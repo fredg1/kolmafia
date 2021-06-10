@@ -246,6 +246,7 @@ public class Parser
 	private final InputStream istream;
 
 	private LineNumberReader commandStream;
+	private Line previousLine;
 	private Line currentLine;
 	private Line nextLine;
 	private String currentToken;
@@ -353,6 +354,16 @@ public class Parser
 
 	public int getLineNumber()
 	{
+		if ( this.currentLine == null )
+		{
+			if ( this.previousLine == null )
+			{
+				return 0;
+			}
+
+			return this.previousLine.lineNumber;
+		}
+
 		return this.currentLine.lineNumber;
 	}
 
@@ -3550,6 +3561,7 @@ public class Parser
 				{
 					i = -1;
 					ch = '\n';
+					this.previousLine = this.currentLine;
 					this.currentLine = this.nextLine;
 					this.nextLine = this.getNextLine();
 				}
@@ -4432,6 +4444,7 @@ public class Parser
 
 		while ( this.currentLine.line.equals( "" ) )
 		{
+			this.previousLine = this.currentLine;
 			this.currentLine = this.nextLine;
 			this.nextLine = this.getNextLine();
 
