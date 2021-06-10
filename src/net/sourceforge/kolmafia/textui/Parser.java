@@ -45,6 +45,10 @@ import java.util.*;
 
 import net.java.dev.spellcast.utilities.DataUtilities;
 
+import org.eclipse.lsp4j.Location;
+import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
+
 import net.sourceforge.kolmafia.KoLConstants;
 import net.sourceforge.kolmafia.KoLmafiaCLI;
 import net.sourceforge.kolmafia.RequestLogger;
@@ -112,13 +116,127 @@ import net.sourceforge.kolmafia.utilities.ByteArrayStream;
 import net.sourceforge.kolmafia.utilities.CharacterEntities;
 import net.sourceforge.kolmafia.utilities.StringUtilities;
 
+/*
+Scope
+	Typedef
+		Identifier (exactly 1)
+	Type
+		existing type
+		Record
+			( Type + Identifier ) (0+)
+		AggregateType
+			AggregateType
+				AggregateType
+					(...) (e.g. boolean [string][string][string] [...] )
+	Command (one of:)
+		Return
+			Expression
+				Expression
+					Expression
+						(...)
+				Value
+				Operator
+		BasicScript
+		While
+			Expression
+			+	LoopScope (one of:)
+					Scope
+					Command
+		Foreach
+			Identifier + Value + LoopScope
+		JavaFor
+			Type + Identifier + Expression (0-1)
+			+ Expression
+			+ PreIncDec (0-1) + VariableReference + PostIncDec (0-1) + Assignment
+			+ LoopScope
+		For
+			Identifier + Expression + Expression + Expression (0-1)
+			+ LoopScope
+		Repeat
+			LoopScope + Expression
+		Switch
+			Expression
+			+	(1+):
+				Expression (0-1)
+				+	Type
+					Command
+					Variables
+		Conditional
+			Expression
+			+	(1+)
+				BlockOrSingleCommand
+				+ Expression (0-1)
+		Try
+			BlockOrSingleCommand (one of:)
+				Block
+				SingleCommandScope
+					Command (exactly 1)
+			+ BlockOrSingleCommand
+		Catch
+			BlockOrSingleCommand
+		Static
+			CommandOrDeclaration
+				Type
+				Command
+				Variables
+			Scope
+		Sort
+			VariableReference + Expression
+		Remove
+			Expression
+		Block
+			Scope
+		Value
+			Expression
+			Number
+			String
+				Expression
+				Literal
+			TypedConstant
+				Type
+				String
+				Literal
+			NewRecord
+				Identifier
+				+	AggregateLiteral
+					Expression
+			CatchValue
+				Block
+				Expression
+			PreIncDec
+				VariableReference
+			Invoke
+				Type
+				+	Expression
+					Identifier + VariableReference
+				+	Parameters
+						Expression (0+)
+				+	PostCall
+						VariableReference
+			Call
+				ScopedIdentifier
+				+ Parameters
+				+ PostCall
+			Type + ( AggregateLiteral / VariableReference )
+	Function
+		Identifier + ( Type + Variable ) (0+)
+		+	BlockOrSingleCommand
+	Variables
+		Variable (1+)
+			Identifier
+	AggregateLiteral
+		AggregateLiteral
+			AggregateLiteral
+				(...)
+		Expression
+*/
 public class Parser
 {
-	public static String APPROX = "\u2248";
-	public static String PRE_INCREMENT = "++X";
-	public static String PRE_DECREMENT = "--X";
-	public static String POST_INCREMENT = "X++";
-	public static String POST_DECREMENT = "X--";
+	public static final String APPROX = "\u2248";
+	public static final String PRE_INCREMENT = "++X";
+	public static final String PRE_DECREMENT = "--X";
+	public static final String POST_INCREMENT = "X++";
+	public static final String POST_DECREMENT = "X--";
 
 	// Variables used during parsing
 
@@ -128,10 +246,9 @@ public class Parser
 	private final InputStream istream;
 
 	private LineNumberReader commandStream;
-	private String currentLine;
-	private String nextLine;
+	private Line currentLine;
+	private Line nextLine;
 	private String currentToken;
-	private int lineNumber;
 
 	private final Map<File, Long> imports;
 	private Function mainMethod = null;
@@ -175,7 +292,6 @@ public class Parser
 		{
 			this.commandStream = new LineNumberReader( new InputStreamReader( this.istream, StandardCharsets.UTF_8 ) );
 			this.currentLine = this.getNextLine();
-			this.lineNumber = this.commandStream.getLineNumber();
 			this.nextLine = this.getNextLine();
 		}
 		catch ( Exception e )
@@ -237,7 +353,7 @@ public class Parser
 
 	public int getLineNumber()
 	{
-		return this.lineNumber;
+		return this.currentLine.lineNumber;
 	}
 
 	public Map<File, Long> getImports()
@@ -416,8 +532,10 @@ public class Parser
 					parser.getScriptName().replace( ".ash", "" )
 						.replaceAll( "[^a-zA-Z0-9]", "_" ),
 				parser.mainMethod.getType(),
+				parser.mainMethod.getDefinitionLocation(),
 				parser.mainMethod.getVariableReferences() );
 			f.setScope( ((UserDefinedFunction)parser.mainMethod).getScope() );
+			f.setVariableReferences( parser.mainMethod.getVariableReferences() );
 			result.addFunction( f );
 		}
 
@@ -577,6 +695,8 @@ public class Parser
 
 		// Allow anonymous records
 		String recordName = null;
+		Location recordDefinition = null;
+		Position recordStart = this.here();
 
 		if ( !"{".equals( this.currentToken() ) )
 		{
@@ -599,6 +719,8 @@ public class Parser
 			}
 
 			this.readToken(); // read name
+
+			recordDefinition = this.makeSymbolLocation( recordStart );
 		}
 
 		if ( !"{".equals ( this.currentToken() ) )
@@ -668,6 +790,11 @@ public class Parser
 
 		this.readToken(); // read }
 
+		if ( recordDefinition == null )
+		{
+			recordDefinition = this.makeSymbolLocation( recordStart );
+		}
+
 		String[] fieldNameArray = new String[ fieldNames.size() ];
 		Type[] fieldTypeArray = new Type[ fieldTypes.size() ];
 		fieldNames.toArray( fieldNameArray );
@@ -677,7 +804,7 @@ public class Parser
 			new RecordType(
 				recordName != null ? recordName :
 					( "(anonymous record " + Integer.toHexString( Arrays.hashCode( fieldNameArray ) ) + ")" ),
-				fieldNameArray, fieldTypeArray );
+				fieldNameArray, fieldTypeArray, recordDefinition );
 
 		if ( recordName != null )
 		{
@@ -702,6 +829,8 @@ public class Parser
 
 		String functionName = this.currentToken();
 
+		Position start = this.here();
+
 		if ( Parser.isReservedWord( functionName ) )
 		{
 			throw this.parseException( "Reserved word '" + functionName + "' cannot be used as a function name" );
@@ -716,6 +845,8 @@ public class Parser
 
 		while ( !this.currentToken().equals( ")" ) )
 		{
+			Position varargStart = this.here();
+
 			Type paramType = this.parseType( parentScope, true, false );
 			if ( paramType == null )
 			{
@@ -733,6 +864,8 @@ public class Parser
 				paramType = new VarArgType( paramType );
 
 				this.readToken(); //read ...
+
+				paramType.getReferenceLocations().add( this.makeSymbolLocation( varargStart ) );
 
 				// Only one vararg is allowed
 				vararg = true;
@@ -773,7 +906,7 @@ public class Parser
 		// Add the function to the parent scope before we parse the
 		// function scope to allow recursion.
 
-		UserDefinedFunction f = new UserDefinedFunction( functionName, functionType, variableReferences );
+		UserDefinedFunction f = new UserDefinedFunction( functionName, functionType, this.makeSymbolLocation( start ), variableReferences );
 
 		if ( f.overridesLibraryFunction() )
 		{
@@ -857,10 +990,13 @@ public class Parser
 			throw this.parseException( "Variable " + variableName + " is already defined" );
 		}
 
-		Variable result = new Variable( variableName, t );
+		Position start = this.here();
 
 		this.readToken(); // If parsing of Identifier succeeded, go to next token.
 		// If we are parsing a parameter declaration, we are done
+
+		Variable result = new Variable( variableName, t, this.makeSymbolLocation( start ) );
+
 		if ( scope == null )
 		{
 			if ( this.currentToken().equals( "=" ) )
@@ -925,7 +1061,7 @@ public class Parser
 	private Value autoCoerceValue( Type ltype, Value rhs, final BasicScope scope )
 	{
 		// DataTypes.TYPE_ANY has no name
-		if ( ltype == null || ltype.getName() == null)
+		if ( ltype == null || ltype.getName() == null )
 		{
 			return rhs;
 		}
@@ -948,6 +1084,8 @@ public class Parser
 			Function target = scope.findFunction( name, params, MatchType.EXACT );
 			if ( target != null && target.getType().equals( ltype ) )
 			{
+				target.addReference( this.make0WidthSymbolLocation() );
+
 				return new FunctionCall( target, params, this );
 			}
 		}
@@ -962,6 +1100,8 @@ public class Parser
 			Function target = scope.findFunction( name, params, MatchType.EXACT );
 			if ( target != null && target.getType().equals( ltype ) )
 			{
+				target.addReference( this.make0WidthSymbolLocation() );
+
 				return new FunctionCall( target, params, this );
 			}
 		}
@@ -1019,6 +1159,7 @@ public class Parser
 		}
 
 		String typeName = this.currentToken();
+		Position start = this.here();
 
 		if ( !this.parseIdentifier( typeName ) )
 		{
@@ -1045,7 +1186,7 @@ public class Parser
 		}
 
 		// Add the type to the type table
-		TypeDef type = new TypeDef( typeName, t );
+		TypeDef type = new TypeDef( typeName, t, this.makeSymbolLocation( start ) );
 		parentScope.addType( type );
 
 		return true;
@@ -1174,11 +1315,25 @@ public class Parser
 
 	private Type parseType( final BasicScope scope, final boolean aggregates, final boolean records )
 	{
-		if ( this.currentToken() == null )
+		if ( this.currentToken() == null || ";".equals( this.currentToken() ) )
 		{
 			return null;
 		}
 
+		Position start = this.here();
+
+		Type valType = this.parseTypeInternal( scope, aggregates, records );
+
+		if ( valType != null )
+		{
+			valType.addReference( this.makeSymbolLocation( start ) );
+		}
+
+		return valType;
+	}
+
+	private Type parseTypeInternal( final BasicScope scope, final boolean aggregates, final boolean records )
+	{
 		Type valType = scope.findType( this.currentToken() );
 		if ( valType == null )
 		{
@@ -1699,7 +1854,7 @@ public class Parser
 		{
 			try
 			{
-				ostream.write( this.currentLine.getBytes() );
+				ostream.write( this.currentLine.line.getBytes() );
 				ostream.write( KoLConstants.LINE_BREAK.getBytes() );
 			}
 			catch ( Exception e )
@@ -1710,7 +1865,7 @@ public class Parser
 				StaticEntity.printStackTrace( e );
 			}
 
-			this.currentLine = "";
+			this.currentLine = this.currentLine.clear();
 			this.fixLines();
 		}
 
@@ -2082,7 +2237,7 @@ public class Parser
 		Value aggregate = this.parseVariableReference( parentScope );
 
 		if ( !( aggregate instanceof VariableReference ) ||
-                !( aggregate.getType().getBaseType() instanceof AggregateType ) )
+		     !( aggregate.getType().getBaseType() instanceof AggregateType ) )
 		{
 			throw this.parseException( "Aggregate reference expected" );
 		}
@@ -2096,9 +2251,9 @@ public class Parser
 		// Define key variables of appropriate type
 		VariableList varList = new VariableList();
 		AggregateType type = (AggregateType) aggregate.getType().getBaseType();
-		Variable valuevar = new Variable( "value", type.getDataType() );
+		Variable valuevar = new Variable( "value", type.getDataType(), null );
 		varList.add( valuevar );
-		Variable indexvar = new Variable( "index", type.getIndexType() );
+		Variable indexvar = new Variable( "index", type.getIndexType(), null );
 		varList.add( indexvar );
 
 		// Parse the key expression in a new scope containing 'index' and 'value'
@@ -2120,6 +2275,7 @@ public class Parser
 		this.readToken(); // foreach
 
 		List<String> names = new ArrayList<String>();
+		List<Position> positions = new ArrayList<>();
 
 		while ( true )
 		{
@@ -2141,6 +2297,7 @@ public class Parser
 			}
 
 			names.add( name );
+			positions.add( this.here() );
 			this.readToken(); // name
 
 			if ( this.currentToken() != null )
@@ -2174,8 +2331,11 @@ public class Parser
 		List<VariableReference> variableReferences = new ArrayList<VariableReference>();
 		Type type = aggregate.getType().getBaseType();
 
-		for ( String name : names )
+		for ( int i = 0; i < names.size(); i++ )
 		{
+			String name = names.get( i );
+			Position start = positions.get( i );
+
 			Type itype;
 			if ( type == null )
 			{
@@ -2192,7 +2352,7 @@ public class Parser
 				type = ( (AggregateType) type ).getDataType();
 			}
 
-			Variable keyvar = new Variable( name, itype );
+			Variable keyvar = new Variable( name, itype, makeSymbolLocation( start ) );
 			varList.add( keyvar );
 			variableReferences.add( new VariableReference( keyvar ) );
 		}
@@ -2231,6 +2391,9 @@ public class Parser
 		}
 
 		this.readToken(); // for
+
+		Position start = this.here();
+
 		this.readToken(); // name
 
 		if ( !this.currentToken().equalsIgnoreCase( "from" ) )
@@ -2273,7 +2436,7 @@ public class Parser
 		}
 
 		// Create integer index variable
-		Variable indexvar = new Variable( name, DataTypes.INT_TYPE );
+		Variable indexvar = new Variable( name, DataTypes.INT_TYPE, this.makeSymbolLocation( start ) );
 
 		// Put index variable onto a list
 		VariableList varList = new VariableList();
@@ -2313,12 +2476,15 @@ public class Parser
 			Type t = this.parseType( scope, true, true );
 
 			String name = this.currentToken();
+			Position start = this.here();
 			Variable variable;
 
 			if ( name == null || !this.parseIdentifier( name ) || Parser.isReservedWord( name ) )
 			{
 				throw this.parseException( "Identifier required" );
 			}
+
+			this.readToken(); // name
 
 			// If there is no data type, it is using an existing variable
 			if ( t == null )
@@ -2338,11 +2504,9 @@ public class Parser
 				}
 
 				// Create variable and add it to the scope
-				variable = new Variable( name, t );
+				variable = new Variable( name, t, this.makeSymbolLocation( start ) );
 				scope.addVariable( variable );
 			}
-
-			this.readToken(); // name
 
 			VariableReference lhs = new VariableReference( name, scope );
 			Value rhs = null;
@@ -2525,14 +2689,21 @@ public class Parser
 		String name = this.currentToken();
 		Type type = scope.findType( name );
 
+		Position start = this.here();
+
+		this.readToken(); //name
+
+		if ( type != null )
+		{
+			type.addReference( this.makeSymbolLocation( start ) );
+		}
+
 		if ( !( type instanceof RecordType ) )
 		{
 			throw this.parseException( "'" + name + "' is not a record type" );
 		}
 
 		RecordType target = (RecordType) type;
-
-		this.readToken(); //name
 
 		List<Value> params = new ArrayList<>();
 		String [] names = target.getFieldNames();
@@ -2620,7 +2791,10 @@ public class Parser
 		}
 
 		String name = this.currentToken();
+		Position start = this.here();
 		this.readToken(); //name
+
+		Location nameLocation = this.makeSymbolLocation( start );
 
 		List<Value> params = this.parseParameters( scope, firstParam );
 		Function target = scope.findFunction( name, params );
@@ -2629,6 +2803,8 @@ public class Parser
 		{
 			throw this.undefinedFunctionException( name, params );
 		}
+
+		target.addReference( nameLocation );
 
 		params = this.autoCoerceParameters( target, params, scope );
 		FunctionCall call = new FunctionCall( target, params, this );
@@ -3187,7 +3363,7 @@ public class Parser
 		{
         }
 
-		else if ( ( result = this.parseCall( scope, null ) ) != null )
+		else if ( ( result = this.parseCall( scope ) ) != null )
 		{
         }
 
@@ -3348,7 +3524,7 @@ public class Parser
 		StringBuilder resultString = new StringBuilder();
 		for ( int i = 0; ; ++i )
 		{
-			if ( i == this.currentLine.length() )
+			if ( i == this.currentLine.line.length() )
 			{
 				// Plain strings can't span lines
 				if ( type == null )
@@ -3356,7 +3532,7 @@ public class Parser
 					throw this.parseException( "No closing " + stopCharacter + " found" );
 				}
 
-				this.currentLine = "";
+				this.currentLine = this.currentLine.clear();
 				this.fixLines();
 				i = 0;
 				if ( this.currentLine == null )
@@ -3365,12 +3541,12 @@ public class Parser
 				}
 			}
 
-			char ch = this.currentLine.charAt( i );
+			char ch = this.currentLine.line.charAt( i );
 
 			// Handle escape sequences
 			if ( ch == '\\' )
 			{
-				if ( i == this.currentLine.length() - 1 )
+				if ( i == this.currentLine.line.length() - 1 )
 				{
 					i = -1;
 					ch = '\n';
@@ -3379,7 +3555,7 @@ public class Parser
 				}
 				else
 				{
-					ch = this.currentLine.charAt( ++i );
+					ch = this.currentLine.line.charAt( ++i );
 				}
 
 				switch ( ch )
@@ -3403,7 +3579,7 @@ public class Parser
 				case 'x':
 					try
 					{
-						int hex08 = Integer.parseInt( this.currentLine.substring( i + 1, i + 3 ), 16 );
+						int hex08 = Integer.parseInt( this.currentLine.line.substring( i + 1, i + 3 ), 16 );
 						resultString.append( (char) hex08 );
 						i += 2;
 					}
@@ -3416,7 +3592,7 @@ public class Parser
 				case 'u':
 					try
 					{
-						int hex16 = Integer.parseInt( this.currentLine.substring( i + 1, i + 5 ), 16 );
+						int hex16 = Integer.parseInt( this.currentLine.line.substring( i + 1, i + 5 ), 16 );
 						resultString.append( (char) hex16 );
 						i += 4;
 					}
@@ -3431,7 +3607,7 @@ public class Parser
 					{
 						try
 						{
-							int octal = Integer.parseInt( this.currentLine.substring( i, i + 3 ), 8 );
+							int octal = Integer.parseInt( this.currentLine.line.substring( i, i + 3 ), 8 );
 							resultString.append( (char) octal );
 							i += 2;
 							break;
@@ -3488,7 +3664,7 @@ public class Parser
 					if ( ch == '/' )
 					{
 						// Throw away the rest of the line
-						i = this.currentLine.length() - 1;
+						i = this.currentLine.line.length() - 1;
 						continue;
 					}
 					resultString.append( '/' );
@@ -3660,7 +3836,7 @@ public class Parser
 
 		if ( type == null )
 		{
-			StringBuilder buf = new StringBuilder( this.currentLine );
+			StringBuilder buf = new StringBuilder( name );
 			int length = name.length();
 
 			if ( name.endsWith( "ies" ) )
@@ -3686,8 +3862,7 @@ public class Parser
 				throw this.parseException( "Unknown type " + name );
 			}
 
-			this.currentLine = buf.toString();
-			this.currentToken = null;
+			this.currentToken = buf.toString();
 			type = this.parseType( scope, false, false );
 
 			plurals = true;
@@ -3728,15 +3903,15 @@ public class Parser
 		int level = 1;
 		for ( int i = 1;; ++i )
 		{
-			if ( i == this.currentLine.length() )
+			if ( i == this.currentLine.line.length() )
 			{
 				throw this.parseException( "No closing ] found" );
 			}
 
-			char c = this.currentLine.charAt( i );
+			char c = this.currentLine.line.charAt( i );
 			if ( c == '\\' )
 			{
-				resultString.append( this.currentLine.charAt( ++i ) );
+				resultString.append( this.currentLine.line.charAt( ++i ) );
 			}
 			else if ( c == '[' )
 			{
@@ -3818,7 +3993,11 @@ public class Parser
 			throw this.parseException( "Unknown variable '" + name + "'" );
 		}
 
+		Position start = this.here();
+
 		this.readToken(); // read name
+
+		var.addReference( this.makeSymbolLocation( start ) );
 
 		if ( this.currentToken() == null || !this.currentToken().equals( "[" ) && !this.currentToken().equals( "." ) )
 		{
@@ -3945,12 +4124,12 @@ public class Parser
 			throw this.parseException( "<", this.currentToken() );
 		}
 
-		int directiveEndIndex = this.currentLine.indexOf( ";" );
+		int directiveEndIndex = this.currentLine.line.indexOf( ";" );
 		if ( directiveEndIndex == -1 )
 		{
-			directiveEndIndex = this.currentLine.length();
+			directiveEndIndex = this.currentLine.line.length();
 		}
-		String resultString = this.currentLine.substring( 0, directiveEndIndex );
+		String resultString = this.currentLine.line.substring( 0, directiveEndIndex );
 
 		int startIndex = resultString.indexOf( "<" );
 		int endIndex = resultString.indexOf( ">" );
@@ -4046,31 +4225,31 @@ public class Parser
 	// **************** Tokenizer *****************
 
 	private static final char BOM = '\ufeff';
-	private String getNextLine()
+	private Line getNextLine()
 	{
 		try
 		{
-			String fullLine;
+			Line fullLine;
 			do
 			{
 				// Read a line from input, and break out of the
 				// do-while loop when you've read a valid line
 
-				fullLine = this.commandStream.readLine();
+				fullLine = new Line( this.commandStream.readLine(), this.commandStream.getLineNumber() );
 
 				// Return null at end of file
-				if ( fullLine == null )
+				if ( fullLine.line == null )
 				{
 					return null;
 				}
 
-				if ( fullLine.length() == 0 )
+				if ( fullLine.line.length() == 0 )
 				{
 					continue;
 				}
 
 				// If the line starts with a Unicode BOM, remove it.
-				if ( fullLine.charAt( 0 ) == Parser.BOM )
+				if ( fullLine.line.charAt( 0 ) == Parser.BOM )
 				{
 					fullLine = fullLine.substring( 1 );
 				}
@@ -4078,7 +4257,7 @@ public class Parser
 				// Remove whitespace at front and end
 				fullLine = fullLine.trim();
 			}
-			while ( fullLine.length() == 0 );
+			while ( fullLine.line.length() == 0 );
 
 			// Found valid currentLine - return it
 
@@ -4113,22 +4292,22 @@ public class Parser
 			}
 
 			// "#" starts a whole-line comment
-			if ( this.currentLine.startsWith( "#" ) )
+			if ( this.currentLine.line.startsWith( "#" ) )
 			{
 				// Skip the comment
-				this.currentLine = "";
+				this.currentLine = this.currentLine.clear();
 				continue;
 			}
 
 			// Get the next token for consideration
-			this.currentToken = this.currentLine.substring( 0, this.tokenLength( this.currentLine ) );
+			this.currentToken = this.currentLine.line.substring( 0, this.tokenLength( this.currentLine.line ) );
 
 			// "//" starts a comment which consumes the rest of the line
 			if ( this.currentToken.equals( "//" ) )
 			{
 				// Skip the comment
 				this.currentToken = null;
-				this.currentLine = "";
+				this.currentLine = this.currentLine.clear();
 				continue;
 			}
 
@@ -4140,11 +4319,11 @@ public class Parser
 
 			while ( this.currentLine != null )
 			{
-				int end = this.currentLine.indexOf( "*/" );
+				int end = this.currentLine.line.indexOf( "*/" );
 				if ( end == -1 )
 				{
 					// Skip entire line
-					this.currentLine = "";
+					this.currentLine = this.currentLine.clear();
 					this.fixLines();
 					continue;
 				}
@@ -4165,17 +4344,17 @@ public class Parser
 			return null;
 		}
 
-		if ( this.tokenLength( this.currentLine ) >= this.currentLine.length() )
+		if ( this.tokenLength( this.currentLine.line ) >= this.currentLine.line.length() )
 		{
 			if ( this.nextLine == null )
 			{
 				return null;
 			}
 
-			return this.nextLine.substring( 0, this.tokenLength( this.nextLine ) ).trim();
+			return this.nextLine.line.substring( 0, this.tokenLength( this.nextLine.line ) ).trim();
 		}
 
-		String result = this.currentLine.substring( this.tokenLength( this.currentLine ) ).trim();
+		String result = this.currentLine.line.substring( this.tokenLength( this.currentLine.line ) ).trim();
 
 		if ( result.equals( "" ) )
 		{
@@ -4184,7 +4363,7 @@ public class Parser
 				return null;
 			}
 
-			return this.nextLine.substring( 0, this.tokenLength( this.nextLine ) );
+			return this.nextLine.line.substring( 0, this.tokenLength( this.nextLine.line ) );
 		}
 
 		return result.substring( 0, this.tokenLength( result ) );
@@ -4193,7 +4372,7 @@ public class Parser
 	// Put a token back, so it can be parsed again later.
 	private void replaceToken( String s )
 	{
-		this.currentLine = s + this.currentLine;
+		this.currentLine = this.currentLine.replaceToken( s );
 		this.currentToken = null;
 	}
 
@@ -4206,7 +4385,7 @@ public class Parser
 			return;
 		}
 
-		this.currentLine = this.currentLine.substring( this.tokenLength( this.currentLine ) );
+		this.currentLine = this.currentLine.substring( this.tokenLength( this.currentLine.line ) );
 	}
 
 	private int tokenLength( final String s )
@@ -4251,10 +4430,9 @@ public class Parser
 			return;
 		}
 
-		while ( this.currentLine.equals( "" ) )
+		while ( this.currentLine.line.equals( "" ) )
 		{
 			this.currentLine = this.nextLine;
-			this.lineNumber = this.commandStream.getLineNumber();
 			this.nextLine = this.getNextLine();
 
 			if ( this.currentLine == null )
@@ -4270,7 +4448,7 @@ public class Parser
 			return;
 		}
 
-		while ( this.nextLine.equals( "" ) )
+		while ( this.nextLine.line.equals( "" ) )
 		{
 			this.nextLine = this.getNextLine();
 			if ( this.nextLine == null )
@@ -4325,6 +4503,85 @@ public class Parser
 	private boolean tokenString( final String s )
 	{
 		return Parser.multiCharTokens.contains( s );
+	}
+
+	/**
+	 * A container for a String as well as its position
+	 * in a file.
+	 * Would be simpler if we could just extend {@link String},
+	 * but we can't, since it's a final class...
+	 */
+	class Line
+	{
+		final String line;
+		final int lineNumber;
+		final int offset;
+
+		Line( String line, int lineNumber )
+		{
+			this( line, lineNumber, 0 );
+		}
+
+		Line( String line, int lineNumber, int offset )
+		{
+			this.line = line;
+			this.lineNumber = lineNumber;
+			this.offset = offset;
+		}
+
+		Line trim()
+		{
+			String trimmed = this.line.trim();
+
+			if ( trimmed.equals( this.line ) )
+			{
+				return this;
+			}
+
+			int lTrim = this.line.indexOf( trimmed );
+			if ( lTrim == -1 )
+			{
+				lTrim = this.line.length();
+			}
+
+			return new Line( trimmed, this.lineNumber, this.offset + lTrim );
+		}
+
+		Line substring( int beginIndex )
+		{
+			return new Line( this.line.substring( beginIndex ), this.lineNumber, this.offset + beginIndex );
+		}
+
+		Line clear()
+		{
+			return this.substring( this.line.length() );
+		}
+
+		Line replaceToken( String s )
+		{
+			return new Line( s + this.line, this.lineNumber, this.offset - s.length() );
+		}
+	}
+
+	private Position here()
+	{
+		// 0-indexed
+		int line = this.currentLine.lineNumber - 1;
+		int character = this.currentLine.offset;
+		return new Position( line, character );
+	}
+
+	private Location makeSymbolLocation( Position start )
+	{
+		Position end = this.here();
+		Range range = new Range( start, end );
+		String uri = this.fileName != null ? this.fileName : this.istream.toString();
+		return new Location( uri, range );
+	}
+
+	private Location make0WidthSymbolLocation()
+	{
+		return this.makeSymbolLocation( this.here() );
 	}
 
 	// **************** Parse errors *****************
@@ -4474,7 +4731,7 @@ public class Parser
 
 	private String getLineAndFile()
 	{
-		return Parser.getLineAndFile( this.shortFileName, this.lineNumber );
+		return Parser.getLineAndFile( this.shortFileName, this.getLineNumber() );
 	}
 
 	public static String getLineAndFile( final String fileName, final int lineNumber )

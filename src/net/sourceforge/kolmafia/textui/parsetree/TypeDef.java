@@ -1,6 +1,3 @@
-package net.sourceforge.kolmafia.textui.parsetree;
-import net.sourceforge.kolmafia.textui.DataTypes;
-
 /*
  * Copyright (c) 2005-2021, KoLmafia development team
  * http://kolmafia.sourceforge.net/
@@ -34,15 +31,22 @@ import net.sourceforge.kolmafia.textui.DataTypes;
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+package net.sourceforge.kolmafia.textui.parsetree;
+
+import org.eclipse.lsp4j.Location;
+
+import net.sourceforge.kolmafia.textui.DataTypes;
+
 public class TypeDef
 	extends Type
 {
 	Type base;
 
-	public TypeDef( final String name, final Type base )
+	public TypeDef( final String name, final Type base, final Location location )
 	{
-		super( name, DataTypes.TYPE_TYPEDEF );
+		super( name, DataTypes.TYPE_TYPEDEF, location );
 		this.base = base;
+		this.references = DataTypes.TYPEDEF_TYPE.references;
 	}
 
 	@Override
