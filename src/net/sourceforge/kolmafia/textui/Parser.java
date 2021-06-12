@@ -1400,6 +1400,7 @@ public class Parser
 			// yet ensured we are reading a MapLiteral, allow any
 			// type of Value as the "key"
 			Type dataType = data.getBaseType();
+
 			if ( "{".equals( this.currentToken() ) )
 			{
 				this.readToken(); // read {
@@ -1474,9 +1475,16 @@ public class Parser
 			this.readToken(); // read :
 
 			Value rhs;
-			if ( "{".equals( this.currentToken() ) && dataType instanceof AggregateType )
+
+			if ( "{".equals( this.currentToken() ) )
 			{
 				this.readToken(); // read {
+
+				if ( !( dataType instanceof AggregateType ) )
+				{
+					throw this.parseException( "a value of type " + dataType.toString(), "an aggregate" );
+				}
+
 				rhs = parseAggregateLiteral( scope, (AggregateType) dataType );
 			}
 			else
