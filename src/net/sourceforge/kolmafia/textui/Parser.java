@@ -1400,9 +1400,22 @@ public class Parser
 			// yet ensured we are reading a MapLiteral, allow any
 			// type of Value as the "key"
 			Type dataType = data.getBaseType();
-			if ( ( isArray || arrayAllowed ) && "{".equals( this.currentToken() ) && dataType instanceof AggregateType )
+			if ( "{".equals( this.currentToken() ) )
 			{
 				this.readToken(); // read {
+
+				if ( !isArray && !arrayAllowed )
+				{
+					// We know this is a map, but they placed an
+					// aggregate literal as a key
+					throw this.parseException( "a key of type " + index.toString(), "an aggregate" );
+				}
+
+				if ( !( dataType instanceof AggregateType ) )
+				{
+					throw this.parseException( "an element of type " + dataType.toString(), "an aggregate" );
+				}
+
 				lhs = parseAggregateLiteral( scope, (AggregateType) dataType );
 			}
 			else
