@@ -699,7 +699,7 @@ public class Parser
 
 		this.readToken(); // read record
 
-		if ( this.currentToken() == null )
+		if ( ";".equals( this.currentToken() ) )
 		{
 			throw this.parseException( "Record name expected" );
 		}
@@ -756,7 +756,7 @@ public class Parser
 
 			// Get the field name
 			String fieldName = this.currentToken();
-			if ( fieldName == null )
+			if ( ";".equals( fieldName ) )
 			{
 				throw this.parseException( "Field name expected" );
 			}
@@ -788,7 +788,7 @@ public class Parser
 			fieldTypes.add( fieldType );
 			fieldNames.add( fieldName.toLowerCase() );
 
-			if ( this.currentToken() == null )
+			if ( this.atEndOfFile() )
 			{
 				throw this.parseException( "}", "EOF" );
 			}
@@ -1121,7 +1121,7 @@ public class Parser
 		return rhs;
 	}
 
-	private List<Value> autoCoerceParameters( Function target, List<Value>params, BasicScope scope )
+	private List<Value> autoCoerceParameters( Function target, List<Value> params, BasicScope scope )
 	{
 		ListIterator<VariableReference> refIterator = target.getVariableReferences().listIterator();
 		ListIterator<Value> valIterator = params.listIterator();
@@ -1172,6 +1172,11 @@ public class Parser
 		String typeName = this.currentToken();
 		Position start = this.here();
 
+		if ( ";".equals( typeName ) )
+		{
+			throw this.parseException( "Type name expected" );
+		}
+
 		if ( !this.parseIdentifier( typeName ) )
 		{
 			throw this.parseException( "Invalid type name '" + typeName + "'" );
@@ -1206,11 +1211,6 @@ public class Parser
 	private ParseTreeNode parseCommand( final Type functionType, final BasicScope scope, final boolean noElse, boolean allowBreak, boolean allowContinue )
 	{
 		ParseTreeNode result;
-
-		if ( this.currentToken() == null )
-		{
-			return null;
-		}
 
 		if ( "break".equalsIgnoreCase( this.currentToken() ) )
 		{
@@ -1326,7 +1326,7 @@ public class Parser
 
 	private Type parseType( final BasicScope scope, final boolean aggregates, final boolean records )
 	{
-		if ( this.currentToken() == null )
+		if ( ";".equals( this.currentToken() ) )
 		{
 			return null;
 		}
@@ -1392,7 +1392,7 @@ public class Parser
 		// Assume it is a map.
 		boolean isArray = false;
 
-		while ( this.currentToken() != null && !"}".equals( this.currentToken() ) )
+		while ( !"}".equals( this.currentToken() ) )
 		{
 			Value lhs;
 
@@ -1424,7 +1424,7 @@ public class Parser
 				lhs = this.parseExpression( scope );
 			}
 
-			if ( lhs == null || this.currentToken() == null )
+			if ( lhs == null )
 			{
 				throw this.parseException( "Script parsing error" );
 			}
@@ -1539,7 +1539,7 @@ public class Parser
 	private Type parseAggregateType( final Type dataType, final BasicScope scope )
 	{
 		this.readToken(); // [ or ,
-		if ( this.currentToken() == null )
+		if ( ";".equals( this.currentToken() ) )
 		{
 			throw this.parseException( "Missing index token" );
 		}
@@ -1561,7 +1561,7 @@ public class Parser
 			int size = StringUtilities.parseInt( this.currentToken() );
 			this.readToken(); // integer
 
-			if ( this.currentToken() == null )
+			if ( ";".equals( this.currentToken() ) )
 			{
 				throw this.parseException( "]", this.currentToken() );
 			}
@@ -1598,7 +1598,7 @@ public class Parser
 		}
 
 		this.readToken(); // type name
-		if ( this.currentToken() == null )
+		if ( ";".equals( this.currentToken() ) )
 		{
 			throw this.parseException( "]", this.currentToken() );
 		}
@@ -1625,6 +1625,11 @@ public class Parser
 
 	private boolean parseIdentifier( final String identifier )
 	{
+		if ( identifier == null )
+		{
+			return false;
+		}
+
 		if ( !Character.isLetter( identifier.charAt( 0 ) ) && identifier.charAt( 0 ) != '_' )
 		{
 			return false;
@@ -1776,7 +1781,7 @@ public class Parser
 		this.readToken(); // (
 
 		Value condition = this.parseExpression( parentScope );
-		if ( this.currentToken() == null || !")".equals( this.currentToken() ) )
+		if ( !")".equals( this.currentToken() ) )
 		{
 			throw this.parseException( ")", this.currentToken() );
 		}
@@ -1862,11 +1867,6 @@ public class Parser
 
 	private BasicScript parseBasicScript()
 	{
-		if ( this.currentToken() == null )
-		{
-			return null;
-		}
-
 		if ( !"cli_execute".equalsIgnoreCase( this.currentToken() ) )
 		{
 			return null;
@@ -1882,8 +1882,13 @@ public class Parser
 
 		ByteArrayStream ostream = new ByteArrayStream();
 
-		while ( this.currentToken() != null && !"}".equals( this.currentToken() ) )
+		while ( !"}".equals( this.currentToken() ) )
 		{
+			if ( this.atEndOfFile() )
+			{
+				throw this.parseException( "}", this.currentToken() );
+			}
+
 			try
 			{
 				ostream.write( this.currentLine.line.getBytes() );
@@ -1899,11 +1904,6 @@ public class Parser
 
 			this.currentLine = this.currentLine.clear();
 			this.fixLines();
-		}
-
-		if ( this.currentToken() == null )
-		{
-			throw this.parseException( "}", this.currentToken() );
 		}
 
 		this.readToken(); // }
@@ -2332,19 +2332,16 @@ public class Parser
 			positions.add( this.here() );
 			this.readToken(); // name
 
-			if ( this.currentToken() != null )
+			if ( ",".equals( this.currentToken() ) )
 			{
-				if ( ",".equals( this.currentToken() ) )
-				{
-					this.readToken(); // ,
-					continue;
-				}
+				this.readToken(); // ,
+				continue;
+			}
 
-				if ( "in".equalsIgnoreCase( this.currentToken() ) )
-				{
-					this.readToken(); // in
-					break;
-				}
+			if ( "in".equalsIgnoreCase( this.currentToken() ) )
+			{
+				this.readToken(); // in
+				break;
 			}
 
 			throw this.parseException( "in", this.currentToken() );
@@ -2503,7 +2500,7 @@ public class Parser
 		// variable to variable list in the scope, and saving
 		// initialization expressions in initializers.
 
-		while ( this.currentToken() != null && !";".equals( this.currentToken ) )
+		while ( !this.atEndOfFile() && !";".equals( this.currentToken() ) )
 		{
 			Type t = this.parseType( scope, true, true );
 
@@ -2511,7 +2508,7 @@ public class Parser
 			Position start = this.here();
 			Variable variable;
 
-			if ( name == null || !this.parseIdentifier( name ) || Parser.isReservedWord( name ) )
+			if ( !this.parseIdentifier( name ) || Parser.isReservedWord( name ) )
 			{
 				throw this.parseException( "Identifier required" );
 			}
@@ -2573,7 +2570,7 @@ public class Parser
 			{
 				this.readToken(); // ,
 
-				if ( this.currentToken() == null || ";".equals( this.currentToken ) )
+				if ( ";".equals( this.currentToken() ) )
 				{
 					throw this.parseException( "Identifier expected" );
 				}
@@ -2590,7 +2587,7 @@ public class Parser
 		// Parse condition in context of scope
 
 		Value condition =
-			( this.currentToken() != null && ";".equals( this.currentToken() ) ) ?
+			( ";".equals( this.currentToken() ) ) ?
 			DataTypes.TRUE_VALUE : this.parseExpression( scope );
 
 		if ( !";".equals( this.currentToken() ) )
@@ -2609,7 +2606,7 @@ public class Parser
 
 		List<ParseTreeNode> incrementers = new ArrayList<ParseTreeNode>();
 
-		while ( this.currentToken() != null && !")".equals( this.currentToken ) )
+		while ( !this.atEndOfFile() && !")".equals( this.currentToken() ) )
 		{
 			Value value = parsePreIncDec( scope );
 			if ( value != null )
@@ -2648,7 +2645,7 @@ public class Parser
 			{
 				this.readToken(); // ,
 
-				if ( this.currentToken() == null || ")".equals( this.currentToken ) )
+				if ( this.atEndOfFile() || ")".equals( this.currentToken() ) )
 				{
 					throw this.parseException( "Identifier expected" );
 				}
@@ -2746,8 +2743,13 @@ public class Parser
 		{
 			this.readToken(); //(
 
-			while ( this.currentToken() != null && !")".equals( this.currentToken() ) )
+			while ( !")".equals( this.currentToken() ) )
 			{
+				if ( this.atEndOfFile() )
+				{
+					throw this.parseException( ")", this.currentToken() );
+				}
+
 				Type expected = types[param].getBaseType();
 				Value val;
 
@@ -2792,11 +2794,6 @@ public class Parser
 
 					this.readToken(); // ,
 				}
-			}
-
-			if ( this.currentToken() == null )
-			{
-				throw this.parseException( ")", this.currentToken() );
 			}
 
 			this.readToken(); // )
@@ -2859,15 +2856,20 @@ public class Parser
 			params.add( firstParam );
 		}
 
-		while ( this.currentToken() != null && !")".equals( this.currentToken() ) )
+		while ( !")".equals( this.currentToken() ) )
 		{
+			if ( this.atEndOfFile() )
+			{
+				throw this.parseException( ")", "end of file" );
+			}
+
 			Value val = this.parseExpression( scope );
 			if ( val != null )
 			{
 				params.add( val );
 			}
 
-			if ( this.currentToken() == null )
+			if ( this.atEndOfFile() )
 			{
 				throw this.parseException( ")", "end of file" );
 			}
@@ -2883,7 +2885,7 @@ public class Parser
 
 			this.readToken(); // ,
 
-			if ( this.currentToken() == null )
+			if ( this.atEndOfFile() )
 			{
 				throw this.parseException( ")", "end of file" );
 			}
@@ -2892,11 +2894,6 @@ public class Parser
 			{
 				throw this.parseException( "parameter", this.currentToken() );
 			}
-		}
-
-		if ( this.currentToken() == null )
-		{
-			throw this.parseException( ")", "end of file" );
 		}
 
 		if ( !")".equals( this.currentToken() ) )
@@ -2912,7 +2909,7 @@ public class Parser
 	private Value parsePostCall( final BasicScope scope, FunctionCall call )
 	{
 		Value result = call;
-		while ( result != null && this.currentToken() != null && ".".equals( this.currentToken() ) )
+		while ( result != null && ".".equals( this.currentToken() ) )
 		{
 			Variable current = new Variable( result.getType() );
 			current.setExpression( result );
@@ -3068,27 +3065,22 @@ public class Parser
 			return null;
 		}
 
-		Value lhs = null;
-		String operStr = null;
-
 		// --[VariableReference]
 		// ++[VariableReference]
 
-		if ( "++".equals( this.currentToken() ) ||
-		     "--".equals( this.currentToken() ) )
-		{
-			operStr = "++".equals( this.currentToken() ) ? Parser.PRE_INCREMENT : Parser.PRE_DECREMENT;
-			this.readToken(); // oper
-
-			lhs = this.parseVariableReference( scope );
-			if ( lhs == null )
-			{
-				throw this.parseException( "Variable reference expected" );
-			}
-		}
-		else
+		if ( !"++".equals( this.currentToken() ) &&
+		     !"--".equals( this.currentToken() ) )
 		{
 			return null;
+		}
+
+		String operStr = "++".equals( this.currentToken() ) ? Parser.PRE_INCREMENT : Parser.PRE_DECREMENT;
+		this.readToken(); // oper
+
+		Value lhs = this.parseVariableReference( scope );
+		if ( lhs == null )
+		{
+			throw this.parseException( "Variable reference expected" );
 		}
 
 		int ltype = lhs.getType().getType();
@@ -3104,11 +3096,6 @@ public class Parser
 
 	private Value parsePostIncDec( final VariableReference lhs )
 	{
-		if ( this.currentToken() == null )
-		{
-			return lhs;
-		}
-
 		// [VariableReference]++
 		// [VariableReference]--
 
@@ -3140,7 +3127,7 @@ public class Parser
 
 	private Value parseExpression( final BasicScope scope, final Operator previousOper )
 	{
-		if ( this.currentToken() == null )
+		if ( ";".equals( this.currentToken() ) )
 		{
 			return null;
 		}
@@ -3319,7 +3306,7 @@ public class Parser
 
 	private Value parseValue( final BasicScope scope )
 	{
-		if ( this.currentToken() == null )
+		if ( ";".equals( this.currentToken() ) )
 		{
 			return null;
 		}
@@ -3332,7 +3319,7 @@ public class Parser
 			this.readToken(); // (
 
 			result = this.parseExpression( scope );
-			if ( this.currentToken() == null || !")".equals( this.currentToken() ) )
+			if ( !")".equals( this.currentToken() ) )
 			{
 				throw this.parseException( ")", this.currentToken() );
 			}
@@ -3423,7 +3410,7 @@ public class Parser
 			}
 		}
 
-		while ( result != null && this.currentToken() != null && ( ".".equals( this.currentToken() ) || "[".equals( this.currentToken() ) ) )
+		while ( result != null && ( ".".equals( this.currentToken() ) || "[".equals( this.currentToken() ) ) )
 		{
 			Variable current = new Variable( result.getType() );
 			current.setExpression( result );
@@ -3443,11 +3430,6 @@ public class Parser
 
 	private Value parseNumber()
 	{
-		if ( this.currentToken() == null )
-		{
-			return null;
-		}
-
 		int sign = 1;
 
 		if ( "-".equals( this.currentToken() ) )
@@ -3657,7 +3639,7 @@ public class Parser
 				this.currentLine = this.currentLine.substring( i + 1 );
 
 				Value rhs = this.parseExpression( scope );
-				if ( this.currentToken() == null || !"}".equals( this.currentToken() ) )
+				if ( !"}".equals( this.currentToken() ) )
 				{
 					throw this.parseException( "}", this.currentToken() );
 				}
@@ -3967,7 +3949,7 @@ public class Parser
 
 	private Operator parseOperator( final String oper )
 	{
-		if ( oper == null || !this.isOperator( oper ) )
+		if ( !this.isOperator( oper ) )
 		{
 			return null;
 		}
@@ -4008,7 +3990,7 @@ public class Parser
 
 	private Value parseVariableReference( final BasicScope scope )
 	{
-		if ( this.currentToken() == null || !this.parseIdentifier( this.currentToken() ) )
+		if ( !this.parseIdentifier( this.currentToken() ) )
 		{
 			return null;
 		}
@@ -4027,7 +4009,7 @@ public class Parser
 
 		var.addReference( this.makeLocation( start ) );
 
-		if ( this.currentToken() == null || !"[".equals( this.currentToken() ) && !".".equals( this.currentToken() ) )
+		if ( !"[".equals( this.currentToken() ) && !".".equals( this.currentToken() ) )
 		{
 			return new VariableReference( var );
 		}
@@ -4042,10 +4024,9 @@ public class Parser
 
 		boolean parseAggregate = "[".equals( this.currentToken() );
 
-		while ( this.currentToken() != null &&
-			( "[".equals( this.currentToken() ) ||
-			  ".".equals( this.currentToken() ) ||
-			  parseAggregate && ",".equals( this.currentToken() ) ) )
+		while ( "[".equals( this.currentToken() ) ||
+		        ".".equals( this.currentToken() ) ||
+		        parseAggregate && ",".equals( this.currentToken() ) )
 		{
 			Value index;
 
@@ -4104,7 +4085,7 @@ public class Parser
 				RecordType rtype = (RecordType) type;
 
 				String field = this.currentToken();
-				if ( field == null || !this.parseIdentifier( field ) )
+				if ( !this.parseIdentifier( field ) )
 				{
 					throw this.parseException( "Field name expected" );
 				}
@@ -4120,13 +4101,10 @@ public class Parser
 
 			indices.add( index );
 
-			if ( parseAggregate && this.currentToken() != null )
+			if ( parseAggregate && "]".equals( this.currentToken() ) )
 			{
-				if ( "]".equals( this.currentToken() ) )
-				{
-					this.readToken(); // read ]
-					parseAggregate = false;
-				}
+				this.readToken(); // read ]
+				parseAggregate = false;
 			}
 		}
 
@@ -4147,7 +4125,7 @@ public class Parser
 
 		this.readToken(); //directive
 
-		if ( this.currentToken() == null )
+		if ( ";".equals( this.currentToken() ) )
 		{
 			throw this.parseException( "<", this.currentToken() );
 		}
@@ -4532,6 +4510,13 @@ public class Parser
 	private boolean tokenString( final String s )
 	{
 		return Parser.multiCharTokens.contains( s );
+	}
+
+	private boolean atEndOfFile()
+	{
+		this.currentToken();
+
+		return this.currentLine == null;
 	}
 
 	/**
