@@ -555,7 +555,7 @@ public class Parser
 
 	private Scope parseCommandOrDeclaration( final Scope result, final Type expectedType )
 	{
-		Type t = this.parseType( result, true, true );
+		Type t = this.parseType( result, true );
 
 		// If there is no data type, it's a command of some sort
 		if ( t == null )
@@ -626,7 +626,7 @@ public class Parser
 				continue;
 			}
 
-			Type t = this.parseType( result, true, true );
+			Type t = this.parseType( result, true );
 
 			// If there is no data type, it's a command of some sort
 			if ( t == null )
@@ -748,7 +748,7 @@ public class Parser
 		while ( true )
 		{
 			// Get the field type
-			Type fieldType = this.parseType( parentScope, true, true );
+			Type fieldType = this.parseType( parentScope, true );
 			if ( fieldType == null )
 			{
 				throw this.parseException( "Type name expected" );
@@ -858,7 +858,7 @@ public class Parser
 		{
 			Position varargStart = this.here();
 
-			Type paramType = this.parseType( parentScope, true, false );
+			Type paramType = this.parseType( parentScope, false );
 			if ( paramType == null )
 			{
 				throw this.parseException( ")", this.currentToken() );
@@ -1161,9 +1161,10 @@ public class Parser
 		{
 			return false;
 		}
+
 		this.readToken(); // read typedef
 
-		Type t = this.parseType( parentScope, true, true );
+		Type t = this.parseType( parentScope, true );
 		if ( t == null )
 		{
 			throw this.parseException( "Missing data type for typedef" );
@@ -1324,7 +1325,7 @@ public class Parser
 		return result;
 	}
 
-	private Type parseType( final BasicScope scope, final boolean aggregates, final boolean records )
+	private Type parseType( final BasicScope scope, final boolean records )
 	{
 		if ( ";".equals( this.currentToken() ) )
 		{
@@ -1333,7 +1334,7 @@ public class Parser
 
 		Position start = this.here();
 
-		Type valType = this.parseTypeInternal( scope, aggregates, records );
+		Type valType = this.parseTypeInternal( scope, records );
 
 		if ( valType != null )
 		{
@@ -1343,7 +1344,7 @@ public class Parser
 		return valType;
 	}
 
-	private Type parseTypeInternal( final BasicScope scope, final boolean aggregates, final boolean records )
+	private Type parseTypeInternal( final BasicScope scope, final boolean records )
 	{
 		Type valType = scope.findType( this.currentToken() );
 		if ( valType == null )
@@ -1357,7 +1358,7 @@ public class Parser
 					return null;
 				}
 
-				if ( aggregates && "[".equals( this.currentToken() ) )
+				if ( "[".equals( this.currentToken() ) )
 				{
 					return this.parseAggregateType( valType, scope );
 				}
@@ -1370,7 +1371,7 @@ public class Parser
 
 		this.readToken();
 
-		if ( aggregates && "[".equals( this.currentToken() ) )
+		if ( "[".equals( this.currentToken() ) )
 		{
 			return this.parseAggregateType( valType, scope );
 		}
@@ -2104,7 +2105,7 @@ public class Parser
 				continue;
 			}
 
-			Type t = this.parseType( scope, true, true );
+			Type t = this.parseType( scope, true );
 
 			// If there is no data type, it's a command of some sort
 			if ( t == null )
@@ -2502,7 +2503,7 @@ public class Parser
 
 		while ( !this.atEndOfFile() && !";".equals( this.currentToken() ) )
 		{
-			Type t = this.parseType( scope, true, true );
+			Type t = this.parseType( scope, true );
 
 			String name = this.currentToken();
 			Position start = this.here();
@@ -2929,7 +2930,7 @@ public class Parser
 
 		this.readToken(); // call
 
-		Type type = this.parseType( scope, true, false );
+		Type type = this.parseType( scope, false );
 
 		// You can omit the type, but then this function invocation
 		// cannot be used in an expression
@@ -3388,7 +3389,7 @@ public class Parser
 
 		else
 		{
-			Type baseType = this.parseType( scope, true, false );
+			Type baseType = this.parseType( scope, false );
 			if ( baseType != null && baseType.getBaseType() instanceof AggregateType )
 			{
 				if ( !"{".equals( this.currentToken() ) )
@@ -3838,50 +3839,61 @@ public class Parser
 
 	private Value parseTypedConstant( final BasicScope scope )
 	{
+		if ( !"$".equals( this.currentToken() ) )
+		{
+			return null;
+		}
+
+		Position typedConstantStart = this.here();
+
 		this.readToken(); // read $
 
 		String name = this.currentToken();
-		Type type = this.parseType( scope, false, false );
+		Type type = null;
 		boolean plurals = false;
 
-		if ( type == null )
+		if ( this.parseIdentifier( name ) )
 		{
-			StringBuilder buf = new StringBuilder( name );
-			int length = name.length();
+			type = scope.findType( name );
 
-			if ( name.endsWith( "ies" ) )
+			if ( type == null )
 			{
-				buf.delete( length - 3, length );
-				buf.insert( length - 3, "y" );
-			}
-			else if ( name.endsWith( "es" ) )
-			{
-				buf.delete( length - 2, length );
-			}
-			else if ( name.endsWith( "s" ) )
-			{
-				buf.deleteCharAt( length - 1 );
-			}
-			else if ( name.endsWith( "a" ) )
-			{
-				buf.deleteCharAt( length - 1 );
-				buf.insert( length - 1, "um" );
-			}
-			else
-			{
-				throw this.parseException( "Unknown type " + name );
+				StringBuilder buf = new StringBuilder( name );
+				int length = name.length();
+	
+				if ( name.endsWith( "ies" ) )
+				{
+					buf.delete( length - 3, length );
+					buf.insert( length - 3, "y" );
+				}
+				else if ( name.endsWith( "es" ) )
+				{
+					buf.delete( length - 2, length );
+				}
+				else if ( name.endsWith( "s" ) )
+				{
+					buf.deleteCharAt( length - 1 );
+				}
+				else if ( name.endsWith( "a" ) )
+				{
+					buf.deleteCharAt( length - 1 );
+					buf.insert( length - 1, "um" );
+				}
+
+				type = scope.findType( buf.toString() );
+
+				plurals = true;
 			}
 
-			this.currentToken = buf.toString();
-			type = this.parseType( scope, false, false );
-
-			plurals = true;
+			this.readToken();
 		}
 
 		if ( type == null )
 		{
 			throw this.parseException( "Unknown type " + name );
 		}
+
+		type.addReference( this.makeLocation( typedConstantStart ) );
 
 		if ( !type.isPrimitive() )
 		{
