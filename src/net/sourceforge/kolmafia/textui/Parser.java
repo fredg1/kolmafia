@@ -1332,20 +1332,8 @@ public class Parser
 			return null;
 		}
 
-		Position start = this.here();
+		Position typeStart = this.here();
 
-		Type valType = this.parseTypeInternal( scope, records );
-
-		if ( valType != null )
-		{
-			valType.addReference( this.makeLocation( start ) );
-		}
-
-		return valType;
-	}
-
-	private Type parseTypeInternal( final BasicScope scope, final boolean records )
-	{
 		Type valType;
 
 		if ( ( valType = this.parseRecord( scope ) ) != null )
@@ -1366,7 +1354,12 @@ public class Parser
 
 		if ( "[".equals( this.currentToken() ) )
 		{
-			return this.parseAggregateType( valType, scope );
+			valType = this.parseAggregateType( valType, scope );
+		}
+
+		if ( valType != null )
+		{
+			valType.addReference( this.makeLocation( typeStart ) );
 		}
 
 		return valType;
