@@ -1346,30 +1346,23 @@ public class Parser
 
 	private Type parseTypeInternal( final BasicScope scope, final boolean records )
 	{
-		Type valType = scope.findType( this.currentToken() );
-		if ( valType == null )
+		Type valType;
+
+		if ( ( valType = this.parseRecord( scope ) ) != null )
 		{
-			if ( records && "record".equalsIgnoreCase( this.currentToken() ) )
+			if ( !records )
 			{
-				valType = this.parseRecord( scope );
-
-				if ( valType == null )
-				{
-					return null;
-				}
-
-				if ( "[".equals( this.currentToken() ) )
-				{
-					return this.parseAggregateType( valType, scope );
-				}
-
-				return valType;
+				throw this.parseException( "Record creation is not allowed here" );
 			}
-
+		}
+		else if ( ( valType = scope.findType( this.currentToken() ) ) != null )
+		{
+			this.readToken();
+		}
+		else
+		{
 			return null;
 		}
-
-		this.readToken();
 
 		if ( "[".equals( this.currentToken() ) )
 		{
