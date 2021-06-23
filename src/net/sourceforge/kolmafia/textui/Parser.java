@@ -3761,7 +3761,9 @@ public class Parser
 		Value value = DataTypes.parseValue( type, element, false );
 		if ( value == null )
 		{
-			throw this.parseException( "Bad " + type.toString() + " value: \"" + element + "\"" );
+			this.error( "Bad " + type.toString() + " value: \"" + element + "\"" );
+
+			return Value.BAD_VALUE;
 		}
 
 		if ( !StringUtilities.isNumeric( element ) )
@@ -3819,18 +3821,15 @@ public class Parser
 
 				if ( names.size() > 1 )
 				{
-					ScriptException ex = this.parseException2( "Multiple matches for \"" + s1 + "\"; using \"" + s2 + "\".",
-										   "Clarify by using one of:" );
-					RequestLogger.printLine( ex.getMessage() );
-					for ( String name : names )
-					{
-						RequestLogger.printLine( name );
-					}
+					this.warning(
+						"Multiple matches for \"" + s1 + "\"; using \"" + s2 + "\".",
+						"Clarify by using one of:" +
+							KoLConstants.LINE_BREAK +
+							String.join( KoLConstants.LINE_BREAK, names ) );
 				}
 				else
 				{
-					ScriptException ex = this.parseException( "Changing \"" + s1 + "\" to \"" + s2 + "\" would get rid of this message." );
-					RequestLogger.printLine( ex.getMessage() );
+					this.warning( "Changing \"" + s1 + "\" to \"" + s2 + "\" would get rid of this message." );
 				}
 			}
 		}
