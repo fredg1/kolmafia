@@ -3321,12 +3321,15 @@ public class Parser
 			this.readToken(); // (
 
 			result = this.parseExpression( scope );
-			if ( !")".equals( this.currentToken() ) )
-			{
-				throw this.parseException( ")", this.currentToken() );
-			}
 
-			this.readToken(); // )
+			if ( ")".equals( this.currentToken() ) )
+			{
+				this.readToken(); // )
+			}
+			else
+			{
+				this.parseException( ")", this.currentToken() );
+			}
 		}
 
 		// Parse constant values
@@ -3393,12 +3396,18 @@ public class Parser
 			Type baseType = this.parseType( scope, false );
 			if ( baseType != null && baseType.getBaseType() instanceof AggregateType )
 			{
-				if ( !"{".equals( this.currentToken() ) )
+				if ( "{".equals( this.currentToken() ) )
 				{
-					throw this.parseException( "{", this.currentToken() );
+					this.readToken(); // {
+					result = this.parseAggregateLiteral( scope, (AggregateType) baseType.getBaseType() );
 				}
-				this.readToken();
-				result = this.parseAggregateLiteral( scope, (AggregateType) baseType.getBaseType() );
+				else
+				{
+					this.parseException( "{", this.currentToken() );
+					// don't parse. We don't know if they just didn't put anything.
+
+					result = Value.BAD_VALUE;
+				}
 			}
 			else
 			{
