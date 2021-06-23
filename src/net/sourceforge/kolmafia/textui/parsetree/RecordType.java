@@ -43,6 +43,15 @@ import net.sourceforge.kolmafia.textui.ScriptException;
 public class RecordType
 	extends CompositeType
 {
+	public static final RecordType BAD_RECORD = new RecordType( null, new String[] {}, new Type[] {} )
+	{
+		@Override
+		public Type simpleType()
+		{
+			return Type.BAD_TYPE;
+		}
+	};
+
 	private final String[] fieldNames;
 	private final Type[] fieldTypes;
 	private final Value[] fieldIndices;

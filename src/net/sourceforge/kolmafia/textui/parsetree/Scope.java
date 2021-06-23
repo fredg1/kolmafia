@@ -96,9 +96,9 @@ public class Scope
 			// since they were previously required in some cases that didn't
 			// really need them.
 			this.barrier = BasicScope.BARRIER_PAST;
-			p.warning( "Unreachable code" );
+			p.warning( "WARNING: Unreachable code" );
 		}
-		
+
 		if ( !this.breakable )
 		{
 			this.breakable = c.assertBreakable();
@@ -121,7 +121,7 @@ public class Scope
 	{
 		return this.barrier >= BasicScope.BARRIER_SEEN;
 	}
-	
+
 	@Override
 	public boolean assertBreakable()
 	{

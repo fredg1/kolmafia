@@ -42,6 +42,8 @@ import net.sourceforge.kolmafia.textui.ScriptRuntime;
 public abstract class ScriptState
 	extends ParseTreeNode
 {
+	public static final BadScriptState BAD_SCRIPT_STATE = new BadScriptState();
+
 	private final ScriptRuntime.State state;
 
 	public ScriptState( final ScriptRuntime.State state )
@@ -79,5 +81,26 @@ public abstract class ScriptState
 	public boolean assertBarrier()
 	{
 		return true;
+	}
+
+	public static final class BadScriptState
+		extends ScriptState
+	{
+		public BadScriptState()
+		{
+			super( ScriptRuntime.State.NORMAL );
+		}
+
+		@Override
+		public Value execute( final AshRuntime interpreter )
+		{
+			return null;
+		}
+
+		@Override
+		public boolean assertBarrier()
+		{
+			return false;
+		}
 	}
 }

@@ -43,6 +43,8 @@ import net.sourceforge.kolmafia.textui.AshRuntime;
 public class Variable
 	extends Symbol
 {
+	public static final Variable BAD_VARIABLE = new Variable( Type.BAD_TYPE );
+
 	Type type;
 	Value content;
 	Value expression = null;

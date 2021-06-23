@@ -70,6 +70,8 @@ import net.sourceforge.kolmafia.utilities.StringUtilities;
 public class Type
 	extends Symbol
 {
+	public static final Type BAD_TYPE = new Type( null, DataTypes.TYPE_ANY );
+
 	public boolean primitive;
 	private final int type;
 	private Value allValues = null;
