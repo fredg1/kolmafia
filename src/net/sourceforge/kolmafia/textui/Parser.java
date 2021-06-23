@@ -608,15 +608,15 @@ public class Parser
 	                          final boolean allowBreak,
 	                          final boolean allowContinue )
 	{
-		String importString;
+		Directive importDirective;
 
 		this.parseScriptName();
 		this.parseNotify();
 		this.parseSince();
 
-		while ( ( importString = this.parseImport() ) != null )
+		while ( ( importDirective = this.parseImport() ) != null )
 		{
-			result = this.importFile( importString, result );
+			result = this.importFile( importDirective.value, result );
 		}
 
 		while ( true )
@@ -4129,114 +4129,123 @@ public class Parser
 		return new CompositeReference( var, indices, this );
 	}
 
-	private String parseDirective( final String directive )
+	private class Directive
+	{
+		final String value;
+		final Range range;
+
+		Directive( final String value, final Range range )
+		{
+			this.value = value;
+			this.range = range;
+		}
+	}
+
+	private Directive parseDirective( final String directive )
 	{
 		if ( !directive.equalsIgnoreCase( this.currentToken() ) )
 		{
 			return null;
 		}
 
+		Position directiveStart = this.here();
+
 		this.readToken(); //directive
 
-		if ( ";".equals( this.currentToken() ) )
+		this.currentToken(); // we don't care what it is, just trigger the method.
+
+		if ( this.atEndOfFile() )
 		{
-			throw this.parseException( "<", this.currentToken() );
+			this.parseException( "<", "end of file" );
+
+			return null;
 		}
 
-		int directiveEndIndex = this.currentLine.line.indexOf( ";" );
-		if ( directiveEndIndex == -1 )
+		String resultString = null;
+		int endIndex = -1;
+		char firstChar = this.currentLine.line.charAt( 0 );
+
+		for ( char ch : new char[] { '<', '\'', '"' } )
 		{
-			directiveEndIndex = this.currentLine.line.length();
-		}
-		String resultString = this.currentLine.line.substring( 0, directiveEndIndex );
-
-		int startIndex = resultString.indexOf( "<" );
-		int endIndex = resultString.indexOf( ">" );
-
-		if ( startIndex != -1 && endIndex == -1 )
-		{
-			throw this.parseException( "No closing > found" );
-		}
-
-		if ( startIndex == -1 )
-		{
-			startIndex = resultString.indexOf( "\"" );
-			endIndex = resultString.indexOf( "\"", startIndex + 1 );
-
-			if ( startIndex != -1 && endIndex == -1 )
+			if ( ch != firstChar )
 			{
-				throw this.parseException( "No closing \" found" );
+				continue;
 			}
-		}
 
-		if ( startIndex == -1 )
-		{
-			startIndex = resultString.indexOf( "'" );
-			endIndex = resultString.indexOf( "'", startIndex + 1 );
+			this.currentLine = this.currentLine.substring( 1 );
 
-			if ( startIndex != -1 && endIndex == -1 )
+			if ( ch == '<' )
 			{
-				throw this.parseException( "No closing ' found" );
+				ch = '>';
 			}
+
+			endIndex = this.currentLine.line.indexOf( ch );
+
+			if ( endIndex == -1 )
+			{
+				this.error( "No closing " + ch + " found" );
+
+				break;
+			}
+
+			resultString = this.currentLine.line.substring( 0, endIndex );
+			this.currentLine = this.currentLine.substring( endIndex + 1 ); //get rid of '>', '\'' or '"' token
+
+			break;
 		}
 
 		if ( endIndex == -1 )
 		{
-			endIndex = resultString.indexOf( ";" );
+			endIndex = this.currentLine.line.indexOf( ";" );
+
 			if ( endIndex == -1 )
 			{
-				endIndex = resultString.length();
+				endIndex = this.currentLine.line.length();
 			}
+
+			resultString = this.currentLine.line.substring( 0, endIndex );
+			this.currentLine = this.currentLine.substring( endIndex );
 		}
 
-		resultString = resultString.substring( startIndex + 1, endIndex );
-		this.currentLine = this.currentLine.substring( endIndex );
 		this.currentToken = null;
-
-		if ( ">".equals( this.currentToken() ) ||
-		     "\"".equals( this.currentToken() ) ||
-		     "'".equals( this.currentToken() ) )
-		{
-			this.readToken(); //get rid of '>' or '"' token
-		}
 
 		if ( ";".equals( this.currentToken() ) )
 		{
 			this.readToken(); //read ;
 		}
 
-		return resultString;
+		return new Directive( resultString, this.rangeToHere( directiveStart ) );
 	}
 
 	private void parseScriptName()
 	{
-		String resultString = this.parseDirective( "script" );
-		if ( this.scriptName == null )
+		Directive scriptDirective = this.parseDirective( "script" );
+		if ( this.scriptName == null && scriptDirective != null )
 		{
-			this.scriptName = resultString;
+			this.scriptName = scriptDirective.value;
 		}
 	}
 
 	private void parseNotify()
 	{
-		String resultString = this.parseDirective( "notify" );
-		if ( this.notifyRecipient == null )
+		Directive notifyDirective = this.parseDirective( "notify" );
+		if ( this.notifyRecipient == null && notifyDirective != null )
 		{
-			this.notifyRecipient = resultString;
+			this.notifyRecipient = notifyDirective.value;
 		}
 	}
 
 	private void parseSince()
 	{
-		String revision = this.parseDirective( "since" );
-		if ( revision != null )
+		Directive sinceDirective = this.parseDirective( "since" );
+		if ( sinceDirective != null )
 		{
 			// enforce "since" directives RIGHT NOW at parse time
-			this.enforceSince( revision );
+			this.enforceSince( sinceDirective.value, sinceDirective.range );
 		}
 	}
 
-	private String parseImport()
+	private Directive parseImport()
 	{
 		return this.parseDirective( "import" );
 	}
