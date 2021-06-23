@@ -3455,7 +3455,9 @@ public class Parser
 
 			if ( !this.readIntegerToken( fraction ) )
 			{
-				throw this.parseException( "numeric value", fraction );
+				this.parseException( "numeric value", fraction );
+
+				return new Value( (double) 0 );
 			}
 
 			this.readToken(); // integer
