@@ -3537,18 +3537,45 @@ public class Parser
 		{
 			if ( i == this.currentLine.line.length() )
 			{
+				this.currentLine = this.currentLine.clear();
+				this.currentToken = null;
+
 				// Plain strings can't span lines
 				if ( type == null )
 				{
-					throw this.parseException( "No closing " + stopCharacter + " found" );
+					this.error( "No closing " + stopCharacter + " found" );
+
+					Value result = new Value( resultString.toString() );
+
+					if ( conc == null )
+					{
+						return result;
+					}
+					else
+					{
+						conc.addString( result );
+						return conc;
+					}
 				}
 
-				this.currentLine = this.currentLine.clear();
 				this.fixLines();
 				i = 0;
 				if ( this.currentLine == null )
 				{
-					throw this.parseException( "No closing ] found" );
+					this.error( "No closing " + stopCharacter + " found" );
+
+					String element = resultString.toString().trim();
+					if ( element.length() != 0 )
+					{
+						list.add( this.parseLiteral( type, element ) );
+					}
+
+					if ( list.size() == 0 )
+					{
+						// Empty list - caller will interpret this specially
+						return null;
+					}
+					return new PluralValue( type, list );
 				}
 			}
 
@@ -3597,7 +3624,9 @@ public class Parser
 					}
 					catch ( NumberFormatException e )
 					{
-						throw this.parseException( "Hexadecimal character escape requires 2 digits" );
+						this.error( "Hexadecimal character escape requires 2 digits" );
+
+						resultString.append( ch );
 					}
 					break;
 
@@ -3610,7 +3639,9 @@ public class Parser
 					}
 					catch ( NumberFormatException e )
 					{
-						throw this.parseException( "Unicode character escape requires 4 digits" );
+						this.error( "Unicode character escape requires 4 digits" );
+
+						resultString.append( ch );
 					}
 					break;
 
@@ -3626,7 +3657,7 @@ public class Parser
 						}
 						catch ( NumberFormatException e )
 						{
-							throw this.parseException( "Octal character escape requires 3 digits" );
+							this.error( "Octal character escape requires 3 digits" );
 						}
 					}
 					resultString.append( ch );
@@ -3641,12 +3672,15 @@ public class Parser
 				this.currentLine = this.currentLine.substring( i + 1 );
 
 				Value rhs = this.parseExpression( scope );
-				if ( !"}".equals( this.currentToken() ) )
-				{
-					throw this.parseException( "}", this.currentToken() );
-				}
 
-				this.readToken(); // }
+				if ( "}".equals( this.currentToken() ) )
+				{
+					this.readToken(); // }
+				}
+				else
+				{
+					this.parseException( "}", this.currentToken() );
+				}
 
 				// Set i to -1 so that it is set to zero by the loop as the currentLine has been shortened
 				i = -1;
@@ -3661,8 +3695,8 @@ public class Parser
 					conc.addString( lhs );
 					conc.addString( rhs );
 				}
-				
-				resultString.setLength(0);
+
+				resultString.setLength( 0 );
 				continue;
 			}
 
@@ -3686,7 +3720,7 @@ public class Parser
 					slash = true;
 					continue;
 				}
-			} 
+			}
 
 			// Handle plain strings
 			if ( type == null )
