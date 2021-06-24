@@ -910,110 +910,163 @@ public class Parser
 
 		String functionName = this.currentToken();
 
-		Position start = this.here();
+		Position functionStart = this.here();
+		boolean functionError = false;
+
+		this.readToken(); //read Function name
 
 		if ( Parser.isReservedWord( functionName ) )
 		{
-			throw this.parseException( "Reserved word '" + functionName + "' cannot be used as a function name" );
+			this.error( functionStart, "Reserved word '" + functionName + "' cannot be used as a function name" );
+			functionError = true;
 		}
 
-		this.readToken(); //read Function name
 		this.readToken(); //read (
 
 		VariableList paramList = new VariableList();
 		List<VariableReference> variableReferences = new ArrayList<VariableReference>();
 		boolean vararg = false;
 
-		while ( !")".equals( this.currentToken() ) )
+		Position previousPosition = null;
+		while ( this.madeProgress( previousPosition, previousPosition = this.here() ) )
 		{
-			Position varargStart = this.here();
+			Position parameterStart = this.here();
+			boolean parameterError = false;
+
+			if ( this.atEndOfFile() )
+			{
+				this.parseException( parameterStart, ")", "end of file" );
+				functionError = parameterError = true;
+				break;
+			}
+
+			if ( ")".equals( this.currentToken() ) )
+			{
+				this.readToken(); //read )
+				break;
+			}
 
 			Type paramType = this.parseType( parentScope, false );
 			if ( paramType == null )
 			{
-				throw this.parseException( ")", this.currentToken() );
+				if ( !parameterError )
+				{
+					this.parseException( parameterStart, ")", this.currentToken() );
+				}
+				functionError = parameterError = true;
+
+				break;
 			}
 
 			if ( "...".equals( this.currentToken() ) )
 			{
+				this.readToken(); //read ...
+
 				// We can only have a single vararg parameter
 				if ( vararg )
 				{
-					throw this.parseException( "Only one vararg parameter is allowed" );
+					if ( !parameterError )
+					{
+						this.error( parameterStart, "Only one vararg parameter is allowed" );
+					}
+					functionError = parameterError = true;
+
+					paramType = Type.BAD_TYPE;
 				}
-				// Make an vararg type out of the previously parsed type.
-				paramType = new VarArgType( paramType );
+				else
+				{
+					// Make an vararg type out of the previously parsed type.
+					paramType = new VarArgType( paramType );
 
-				this.readToken(); //read ...
+					paramType.getReferenceLocations().add( this.makeLocation( parameterStart ) );
 
-				paramType.getReferenceLocations().add( this.makeLocation( varargStart ) );
-
-				// Only one vararg is allowed
-				vararg = true;
+					// Only one vararg is allowed
+					vararg = true;
+				}
 			}
 
 			Variable param = this.parseVariable( paramType, null );
 			if ( param == null )
 			{
-				throw this.parseException( "identifier", this.currentToken() );
+				if ( !parameterError )
+				{
+					this.parseException( parameterStart, "identifier", this.currentToken() );
+				}
+				functionError = parameterError = true;
+
+				continue;
 			}
 
 			if ( !paramList.add( param ) )
 			{
-				throw this.parseException( "Variable " + param.getName() + " is already defined" );
+				if ( !parameterError )
+				{
+					this.error( parameterStart, "Variable " + param.getName() + " is already defined" );
+				}
+				functionError = parameterError = true;
 			}
 
 			if ( !")".equals( this.currentToken() ) )
 			{
 				// The single vararg parameter must be the last one
-				if ( vararg )
+				if ( vararg && !parameterError )
 				{
-					throw this.parseException( "The vararg parameter must be the last one" );
+					this.error( parameterStart, "The vararg parameter must be the last one" );
+					functionError = parameterError = true;
 				}
 
-				if ( !",".equals( this.currentToken() ) )
+				if ( ",".equals( this.currentToken() ) )
 				{
-					throw this.parseException( ",", this.currentToken() );
+					this.readToken(); //read comma
 				}
-
-				this.readToken(); //read comma
+				else
+				{
+					if ( !parameterError )
+					{
+						this.parseException( parameterStart, ",", this.currentToken() );
+					}
+					functionError = parameterError = true;
+				}
 			}
 
 			variableReferences.add( new VariableReference( param ) );
 		}
 
-		this.readToken(); //read )
-
 		// Add the function to the parent scope before we parse the
 		// function scope to allow recursion.
 
-		UserDefinedFunction f = new UserDefinedFunction( functionName, functionType, this.makeLocation( start ), variableReferences );
+		Location functionLocation = this.makeLocation( functionStart );
 
-		if ( f.overridesLibraryFunction() )
+		UserDefinedFunction f = new UserDefinedFunction( functionName, functionType, functionLocation, variableReferences );
+
+		if ( !functionError && f.overridesLibraryFunction() )
 		{
-			throw this.overridesLibraryFunctionException( f );
+			this.overridesLibraryFunctionError( functionStart, f );
+			functionError = true;
 		}
 
 		UserDefinedFunction existing = parentScope.findFunction( f );
 
-		if ( existing != null && existing.getScope() != null )
+		if ( !functionError && existing != null && existing.getScope() != null )
 		{
-			throw this.multiplyDefinedFunctionException( f );
+			this.multiplyDefinedFunctionError( functionStart, f );
+			functionError = true;
 		}
 
-		if ( vararg )
+		if ( !functionError && vararg )
 		{
 			Function clash = parentScope.findVarargClash( f );
 
 			if ( clash != null )
 			{
-				throw this.varargClashException( f, clash );
+				this.varargClashError( functionStart, f, clash );
+				functionError = true;
 			}
 		}
 
 		// Add new function or replace existing forward reference
 
-		UserDefinedFunction result = parentScope.replaceFunction( existing, f );
+		UserDefinedFunction result = functionError ? f : parentScope.replaceFunction( existing, f );
 
 		if ( ";".equals( this.currentToken() ) )
 		{
@@ -1027,7 +1080,7 @@ public class Parser
 		result.setScope( scope );
 		if ( !result.assertBarrier() && !functionType.equals( DataTypes.TYPE_VOID ) )
 		{
-			throw this.parseException( "Missing return value" );
+			this.error( functionLocation, "Missing return value" );
 		}
 
 		return result;
