@@ -2946,27 +2946,38 @@ public class Parser
 		if ( "(".equals( current ) )
 		{
 			name = this.parseExpression( scope );
-			if ( name == null || !name.getType().equals( DataTypes.STRING_TYPE ) )
+
+			if ( name == null || !name.getType().equals( DataTypes.STRING_TYPE ) && name.getType() != Type.BAD_TYPE )
 			{
-				throw this.parseException( "String expression expected for function name" );
+				this.error( "String expression expected for function name" );
+
+				name = Value.BAD_VALUE;
 			}
 		}
 		else
 		{
-			if ( !this.parseIdentifier( current ) )
-			{
-				throw this.parseException( "Variable reference expected for function name" );
-			}
-
 			name = this.parseVariableReference( scope );
 
 			if ( !( name instanceof VariableReference ) )
 			{
-				throw this.parseException( "Variable reference expected for function name" );
+				this.error( "Variable reference expected for function name" );
+
+				name = VariableReference.BAD_VARIABLE_REFERENCE;
 			}
 		}
 
-		List<Value> params = parseParameters( scope, null );
+		List<Value> params;
+
+		if ( "(".equals( this.currentToken() ) )
+		{
+			params = parseParameters( scope, null );
+		}
+		else
+		{
+			this.parseException( "(", this.currentToken() );
+
+			params = new ArrayList<>();
+		}
 
 		FunctionInvocation call = new FunctionInvocation( scope, type, name, params, this );
 
