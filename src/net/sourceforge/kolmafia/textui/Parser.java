@@ -2829,12 +2829,16 @@ public class Parser
 		List<Value> params = this.parseParameters( scope, firstParam );
 		Function target = scope.findFunction( name, params );
 
-		if ( target == null )
+		if ( target != null )
 		{
-			throw this.undefinedFunctionException( name, params );
+			target.addReference( nameLocation );
 		}
+		else
+		{
+			this.error( nameLocation, Parser.undefinedFunctionMessage( name, params ) );
 
-		target.addReference( nameLocation );
+			target = Function.BAD_FUNCTION;
+		}
 
 		params = this.autoCoerceParameters( target, params, scope );
 		FunctionCall call = new FunctionCall( target, params, this );
