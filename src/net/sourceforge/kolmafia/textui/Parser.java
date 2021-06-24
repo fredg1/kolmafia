@@ -1976,26 +1976,46 @@ public class Parser
 			return null;
 		}
 
-		if ( !"(".equals( this.nextToken() ) )
+		this.readToken(); // while
+
+		boolean whileError = false;
+
+		if ( "(".equals( this.currentToken() ) )
 		{
-			throw this.parseException( "(", this.nextToken() );
+			this.readToken(); // (
+		}
+		else if ( !whileError )
+		{
+			this.parseException( "(", this.currentToken() );
+			whileError = true;
 		}
 
-		this.readToken(); // while
-		this.readToken(); // (
+		Position conditionStart = this.here();
 
 		Value condition = this.parseExpression( parentScope );
-		if ( !")".equals( this.currentToken() ) )
+
+		Location conditionLocation = this.makeLocation( conditionStart );
+
+		if ( ")".equals( this.currentToken() ) )
 		{
-			throw this.parseException( ")", this.currentToken() );
+			this.readToken(); // )
+		}
+		else if ( !whileError )
+		{
+			this.parseException( ")", this.currentToken() );
+			whileError = true;
 		}
 
 		if ( condition == null || condition.getType() != DataTypes.BOOLEAN_TYPE )
 		{
-			throw this.parseException( "\"while\" requires a boolean conditional expression" );
-		}
+			if ( !whileError )
+			{
+				this.error( conditionLocation, "\"while\" requires a boolean conditional expression" );
+				whileError = true;
+			}
 
-		this.readToken(); // )
+			condition = Value.BAD_VALUE;
+		}
 
 		Scope scope = this.parseLoopScope( functionType, null, parentScope );
 
