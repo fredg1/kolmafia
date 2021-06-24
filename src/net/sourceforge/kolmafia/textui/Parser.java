@@ -1883,11 +1883,18 @@ public class Parser
 
 		ByteArrayStream ostream = new ByteArrayStream();
 
-		while ( !"}".equals( this.currentToken() ) )
+		while ( true )
 		{
+			if ( "}".equals( this.currentToken() ) )
+			{
+				this.readToken(); // }
+				break;
+			}
+
 			if ( this.atEndOfFile() )
 			{
-				throw this.parseException( "}", this.currentToken() );
+				this.parseException( "}", "end of file" );
+				break;
 			}
 
 			try
@@ -1906,8 +1913,6 @@ public class Parser
 			this.currentLine = this.currentLine.clear();
 			this.fixLines();
 		}
-
-		this.readToken(); // }
 
 		return new BasicScript( ostream );
 	}
