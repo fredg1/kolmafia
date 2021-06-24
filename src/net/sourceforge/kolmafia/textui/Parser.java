@@ -2224,7 +2224,7 @@ public class Parser
 			return null;
 		}
 
-		this.readToken(); // final
+		this.readToken(); // static
 
 		Scope result = new StaticScope( parentScope );
 
@@ -2237,12 +2237,14 @@ public class Parser
 
 		this.parseScope( result, functionType, parentScope, false, false );
 
-		if ( !"}".equals( this.currentToken() ) )
+		if ( "}".equals( this.currentToken() ) )
 		{
-			throw this.parseException( "}", this.currentToken() );
+			this.readToken(); //read }
 		}
-
-		this.readToken(); //read }
+		else
+		{
+			this.parseException( "}", this.currentToken() );
+		}
 
 		return result;
 	}
