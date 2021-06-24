@@ -1168,49 +1168,86 @@ public class Parser
 			return false;
 		}
 
+		Position typedefStart = this.here();
+		boolean typedefError = false;
+
 		this.readToken(); // read typedef
 
 		Type t = this.parseType( parentScope, true );
 		if ( t == null )
 		{
-			throw this.parseException( "Missing data type for typedef" );
+			if ( !typedefError )
+			{
+				this.error( typedefStart, "Missing data type for typedef" );
+				typedefError = true;
+			}
+
+			t = Type.BAD_TYPE;
 		}
 
 		String typeName = this.currentToken();
-		Position start = this.here();
+		Position nameStart = this.here();
 
 		if ( ";".equals( typeName ) )
 		{
-			throw this.parseException( "Type name expected" );
-		}
+			if ( !typedefError )
+			{
+				this.error( nameStart, "Type name expected" );
+				typedefError = true;
+			}
 
-		if ( !this.parseIdentifier( typeName ) )
+			typeName = null;
+			// don't read
+		}
+		else if ( !this.parseIdentifier( typeName ) )
 		{
-			throw this.parseException( "Invalid type name '" + typeName + "'" );
-		}
+			if ( !typedefError )
+			{
+				this.error( nameStart, "Invalid type name '" + typeName + "'" );
+				typedefError = true;
+			}
 
-		if ( Parser.isReservedWord( typeName ) )
+			typeName = null;
+			// don't read
+		}
+		else if ( Parser.isReservedWord( typeName ) )
 		{
-			throw this.parseException( "Reserved word '" + typeName + "' cannot be a type name" );
-		}
+			if ( !typedefError )
+			{
+				this.error( nameStart, "Reserved word '" + typeName + "' cannot be a type name" );
+				typedefError = true;
+			}
 
-		this.readToken(); // read name
+			typeName = null;
+			this.readToken(); // read name
+		}
+		else
+		{
+			this.readToken(); // read name
+		}
 
 		Type existingType = parentScope.findType( typeName );
 		if ( existingType != null )
 		{
-			if ( existingType.getBaseType().equals( t ) )
+			if ( existingType.getBaseType().equals( t ) ||
+			     existingType.getBaseType().simpleType() == Type.BAD_TYPE )
 			{
 				// It is OK to redefine a typedef with an equivalent type
 				return true;
 			}
-				
-			throw this.parseException( "Type name '" + typeName + "' is already defined" );
-		}
 
-		// Add the type to the type table
-		TypeDef type = new TypeDef( typeName, t, this.makeLocation( start ) );
-		parentScope.addType( type );
+			if ( !typedefError )
+			{
+				this.error( nameStart, "Type name '" + typeName + "' is already defined" );
+				typedefError = true;
+			}
+		}
+		else if ( typeName != null )
+		{
+			// Add the type to the type table
+			TypeDef type = new TypeDef( typeName, t, this.makeLocation( nameStart ) );
+			parentScope.addType( type );
+		}
 
 		return true;
 	}
