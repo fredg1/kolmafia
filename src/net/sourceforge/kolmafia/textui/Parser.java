@@ -2719,18 +2719,28 @@ public class Parser
 		String name = this.currentToken();
 		Type type = scope.findType( name );
 
-		Position start = this.here();
+		Position nameStart = this.here();
+		boolean newRecordError = false, newRecordSyntaxError = false;
 
 		this.readToken(); //name
 
 		if ( type != null )
 		{
-			type.addReference( this.makeLocation( start ) );
+			type.addReference( this.makeLocation( nameStart ) );
 		}
 
 		if ( !( type instanceof RecordType ) )
 		{
-			throw this.parseException( "'" + name + "' is not a record type" );
+			if ( type.getBaseType() != Type.BAD_TYPE )
+			{
+				if ( !newRecordSyntaxError )
+				{
+					this.error( nameStart, "'" + name + "' is not a record type" );
+				}
+				newRecordError = newRecordSyntaxError = true;
+			}
+
+			type = RecordType.BAD_RECORD;
 		}
 
 		RecordType target = (RecordType) type;
@@ -2744,11 +2754,20 @@ public class Parser
 		{
 			this.readToken(); //(
 
-			while ( !")".equals( this.currentToken() ) )
+			Position previousPosition = null;
+			while ( this.madeProgress( previousPosition, previousPosition = this.here() ) )
 			{
 				if ( this.atEndOfFile() )
 				{
-					throw this.parseException( ")", this.currentToken() );
+					this.parseException( ")", "end of file" );
+					newRecordError = newRecordSyntaxError = true;
+					break;
+				}
+
+				if ( ")".equals( this.currentToken() ) )
+				{
+					this.readToken(); // )
+					break;
 				}
 
 				Type expected = types[param].getBaseType();
@@ -2758,10 +2777,24 @@ public class Parser
 				{
 					val = DataTypes.VOID_VALUE;
 				}
-				else if ( "{".equals( this.currentToken() ) && expected instanceof AggregateType )
+				else if ( "{".equals( this.currentToken() ) )
 				{
 					this.readToken(); // read {
-					val = this.parseAggregateLiteral( scope, (AggregateType) expected );
+
+					if ( expected instanceof AggregateType )
+					{
+						val = this.parseAggregateLiteral( scope, (AggregateType) expected );
+					}
+					else
+					{
+						if ( !newRecordError )
+						{
+							this.error( "Aggregate found when " + expected + " expected for field #" + ( param + 1 ) + " (" + names[param] + ")" );
+							newRecordError = true;
+						}
+
+						val = this.parseAggregateLiteral( scope, AggregateType.BAD_AGGREGATE );
+					}
 				}
 				else
 				{
@@ -2770,7 +2803,13 @@ public class Parser
 
 				if ( val == null )
 				{
-					throw this.parseException( "Expression expected for field #" + ( param + 1 ) + " (" + names[param] + ")" );
+					if ( !newRecordSyntaxError )
+					{
+						this.error( "Expression expected for field #" + ( param + 1 ) + " (" + names[param] + ")" );
+					}
+					newRecordError = newRecordSyntaxError = true;
+
+					val = Value.BAD_VALUE;
 				}
 
 				if ( val != DataTypes.VOID_VALUE )
@@ -2779,7 +2818,13 @@ public class Parser
 					Type given = val.getType();
 					if ( !Operator.validCoercion( expected, given, "assign" ) )
 					{
-						throw this.parseException( given + " found when " + expected + " expected for field #" + ( param + 1 ) + " (" + names[param] + ")" );
+						if ( !newRecordError )
+						{
+							this.error( given + " found when " + expected + " expected for field #" + ( param + 1 ) + " (" + names[param] + ")" );
+							newRecordError = true;
+						}
+
+						val = Value.BAD_VALUE;
 					}
 				}
 
@@ -2790,14 +2835,16 @@ public class Parser
 				{
 					if ( param == names.length )
 					{
-						throw this.parseException( "Too many field initializers for record " + name );
+						if ( !newRecordSyntaxError )
+						{
+							this.error( "Too many field initializers for record " + name );
+						}
+						newRecordError = newRecordSyntaxError = true;
 					}
 
 					this.readToken(); // ,
 				}
 			}
-
-			this.readToken(); // )
 		}
 
 		return target.initialValueExpression( params );
