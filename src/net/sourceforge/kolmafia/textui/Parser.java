@@ -2805,24 +2805,33 @@ public class Parser
 		Scope scope = new Scope( parentScope );
 		List<Assignment> initializers = new ArrayList<Assignment>();
 
+		boolean javaForError = false, javaForSyntaxError = false;
+
 		// Parse each initializer in the context of scope, adding
 		// variable to variable list in the scope, and saving
 		// initialization expressions in initializers.
 
-		while ( !this.atEndOfFile() && !";".equals( this.currentToken() ) )
+		while ( !";".equals( this.currentToken() ) )
 		{
 			Type t = this.parseType( scope, true );
 
 			String name = this.currentToken();
-			Position start = this.here();
-			Variable variable;
+			Position nameStart = this.here();
+
+			this.readToken(); // name
 
 			if ( !this.parseIdentifier( name ) || Parser.isReservedWord( name ) )
 			{
-				throw this.parseException( "Identifier required" );
+				if ( !javaForSyntaxError )
+				{
+					this.error( nameStart, "Identifier required" );
+				}
+				javaForError = javaForSyntaxError = true;
+
+				name = null;
 			}
 
-			this.readToken(); // name
+			Variable variable;
 
 			// If there is no data type, it is using an existing variable
 			if ( t == null )
@@ -2830,19 +2839,35 @@ public class Parser
 				variable = parentScope.findVariable( name );
 				if ( variable == null )
 				{
-					throw this.parseException( "Unknown variable '" + name + "'" );
+					if ( !javaForError )
+					{
+						this.error( nameStart, "Unknown variable '" + name + "'" );
+						javaForError = true;
+					}
+
+					variable = Variable.BAD_VARIABLE;
 				}
+
 				t = variable.getType();
 			}
 			else
 			{
-				if ( scope.findVariable( name, true ) != null )
+				// Create variable and add it to the scope
+				if ( scope.findVariable( name, true ) == null )
 				{
-					throw this.parseException( "Variable '" + name + "' already defined" );
+					variable = new Variable( name, t, this.makeLocation( nameStart ) );
+				}
+				else
+				{
+					if ( !javaForError )
+					{
+						this.error( nameStart, "Variable '" + name + "' already defined" );
+						javaForError = true;
+					}
+
+					variable = Variable.BAD_VARIABLE;
 				}
 
-				// Create variable and add it to the scope
-				variable = new Variable( name, t, this.makeLocation( start ) );
 				scope.addVariable( variable );
 			}
 
@@ -2857,7 +2882,13 @@ public class Parser
 
 				if ( rhs == null )
 				{
-					throw this.parseException( "Expression expected" );
+					if ( !javaForSyntaxError )
+					{
+						this.error( "Expression expected" );
+					}
+					javaForError = javaForSyntaxError = true;
+
+					rhs = Value.BAD_VALUE;
 				}
 
 				Type ltype = t.getBaseType();
@@ -2866,14 +2897,20 @@ public class Parser
 
 				if ( !Operator.validCoercion( ltype, rtype, "assign" ) )
 				{
-					throw this.parseException( "Cannot store " + rtype + " in " + name + " of type " + ltype );
+					if ( !javaForError )
+					{
+						this.error( "Cannot store " + rtype + " in " + name + " of type " + ltype );
+						javaForError = true;
+					}
+
+					rhs = Value.BAD_VALUE;
 				}
 
 			}
 
 			Assignment initializer = new Assignment( lhs, rhs );
 
-			initializers.add( initializer);
+			initializers.add( initializer );
 
 			if ( ",".equals( this.currentToken() ) )
 			{
@@ -2881,17 +2918,27 @@ public class Parser
 
 				if ( ";".equals( this.currentToken() ) )
 				{
-					throw this.parseException( "Identifier expected" );
+					if ( !javaForSyntaxError )
+					{
+						this.error( "Identifier expected" );
+					}
+					javaForError = javaForSyntaxError = true;
 				}
 			}
 		}
 
-		if ( !";".equals( this.currentToken() ) )
+		if ( ";".equals( this.currentToken() ) )
 		{
-			throw this.parseException( ";", this.currentToken() );
+			this.readToken(); // ;
 		}
-
-		this.readToken(); // ;
+		else
+		{
+			if ( !javaForSyntaxError )
+			{
+				this.parseException( ";", this.currentToken() );
+			}
+			javaForError = javaForSyntaxError = true;
+		}
 
 		// Parse condition in context of scope
 
@@ -2899,17 +2946,29 @@ public class Parser
 			( ";".equals( this.currentToken() ) ) ?
 			DataTypes.TRUE_VALUE : this.parseExpression( scope );
 
-		if ( !";".equals( this.currentToken() ) )
+		if ( ";".equals( this.currentToken() ) )
 		{
-			throw this.parseException( ";", this.currentToken() );
+			this.readToken(); // ;
+		}
+		else
+		{
+			if ( !javaForSyntaxError )
+			{
+				this.parseException( ";", this.currentToken() );
+			}
+			javaForError = javaForSyntaxError = true;
 		}
 
-		if ( condition == null || condition.getType() != DataTypes.BOOLEAN_TYPE )
+		if ( condition == null || condition.getType() != DataTypes.BOOLEAN_TYPE && condition.getType().simpleType() != Type.BAD_TYPE )
 		{
-			throw this.parseException( "\"for\" requires a boolean conditional expression" );
-		}
+			if ( !javaForError )
+			{
+				this.error( "\"for\" requires a boolean conditional expression" );
+				javaForError = true;
+			}
 
-		this.readToken(); // ;
+			condition = Value.BAD_VALUE;
+		}
 
 		// Parse incrementers in context of scope
 
@@ -2927,7 +2986,13 @@ public class Parser
 				value = this.parseVariableReference( scope );
 				if ( !( value instanceof VariableReference ) )
 				{
-					throw this.parseException( "Variable reference expected" );
+					if ( !javaForSyntaxError )
+					{
+						this.error( "Variable reference expected" );
+					}
+					javaForError = javaForSyntaxError = true;
+
+					value = VariableReference.BAD_VARIABLE_REFERENCE;
 				}
 
 				VariableReference ref = (VariableReference) value;
@@ -2937,14 +3002,17 @@ public class Parser
 				{
 					Assignment incrementer = parseAssignment( scope, ref );
 
-					if ( incrementer == null )
+					if ( incrementer != null )
 					{
-						throw this.parseException( "Variable '" + ref.getName() + "' not incremented" );
+						incrementers.add( incrementer );
 					}
-
-					incrementers.add( incrementer );
+					else if ( !javaForError )
+					{
+						this.error( "Variable '" + ref.getName() + "' not incremented" );
+						javaForError = true;
+					}
 				}
-				else 
+				else
 				{
 					incrementers.add( lhs );
 				}
@@ -2956,17 +3024,27 @@ public class Parser
 
 				if ( this.atEndOfFile() || ")".equals( this.currentToken() ) )
 				{
-					throw this.parseException( "Identifier expected" );
+					if ( !javaForSyntaxError )
+					{
+						this.error( "Identifier expected" );
+					}
+					javaForError = javaForSyntaxError = true;
 				}
 			}
 		}
 
-		if ( !")".equals( this.currentToken() ) )
+		if ( ")".equals( this.currentToken() ) )
 		{
-			throw this.parseException( ")", this.currentToken() );
+			this.readToken(); // )
 		}
-
-		this.readToken(); // )
+		else
+		{
+			if ( !javaForSyntaxError )
+			{
+				this.parseException( ")", this.currentToken() );
+			}
+			javaForError = javaForSyntaxError = true;
+		}
 
 		// Parse scope body
 		this.parseLoopScope( scope, functionType, parentScope );
