@@ -506,11 +506,15 @@ public class Parser
 					s.append( "; " );
 				s.append( f.getPath() );
 			}
-			throw this.parseException( "too many matches for " + fileName + ": " + s );
+			this.error( "too many matches for " + fileName + ": " + s );
+
+			return scope;
 		}
 		if ( matches.size() == 0 )
 		{
-			throw this.parseException( fileName + " could not be found" );
+			this.error( fileName + " could not be found" );
+
+			return scope;
 		}
 
 		File scriptFile = matches.get( 0 );
@@ -531,7 +535,7 @@ public class Parser
 			result = parser.parseScope( scope, null, null, scope.getParentScope(), false, false );
 			if ( parser.currentLine != null )
 			{
-				throw this.parseException( "Script parsing error" );
+				parser.error( "Script parsing error; thought we reached the end of the file" );
 			}
 		}
 		finally
@@ -539,6 +543,11 @@ public class Parser
 			if ( parser != null )
 			{
 				parser.disconnect();
+
+				for ( AshDiagnostic diagnostic : parser.diagnostics )
+				{
+					this.diagnostics.add( diagnostic );
+				}
 			}
 		}
 
