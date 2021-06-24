@@ -2517,30 +2517,43 @@ public class Parser
 		this.readToken(); // foreach
 
 		List<String> names = new ArrayList<String>();
-		List<Position> positions = new ArrayList<>();
+		List<Location> locations = new ArrayList<>();
 
 		while ( true )
 		{
 			String name = this.currentToken();
 
-			if ( !this.parseIdentifier( name ) )
-			{
-				throw this.parseException( "Key variable name expected" );
-			}
+			Position nameStart = this.here();
 
-			if ( Parser.isReservedWord( name ) )
+			if ( !this.parseIdentifier( name ) ||
+			     // foreach in aggregate (i.e. no key)
+			     "in".equalsIgnoreCase( this.currentToken() ) &&
+			     !"in".equalsIgnoreCase( this.nextToken() ) &&
+			     !",".equals( this.nextToken() ) )
 			{
-				throw this.parseException( "Reserved word '" + name + "' cannot be a key variable name" );
+				// don't read
+				this.error( nameStart, "Key variable name expected" );
 			}
-
-			if ( names.contains( name ) )
+			else if ( Parser.isReservedWord( name ) )
 			{
-				throw this.parseException( "Key variable '" + name + "' is already defined" );
+				this.readToken(); // name
+				this.error( "Reserved word '" + name + "' cannot be a key variable name" );
+				names.add( null );
+				locations.add( null );
 			}
-
-			names.add( name );
-			positions.add( this.here() );
-			this.readToken(); // name
+			else if ( names.contains( name ) )
+			{
+				this.readToken(); // name
+				this.error( "Key variable '" + name + "' is already defined" );
+				names.add( null );
+				locations.add( null );
+			}
+			else
+			{
+				this.readToken(); // name
+				names.add( name );
+				locations.add( this.makeLocation( nameStart ) );
+			}
 
 			if ( ",".equals( this.currentToken() ) )
 			{
@@ -2554,15 +2567,32 @@ public class Parser
 				break;
 			}
 
-			throw this.parseException( "in", this.currentToken() );
+			if ( !this.madeProgress( nameStart, this.here() ) )
+			{
+				// happened because we got a non-identifier token as a name
+				// (e.g. a period or a parenthesis)
+
+				// just skip the token and move forward
+				this.readToken();
+			}
+			else
+			{
+				this.parseException( "in", this.currentToken() );
+			}
+
+			break;
 		}
 
 		// Get an aggregate reference
 		Value aggregate = this.parseValue( parentScope );
 
+		Position aggregateStart = this.here();
+
 		if ( aggregate == null || !( aggregate.getType().getBaseType() instanceof AggregateType ) )
 		{
-			throw this.parseException( "Aggregate reference expected" );
+			this.error( aggregateStart, "Aggregate reference expected" );
+
+			aggregate = Value.BAD_VALUE;
 		}
 
 		// Define key variables of appropriate type
@@ -2573,27 +2603,37 @@ public class Parser
 		for ( int i = 0; i < names.size(); i++ )
 		{
 			String name = names.get( i );
-			Position start = positions.get( i );
+			Location location = locations.get( i );
 
 			Type itype;
 			if ( type == null )
 			{
-				throw this.parseException( "Too many key variables specified" );
+				this.error( location, "Too many key variables specified" );
+
+				break;
 			}
-			else if ( !( type instanceof AggregateType ) )
-			{	// Variable after all key vars holds the value instead
-				itype = type;
-				type = null;
-			}
-			else
+
+			if ( type instanceof AggregateType )
 			{
 				itype = ( (AggregateType) type ).getIndexType();
 				type = ( (AggregateType) type ).getDataType();
 			}
+			else if ( type.simpleType() == Type.BAD_TYPE )
+			{
+				itype = Type.BAD_TYPE;
+			}
+			else
+			{	// Variable after all key vars holds the value instead
+				itype = type;
+				type = null;
+			}
 
-			Variable keyvar = new Variable( name, itype, makeLocation( start ) );
-			varList.add( keyvar );
-			variableReferences.add( new VariableReference( keyvar ) );
+			if ( name != null )
+			{
+				Variable keyvar = new Variable( name, itype, location );
+				varList.add( keyvar );
+				variableReferences.add( new VariableReference( keyvar ) );
+			}
 		}
 
 		// Parse the scope with the list of keyVars
