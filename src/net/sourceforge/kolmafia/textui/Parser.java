@@ -707,105 +707,169 @@ public class Parser
 
 		if ( ";".equals( this.currentToken() ) )
 		{
-			throw this.parseException( "Record name expected" );
+			this.error( "Record name expected" );
+
+			return Type.BAD_TYPE;
 		}
 
 		// Allow anonymous records
 		String recordName = null;
 		Location recordDefinition = null;
 		Position recordStart = this.here();
+		boolean recordError = false;
 
 		if ( !"{".equals( this.currentToken() ) )
 		{
 			// Named record
 			recordName = this.currentToken();
 
-			if ( !this.parseIdentifier( recordName ) )
-			{
-				throw this.parseException( "Invalid record name '" + recordName + "'" );
-			}
-
-			if ( Parser.isReservedWord( recordName ) )
-			{
-				throw this.parseException( "Reserved word '" + recordName + "' cannot be a record name" );
-			}
-
-			if ( parentScope.findType( recordName ) != null )
-			{
-				throw this.parseException( "Record name '" + recordName + "' is already defined" );
-			}
-
 			this.readToken(); // read name
 
 			recordDefinition = this.makeLocation( recordStart );
+
+			if ( !this.parseIdentifier( recordName ) )
+			{
+				this.error( recordDefinition, "Invalid record name '" + recordName + "'" );
+				recordError = true;
+
+				recordName = null;
+			}
+			else if ( Parser.isReservedWord( recordName ) )
+			{
+				this.error( recordDefinition, "Reserved word '" + recordName + "' cannot be a record name" );
+				recordError = true;
+
+				recordName = null;
+			}
+			else if ( parentScope.findType( recordName ) != null )
+			{
+				this.error( recordDefinition, "Record name '" + recordName + "' is already defined" );
+				recordError = true;
+
+				recordName = null;
+			}
 		}
 
-		if ( !"{".equals ( this.currentToken() ) )
+		if ( "{".equals( this.currentToken() ) )
 		{
-			throw this.parseException( "{", this.currentToken() );
+			this.readToken(); // read {
 		}
+		else
+		{
+			this.parseException( "{", this.currentToken() );
 
-		this.readToken(); // read {
+			return Type.BAD_TYPE;
+		}
 
 		// Loop collecting fields
 		List<Type> fieldTypes = new ArrayList<Type>();
 		List<String> fieldNames = new ArrayList<String>();
 
-		while ( true )
+		Position previousPosition = null;
+		while ( this.madeProgress( previousPosition, previousPosition = this.here() ) )
 		{
+			Position fieldStart = this.here();
+			boolean fieldError = false;
+
+			if ( this.atEndOfFile() )
+			{
+				this.parseException( fieldStart, "}", "end of file" );
+				recordError = fieldError = true;
+				break;
+			}
+
+			if ( "}".equals( this.currentToken() ) )
+			{
+				if ( fieldTypes.isEmpty() && !recordError )
+				{
+					this.error( fieldStart, "Record field(s) expected" );
+					recordError = fieldError = true;
+				}
+
+				this.readToken(); // read }
+				break;
+			}
+
 			// Get the field type
 			Type fieldType = this.parseType( parentScope, true );
 			if ( fieldType == null )
 			{
-				throw this.parseException( "Type name expected" );
+				this.error( fieldStart, "Type name expected" );
+				recordError = fieldError = true;
+
+				fieldType = Type.BAD_TYPE;
 			}
 
 			// Get the field name
 			String fieldName = this.currentToken();
 			if ( ";".equals( fieldName ) )
 			{
-				throw this.parseException( "Field name expected" );
+				if ( !fieldError )
+				{
+					this.error( fieldStart, "Field name expected" );
+				}
+				recordError = fieldError = true;
+
+				fieldName = null;
+				// don't read
+			}
+			else if ( !this.parseIdentifier( fieldName ) )
+			{
+				if ( !fieldError )
+				{
+					this.error( fieldStart, "Invalid field name '" + fieldName + "'" );
+				}
+				recordError = fieldError = true;
+
+				fieldName = null;
+				// don't read
+			}
+			else if ( Parser.isReservedWord( fieldName ) )
+			{
+				if ( !fieldError )
+				{
+					this.error( fieldStart, "Reserved word '" + fieldName + "' cannot be used as a field name" );
+				}
+				recordError = fieldError = true;
+
+				fieldName = null;
+				this.readToken(); // read name
+			}
+			else if ( fieldNames.contains( fieldName ) )
+			{
+				if ( !fieldError )
+				{
+					this.error( fieldStart, "Field name '" + fieldName + "' is already defined" );
+				}
+				recordError = fieldError = true;
+
+				fieldName = null;
+				this.readToken(); // read name
+			}
+			else
+			{
+				this.readToken(); // read name
 			}
 
-			if ( !this.parseIdentifier( fieldName ) )
+			if ( ";".equals( this.currentToken() ) )
 			{
-				throw this.parseException( "Invalid field name '" + fieldName + "'" );
+				this.readToken(); // read ;
+			}
+			else
+			{
+				if ( !fieldError )
+				{
+					this.parseException( fieldStart, ";", this.currentToken() );
+				}
+				recordError = fieldError = true;
 			}
 
-			if ( Parser.isReservedWord( fieldName ) )
+			if ( fieldName != null )
 			{
-				throw this.parseException( "Reserved word '" + fieldName + "' cannot be used as a field name" );
-			}
-
-			if ( fieldNames.contains( fieldName ) )
-			{
-				throw this.parseException( "Field name '" + fieldName + "' is already defined" );
-			}
-
-			this.readToken(); // read name
-
-			if ( !";".equals( this.currentToken() ) )
-			{
-				throw this.parseException( ";", this.currentToken() );
-			}
-
-			this.readToken(); // read ;
-
-			fieldTypes.add( fieldType );
-			fieldNames.add( fieldName.toLowerCase() );
-
-			if ( this.atEndOfFile() )
-			{
-				throw this.parseException( "}", "EOF" );
-			}
-
-			if ( "}".equals( this.currentToken() ) )
-			{
-				break;
+				fieldTypes.add( fieldType );
+				fieldNames.add( fieldName.toLowerCase() );
 			}
 		}
-
-		this.readToken(); // read }
 
 		if ( recordDefinition == null )
 		{
@@ -823,7 +887,7 @@ public class Parser
 					( "(anonymous record " + Integer.toHexString( Arrays.hashCode( fieldNameArray ) ) + ")" ),
 				fieldNameArray, fieldTypeArray, recordDefinition );
 
-		if ( recordName != null )
+		if ( !recordError && recordName != null )
 		{
 			// Enter into type table
 			parentScope.addType( rec );
