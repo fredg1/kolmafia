@@ -2166,14 +2166,20 @@ public class Parser
 
 		// catch clauses would be parsed here
 
-		if ( !"finally".equalsIgnoreCase( this.currentToken() ) )
+		Scope finalClause;
+
+		if ( "finally".equalsIgnoreCase( this.currentToken() ) )
+		{
+			this.readToken(); // finally
+
+			finalClause = this.parseBlockOrSingleCommand( functionType, null, body, false, allowBreak, allowContinue );
+		}
+		else
 		{
 			// this would not be an error if at least one catch was present
-			throw this.parseException( "\"try\" without \"finally\" is pointless" );
+			this.error( "\"try\" without \"finally\" is pointless" );
+			finalClause = new Scope( body );
 		}
-		this.readToken(); // finally
-
-		Scope finalClause = this.parseBlockOrSingleCommand( functionType, null, body, false, allowBreak, allowContinue );
 
 		return new Try( body, finalClause );
 	}
