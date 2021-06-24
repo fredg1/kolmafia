@@ -3144,14 +3144,16 @@ public class Parser
 			this.readToken(); // !
 			if ( ( lhs = this.parseValue( scope ) ) == null )
 			{
-				throw this.parseException( "Value expected" );
+				this.error( "Value expected" );
+
+				lhs = Value.BAD_VALUE;
 			}
 
 			lhs = this.autoCoerceValue( DataTypes.BOOLEAN_TYPE, lhs, scope );
 			lhs = new Operation( lhs, new Operator( operator, this ) );
-			if ( lhs.getType() != DataTypes.BOOLEAN_TYPE )
+			if ( lhs.getType() != DataTypes.BOOLEAN_TYPE && lhs.getType() != Type.BAD_TYPE )
 			{
-				throw this.parseException( "\"!\" operator requires a boolean value" );
+				this.error( "\"!\" operator requires a boolean value" );
 			}
 		}
 		else if ( "~".equals( this.currentToken() ) )
@@ -3160,13 +3162,15 @@ public class Parser
 			this.readToken(); // ~
 			if ( ( lhs = this.parseValue( scope ) ) == null )
 			{
-				throw this.parseException( "Value expected" );
+				this.error( "Value expected" );
+
+				lhs = Value.BAD_VALUE;
 			}
 
 			lhs = new Operation( lhs, new Operator( operator, this ) );
-			if ( lhs.getType() != DataTypes.INT_TYPE && lhs.getType() != DataTypes.BOOLEAN_TYPE )
+			if ( lhs.getType() != DataTypes.INT_TYPE && lhs.getType() != DataTypes.BOOLEAN_TYPE && lhs.getType() != Type.BAD_TYPE )
 			{
-				throw this.parseException( "\"~\" operator requires an integer or boolean value" );
+				this.error( "\"~\" operator requires an integer or boolean value" );
 			}
 		}
 		else if ( "-".equals( this.currentToken() ) )
@@ -3179,7 +3183,9 @@ public class Parser
 				this.readToken(); // -
 				if ( ( lhs = this.parseValue( scope ) ) == null )
 				{
-					throw this.parseException( "Value expected" );
+					this.error( "Value expected" );
+
+					lhs = Value.BAD_VALUE;
 				}
 
 				lhs = new Operation( lhs, new Operator( operator, this ) );
@@ -3191,9 +3197,11 @@ public class Parser
 			this.readToken(); // remove
 
 			lhs = this.parseVariableReference( scope );
-			if ( !( lhs instanceof CompositeReference ) )
+			if ( lhs == null || !( lhs instanceof CompositeReference ) && lhs.getType().simpleType() != Type.BAD_TYPE )
 			{
-				throw this.parseException( "Aggregate reference expected" );
+				this.error( "Aggregate reference expected" );
+
+				lhs = VariableReference.BAD_VARIABLE_REFERENCE;
 			}
 
 			lhs = new Operation( lhs, new Operator( operator, this ) );
@@ -3203,7 +3211,10 @@ public class Parser
 			return null;
 		}
 
-		do
+		boolean expressionError = false, expressionSyntaxError = false;
+
+		Position previousPosition = null;
+		while ( this.madeProgress( previousPosition, previousPosition = this.here() ) )
 		{
 			oper = this.parseOperator( this.currentToken() );
 
@@ -3228,32 +3239,52 @@ public class Parser
 
 				Value conditional = lhs;
 
-				if ( conditional.getType() != DataTypes.BOOLEAN_TYPE )
+				if ( conditional.getType() != DataTypes.BOOLEAN_TYPE &&
+				     conditional.getType() != Type.BAD_TYPE && !expressionError )
 				{
-					throw this.parseException(
-						"Non-boolean expression " + conditional + " (" + conditional.getType() + ")" );
+					this.error( "Non-boolean expression " + conditional + " (" + conditional.getType() + ")" );
+					expressionError = true;
 				}
 
 				if ( ( lhs = this.parseExpression( scope, null ) ) == null )
 				{
-					throw this.parseException( "Value expected in left hand side" );
+					if ( !expressionSyntaxError )
+					{
+						this.error( "Value expected in left hand side" );
+					}
+					expressionError = expressionSyntaxError = true;
+
+					lhs = Value.BAD_VALUE;
 				}
 
-				if ( !":".equals( this.currentToken() ) )
+				if ( ":".equals( this.currentToken() ) )
 				{
-					throw this.parseException( "\":\" expected" );
+					this.readToken(); // :
 				}
-
-				this.readToken(); // :
+				else
+				{
+					if ( !expressionSyntaxError )
+					{
+						this.parseException( ":", this.currentToken() );
+					}
+					expressionError = expressionSyntaxError = true;
+				}
 
 				if ( ( rhs = this.parseExpression( scope, null ) ) == null )
 				{
-					throw this.parseException( "Value expected" );
+					if ( !expressionSyntaxError )
+					{
+						this.error( "Value expected" );
+					}
+					expressionError = expressionSyntaxError = true;
+
+					lhs = Value.BAD_VALUE;
 				}
 
-				if ( !oper.validCoercion( lhs.getType(), rhs.getType() ) )
+				if ( !oper.validCoercion( lhs.getType(), rhs.getType() ) && !expressionError )
 				{
-					throw this.parseException( "Cannot choose between " + lhs + " (" + lhs.getType() + ") and " + rhs + " (" + rhs.getType() + ")" );
+					this.error( "Cannot choose between " + lhs + " (" + lhs.getType() + ") and " + rhs + " (" + rhs.getType() + ")" );
+					expressionError = true;
 				}
 
 				lhs = new TernaryExpression( conditional, lhs, rhs );
@@ -3264,7 +3295,13 @@ public class Parser
 
 				if ( ( rhs = this.parseExpression( scope, oper ) ) == null )
 				{
-					throw this.parseException( "Value expected" );
+					if ( !expressionSyntaxError )
+					{
+						this.error( "Value expected" );
+					}
+					expressionError = expressionSyntaxError = true;
+
+					rhs = Value.BAD_VALUE;
 				}
 
 
@@ -3295,15 +3332,23 @@ public class Parser
 				else
 				{
 					rhs = this.autoCoerceValue( ltype, rhs, scope );
-					if ( !oper.validCoercion( ltype, rhs.getType() ) )
+					if ( !oper.validCoercion( ltype, rhs.getType() ) && !expressionError )
 					{
-						throw this.parseException( "Cannot apply operator " + oper + " to " + lhs + " (" + lhs.getType() + ") and " + rhs + " (" + rhs.getType() + ")" );
+						this.error( "Cannot apply operator " + oper + " to " + lhs + " (" + lhs.getType() + ") and " + rhs + " (" + rhs.getType() + ")" );
+						expressionError = true;
 					}
 					lhs = new Operation( lhs, rhs, oper );
 				}
 			}
 		}
-		while ( true );
+
+		if ( !expressionError )
+		{
+			// should NOT happen
+			this.error( "Internal error; got stuck while parsing expressions" );
+		}
+
+		return lhs;
 	}
 
 	private Value parseValue( final BasicScope scope )
