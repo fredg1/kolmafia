@@ -2857,11 +2857,18 @@ public class Parser
 			params.add( firstParam );
 		}
 
-		while ( !")".equals( this.currentToken() ) )
+		while ( true )
 		{
 			if ( this.atEndOfFile() )
 			{
-				throw this.parseException( ")", "end of file" );
+				this.parseException( ")", "end of file" );
+				break;
+			}
+
+			if ( ")".equals( this.currentToken() ) )
+			{
+				this.readToken(); // )
+				break;
 			}
 
 			Value val = this.parseExpression( scope );
@@ -2872,14 +2879,16 @@ public class Parser
 
 			if ( this.atEndOfFile() )
 			{
-				throw this.parseException( ")", "end of file" );
+				this.parseException( ")", "end of file" );
+				break;
 			}
 
 			if ( !",".equals( this.currentToken() ) )
 			{
 				if ( !")".equals( this.currentToken() ) )
 				{
-					throw this.parseException( ")", this.currentToken() );
+					this.parseException( ")", this.currentToken() );
+					break;
 				}
 				continue;
 			}
@@ -2888,21 +2897,16 @@ public class Parser
 
 			if ( this.atEndOfFile() )
 			{
-				throw this.parseException( ")", "end of file" );
+				this.parseException( "parameter", "end of file" );
+				break;
 			}
 
 			if ( ")".equals( this.currentToken() ) )
 			{
-				throw this.parseException( "parameter", this.currentToken() );
+				this.parseException( "parameter", this.currentToken() );
+				// we'll break out at the start of the next loop
 			}
 		}
-
-		if ( !")".equals( this.currentToken() ) )
-		{
-			throw this.parseException( ")", this.currentToken() );
-		}
-
-		this.readToken(); // )
 
 		return params;
 	}
