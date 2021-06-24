@@ -1762,9 +1762,13 @@ public class Parser
 
 		Scope scope = this.parseScope( null, functionType, variables, parentScope, allowBreak, allowContinue );
 
-		if ( !"}".equals( this.currentToken() ) )
+		if ( "}".equals( this.currentToken() ) )
 		{
-			throw this.parseException( "}", this.currentToken() );
+			this.readToken(); //read }
+		}
+		else
+		{
+			this.parseException( "}", this.currentToken() );
 		}
 
 		this.readToken(); //read }
