@@ -2220,7 +2220,8 @@ public class Parser
 			return new Catch( value );
 		}
 
-		throw this.parseException( "\"catch\" requires a block or an expression" );
+		this.error( "\"catch\" requires a block or an expression" );
+		return new Catch( Value.BAD_VALUE );
 	}
 
 	private Scope parseStatic( final Type functionType, final BasicScope parentScope )
