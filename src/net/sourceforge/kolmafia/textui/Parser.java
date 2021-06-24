@@ -1114,32 +1114,32 @@ public class Parser
 		}
 
 		String variableName = this.currentToken();
-		if ( Parser.isReservedWord( variableName ) )
-		{
-			throw this.parseException( "Reserved word '" + variableName + "' cannot be a variable name" );
-		}
 
-		if ( scope != null && scope.findVariable( variableName ) != null )
-		{
-			throw this.parseException( "Variable " + variableName + " is already defined" );
-		}
-
-		Position start = this.here();
+		Position variableStart = this.here();
+		boolean variableError = false;
 
 		this.readToken(); // If parsing of Identifier succeeded, go to next token.
-		// If we are parsing a parameter declaration, we are done
 
-		Variable result = new Variable( variableName, t, this.makeLocation( start ) );
+		Variable result;
 
-		if ( scope == null )
+		if ( Parser.isReservedWord( variableName ) )
 		{
-			if ( "=".equals( this.currentToken() ) )
-			{
-				throw this.parseException( "Cannot initialize parameter " + variableName );
-			}
-			return result;
+			this.error( variableStart, "Reserved word '" + variableName + "' cannot be a variable name" );
+			result = Variable.BAD_VARIABLE;
+			variableError = true;
+		}
+		else if ( scope != null && scope.findVariable( variableName ) != null )
+		{
+			this.error( variableStart, "Variable " + variableName + " is already defined" );
+			result = Variable.BAD_VARIABLE;
+			variableError = true;
+		}
+		else
+		{
+			result = new Variable( variableName, t, this.makeLocation( variableStart ) );
 		}
 
+		// If we are parsing a parameter declaration (if "scope" is null), we are done.
 		// Otherwise, we must initialize the variable.
 
 		Value rhs;
@@ -1149,15 +1149,29 @@ public class Parser
 		{
 			this.readToken(); // read =
 
+			if ( !variableError && scope == null )
+			{
+				// this is a function's parameter declaration
+				this.error( variableStart, "Cannot initialize parameter " + variableName );
+				variableError = true;
+			}
+
 			if ( "{".equals( this.currentToken() ) )
 			{
+				this.readToken(); // read {
 				if ( !( ltype instanceof AggregateType ) )
 				{
-					throw this.parseException(
-						"Cannot initialize " + variableName + " of type " + t + " with an aggregate literal" );
+					if ( !variableError && ltype != Type.BAD_TYPE )
+					{
+						this.error( variableStart, "Cannot initialize " + variableName + " of type " + t + " with an aggregate literal" );
+						variableError = true;
+					}
+					rhs = this.parseAggregateLiteral( scope, AggregateType.BAD_AGGREGATE );
 				}
-				this.readToken(); // read {
-				rhs = this.parseAggregateLiteral( scope, (AggregateType) ltype );
+				else
+				{
+					rhs = this.parseAggregateLiteral( scope, (AggregateType) ltype );
+				}
 			}
 			else
 			{
@@ -1166,28 +1180,51 @@ public class Parser
 
 			if ( rhs == null )
 			{
-				throw this.parseException( "Expression expected" );
+				if ( !variableError )
+				{
+					this.error( variableStart, "Expression expected" );
+					variableError = true;
+				}
 			}
-
-			rhs = this.autoCoerceValue( t, rhs, scope );
-			if ( !Operator.validCoercion( ltype, rhs.getType(), "assign" ) )
+			else
 			{
-				throw this.parseException( "Cannot store " + rhs.getType() + " in " + variableName + " of type " + ltype );
+				rhs = this.autoCoerceValue( t, rhs, scope );
+				if ( !variableError && !Operator.validCoercion( ltype, rhs.getType(), "assign" ) )
+				{
+					this.error( variableStart, "Cannot store " + rhs.getType() + " in " + variableName + " of type " + ltype );
+					variableError = true;
+				}
 			}
 		}
-		else if ( "{".equals( this.currentToken() ) && ltype instanceof AggregateType )
+		else if ( "{".equals( this.currentToken() ) )
 		{
 			this.readToken(); // read {
-			rhs = this.parseAggregateLiteral( scope, (AggregateType) ltype );
+
+			if ( ltype instanceof AggregateType )
+			{
+				rhs = this.parseAggregateLiteral( scope, (AggregateType) ltype );
+			}
+			else
+			{
+				if ( !variableError && ltype != Type.BAD_TYPE )
+				{
+					this.error( variableStart, "Cannot initialize " + variableName + " of type " + t + " with an aggregate literal" );
+					variableError = true;
+				}
+				rhs = this.parseAggregateLiteral( scope, AggregateType.BAD_AGGREGATE );
+			}
 		}
 		else
 		{
 			rhs = null;
 		}
 
-		scope.addVariable( result );
-		VariableReference lhs = new VariableReference( variableName, scope );
-		scope.addCommand( new Assignment( lhs, rhs ), this );
+		if ( scope != null && result != Variable.BAD_VARIABLE )
+		{
+			scope.addVariable( result );
+			VariableReference lhs = new VariableReference( variableName, scope );
+			scope.addCommand( new Assignment( lhs, rhs ), this );
+		}
 
 		return result;
 	}
