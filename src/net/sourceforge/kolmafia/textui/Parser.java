@@ -1536,88 +1536,130 @@ public class Parser
 	private Type parseAggregateType( Type dataType, final BasicScope scope )
 	{
 		this.readToken(); // [ or ,
-		if ( ";".equals( this.currentToken() ) )
-		{
-			throw this.parseException( "Missing index token" );
-		}
 
-		if ( "]".equals( this.currentToken() ) )
-		{
-			this.readToken(); // ]
+		Type indexType = null;
+		boolean empty = false;
+		int size = 0;
 
-			if ( "[".equals( this.currentToken() ) )
-			{
-				return new AggregateType( this.parseAggregateType( dataType, scope ), 0 );
-			}
-
-			return new AggregateType( dataType, 0 );
-		}
+		Position typeStart = this.here();
 
 		if ( this.readIntegerToken( this.currentToken() ) )
 		{
-			int size = StringUtilities.parseInt( this.currentToken() );
+			size = StringUtilities.parseInt( this.currentToken() );
 			this.readToken(); // integer
+		}
+		else if ( this.parseIdentifier( this.currentToken() ) )
+		{
+			String name = this.currentToken();
+			this.readToken(); // type name
 
-			if ( ";".equals( this.currentToken() ) )
+			indexType = scope.findType( name );
+
+			if ( indexType == null )
 			{
-				throw this.parseException( "]", this.currentToken() );
+				if ( dataType.simpleType() != Type.BAD_TYPE )
+				{
+					this.error( typeStart, "Invalid type name '" + name + "'" );
+				}
+
+				indexType = Type.BAD_TYPE;
+			}
+			else if ( !indexType.isPrimitive() )
+			{
+				if ( dataType.simpleType() != Type.BAD_TYPE )
+				{
+					this.error( typeStart, "Index type '" + name + "' is not a primitive type" );
+				}
+
+				indexType = Type.BAD_TYPE;
+			}
+		}
+		else if ( "]".equals( this.currentToken() ) )
+		{
+			/* Technical debt: while it was probably only intended to
+			   allow something in the likes of "string[]" , the way
+			   it was implemented allowed syntaxes such as "int[int,int,]"
+			   (note the trailing comma) while not allowing "int[,,]".
+
+			   This means:
+			   int [][][]
+			   int [0][0][0]
+			   int [][0][0]
+			   int [][][0]
+			   int [0][][0]
+			   int [][0][]
+			   int [0][0][]
+			   int [0][][]
+			   int [0,0,0]
+			   int [0,0][0]
+			   int [0][0,0]
+			   int [0,][0]
+			   int [0][0,]
+			   int [][0,]
+			   int [0,][]
+			   int [0,0,]
+			   are ALL perfectly valid equivalents
+			   (any "0" can be swapped with "int"), but
+			   int [,][]
+			   int [,][0]
+			   int [][,]
+			   int [0][,]
+			   are illegal and need to generate an error.
+
+			   This means we can't just "assume nothing means 0".
+			   We need a dedicated state preventing a comma from following.*/
+			empty = true;
+		}
+		else
+		{
+			if ( dataType.simpleType() != Type.BAD_TYPE )
+			{
+				this.error( typeStart, "Missing index token" );
 			}
 
+			return AggregateType.BAD_AGGREGATE;
+		}
+
+		if ( ",".equals( this.currentToken() ) ||
+		     ( "]".equals( this.currentToken() ) &&
+		       "[".equals( this.nextToken() ) ) )
+		{
 			if ( "]".equals( this.currentToken() ) )
 			{
 				this.readToken(); // ]
-
-				if ( "[".equals( this.currentToken() ) )
-				{
-					return new AggregateType( this.parseAggregateType( dataType, scope ), size );
-				}
-
-				return new AggregateType( dataType, size );
 			}
-
-			if ( ",".equals( this.currentToken() ) )
+			else if ( empty )
 			{
-				return new AggregateType( this.parseAggregateType( dataType, scope ), size );
+				this.error( typeStart, "\"Nothing\" can only be used as the only and/or last index of a bracket group." );
 			}
 
-			throw this.parseException( "]", this.currentToken() );
+			dataType = this.parseAggregateType( dataType, scope );
 		}
-
-		Type indexType = scope.findType( this.currentToken() );
-		if ( indexType == null )
-		{
-			throw this.parseException( "Invalid type name '" + this.currentToken() + "'" );
-		}
-
-		if ( !indexType.isPrimitive() )
-		{
-			throw this.parseException( "Index type '" + this.currentToken() + "' is not a primitive type" );
-		}
-
-		this.readToken(); // type name
-		if ( ";".equals( this.currentToken() ) )
-		{
-			throw this.parseException( "]", this.currentToken() );
-		}
-
-		if ( "]".equals( this.currentToken() ) )
+		else if ( "]".equals( this.currentToken() ) )
 		{
 			this.readToken(); // ]
+		}
+		else
+		{
+			this.parseException( empty ? "]" : ", or ]", this.currentToken() );
+		}
 
-			if ( "[".equals( this.currentToken() ) )
+		if ( dataType.simpleType() == Type.BAD_TYPE )
+		{
+			return AggregateType.BAD_AGGREGATE;
+		}
+
+		if ( indexType != null )
+		{
+			if ( indexType.simpleType() == Type.BAD_TYPE )
 			{
-				return new AggregateType( this.parseAggregateType( dataType, scope ), indexType );
+				return AggregateType.BAD_AGGREGATE;
 			}
 
 			return new AggregateType( dataType, indexType );
 		}
 
-		if ( ",".equals( this.currentToken() ) )
-		{
-			return new AggregateType( this.parseAggregateType( dataType, scope ), indexType );
-		}
-
-		throw this.parseException( ", or ]", this.currentToken() );
+		return new AggregateType( dataType, size );
 	}
 
 	private boolean parseIdentifier( final String identifier )
