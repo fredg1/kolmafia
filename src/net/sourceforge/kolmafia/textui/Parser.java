@@ -2995,10 +2995,12 @@ public class Parser
 
 		Type ltype = lhs.getType().getBaseType();
 		boolean isAggregate = ( ltype instanceof AggregateType );
+		boolean assignmentError = false;
 
-		if ( isAggregate && !"=".equals( operStr ) )
+		if ( isAggregate && !"=".equals( operStr ) && !assignmentError )
 		{
-			throw this.parseException( "Cannot use '" + operStr + "' on an aggregate" );
+			this.error( "Cannot use '" + operStr + "' on an aggregate" );
+			assignmentError = true;
 		}
 
 		Operator oper = new Operator( operStr, this );
@@ -3008,12 +3010,24 @@ public class Parser
 
 		if ( "{".equals( this.currentToken() ) )
 		{
-			if ( !isAggregate )
-			{
-				throw this.parseException( "Cannot use an aggregate literal for type " + lhs.getType() );
-			}
+			Position aggregateStart = this.here();
+
 			this.readToken(); // read {
-			rhs = this.parseAggregateLiteral( scope, (AggregateType) ltype );
+
+			if ( isAggregate )
+			{
+				rhs = this.parseAggregateLiteral( scope, (AggregateType) ltype );
+			}
+			else
+			{
+				rhs = this.parseAggregateLiteral( scope, AggregateType.BAD_AGGREGATE );
+
+				if ( !assignmentError && "=".equals( operStr ) ) // otherwise the coercion check can catch this instead
+				{
+					this.error( aggregateStart, "Cannot use an aggregate literal for type " + lhs.getType() );
+					assignmentError = true;
+				}
+			}
 		}
 		else
 		{
@@ -3022,11 +3036,17 @@ public class Parser
 
 		if ( rhs == null )
 		{
-			throw this.parseException( "Internal error" );
+			if ( !assignmentError )
+			{
+				this.error( "Expression expected" );
+				assignmentError = true;
+			}
+
+			rhs = Value.BAD_VALUE;
 		}
 
 		rhs = this.autoCoerceValue( lhs.getRawType(), rhs, scope );
-		if ( !oper.validCoercion( lhs.getType(), rhs.getType() ) )
+		if ( !oper.validCoercion( lhs.getType(), rhs.getType() ) && !assignmentError )
 		{
 			String error =
 				oper.isLogical() ?
@@ -3034,7 +3054,8 @@ public class Parser
 				oper.isInteger() ?
 				( oper + " requires an integer expression and an integer variable reference" ) :
 				( "Cannot store " + rhs.getType() + " in " + lhs + " of type " + lhs.getType() );
-			throw this.parseException( error );
+			this.error( error );
+			assignmentError = true;
 		}
 
 		Operator op = "=".equals( operStr ) ? null : new Operator( operStr.substring( 0, operStr.length() - 1 ), this );
