@@ -2031,32 +2031,56 @@ public class Parser
 
 		this.readToken(); // repeat
 
+		boolean repeatError = false;
+
 		Scope scope = this.parseLoopScope( functionType, null, parentScope );
-		if ( !"until".equalsIgnoreCase( this.currentToken() ) )
+
+		if ( "until".equalsIgnoreCase( this.currentToken() ) )
 		{
-			throw this.parseException( "until", this.currentToken() );
+			this.readToken(); // until
+		}
+		else if ( !repeatError )
+		{
+			this.parseException( "until", this.currentToken() );
+			repeatError = true;
 		}
 
-		if ( !"(".equals( this.nextToken() ) )
+		if ( "(".equals( this.currentToken() ) )
 		{
-			throw this.parseException( "(", this.nextToken() );
+			this.readToken(); // (
+		}
+		else if ( !repeatError )
+		{
+			this.parseException( "(", this.currentToken() );
+			repeatError = true;
 		}
 
-		this.readToken(); // until
-		this.readToken(); // (
+		Position conditionStart = this.here();
 
 		Value condition = this.parseExpression( parentScope );
-		if ( !")".equals( this.currentToken() ) )
+
+		Location conditionLocation = this.makeLocation( conditionStart );
+
+		if ( ")".equals( this.currentToken() ) )
 		{
-			throw this.parseException( ")", this.currentToken() );
+			this.readToken(); // )
+		}
+		else if ( !repeatError )
+		{
+			this.parseException( ")", this.currentToken() );
+			repeatError = true;
 		}
 
 		if ( condition == null || condition.getType() != DataTypes.BOOLEAN_TYPE )
 		{
-			throw this.parseException( "\"repeat\" requires a boolean conditional expression" );
-		}
+			if ( !repeatError )
+			{
+				this.error( conditionLocation, "\"repeat\" requires a boolean conditional expression" );
+				repeatError = true;
+			}
 
-		this.readToken(); // )
+			condition = Value.BAD_VALUE;
+		}
 
 		return new RepeatUntilLoop( scope, condition );
 	}
