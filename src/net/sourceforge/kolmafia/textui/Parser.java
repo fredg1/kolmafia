@@ -326,7 +326,7 @@ public class Parser
 	{
 		try
 		{
-			Scope scope = this.parseScope( null, null, null, Parser.getExistingFunctionScope(), false, false );
+			Scope scope = this.parseScope( null, null, null, Parser.getExistingFunctionScope(), true, false, false );
 
 			if ( this.currentLine != null )
 			{
@@ -532,7 +532,7 @@ public class Parser
 		try
 		{
 			parser = new Parser( scriptFile, null, this.imports );
-			result = parser.parseScope( scope, null, null, scope.getParentScope(), false, false );
+			result = parser.parseScope( scope, null, null, scope.getParentScope(), true, false, false );
 			if ( parser.currentLine != null )
 			{
 				parser.error( "Script parsing error; thought we reached the end of the file" );
@@ -611,16 +611,18 @@ public class Parser
 	                          final Type expectedType,
 	                          final VariableList variables,
 	                          final BasicScope parentScope,
+	                          final boolean wholeFile,
 	                          final boolean allowBreak,
 	                          final boolean allowContinue )
 	{
 		Scope result = startScope == null ? new Scope( variables, parentScope ) : startScope;
-		return this.parseScope( result, expectedType, parentScope, allowBreak, allowContinue );
+		return this.parseScope( result, expectedType, parentScope, wholeFile, allowBreak, allowContinue );
 	}
 
 	private Scope parseScope( Scope result,
 	                          final Type expectedType,
 	                          final BasicScope parentScope,
+	                          final boolean wholeFile,
 	                          final boolean allowBreak,
 	                          final boolean allowContinue )
 	{
@@ -636,8 +638,24 @@ public class Parser
 		}
 
 		Position previousPosition = null;
-		while ( !this.atEndOfFile() && !this.madeProgress( previousPosition, previousPosition = this.here() ) )
+		while ( !this.atEndOfFile() )
 		{
+			// Infinite loop prevention
+			if ( !this.madeProgress( previousPosition, previousPosition = this.here() ) )
+			{
+				if ( !wholeFile )
+				{
+					break;
+				}
+
+				// If we're at the top scope of a file, and we reached a node we
+				// couldn't parse, just read the current token and continue
+				this.readToken();
+
+				this.error( previousPosition, "Empty or unknown node" );
+				continue;
+			}
+
 			if ( this.parseTypedef( result ) )
 			{
 				if ( ";".equals( this.currentToken() ) )
@@ -2141,7 +2159,7 @@ public class Parser
 
 		this.readToken(); // {
 
-		Scope scope = this.parseScope( null, functionType, variables, parentScope, allowBreak, allowContinue );
+		Scope scope = this.parseScope( null, functionType, variables, parentScope, false, allowBreak, allowContinue );
 
 		if ( "}".equals( this.currentToken() ) )
 		{
@@ -2808,7 +2826,7 @@ public class Parser
 
 		this.readToken(); //read {
 
-		this.parseScope( result, functionType, parentScope, false, false );
+		this.parseScope( result, functionType, parentScope, false, false, false );
 
 		if ( "}".equals( this.currentToken() ) )
 		{
@@ -3446,7 +3464,7 @@ public class Parser
 
 			this.readToken(); // {
 
-			this.parseScope( result, functionType, parentScope, true, true );
+			this.parseScope( result, functionType, parentScope, false, true, true );
 
 			if ( "}".equals( this.currentToken() ) )
 			{
