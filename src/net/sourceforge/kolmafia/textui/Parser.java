@@ -306,7 +306,8 @@ public class Parser
 			// If any part of the initialization fails,
 			// then throw an exception.
 
-			throw this.parseException( this.fileName + " could not be accessed" );
+			// If using the LSP, should we also print in the GCLI or something?
+			this.error( this.fileName + " could not be accessed" );
 		}
 	}
 
@@ -330,7 +331,7 @@ public class Parser
 
 			if ( this.currentLine != null )
 			{
-				throw this.parseException( "Script parsing error; thought we reached the end of the file" );
+				this.error( "Script parsing error; thought we reached the end of the file" );
 			}
 
 			return scope;
@@ -1278,6 +1279,12 @@ public class Parser
 		if ( ltype == null || ltype.getName() == null )
 		{
 			return rhs;
+		}
+
+		// Error propagation
+		if ( ltype.simpleType() == Type.BAD_TYPE || rhs.getType().simpleType() == Type.BAD_TYPE )
+		{
+			return Value.BAD_VALUE;
 		}
 
 		// If the types are the same no coercion needed
