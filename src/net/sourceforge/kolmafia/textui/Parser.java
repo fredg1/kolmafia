@@ -3066,12 +3066,15 @@ public class Parser
 			this.readToken(); // {
 
 			this.parseScope( result, functionType, parentScope, true, true );
-			if ( !"}".equals( this.currentToken() ) )
-			{
-				throw this.parseException( "}", this.currentToken() );
-			}
 
-			this.readToken(); // }
+			if ( "}".equals( this.currentToken() ) )
+			{
+				this.readToken(); // }
+			}
+			else
+			{
+				this.parseException( "}", this.currentToken() );
+			}
 		}
 		else
 		{
@@ -3079,12 +3082,14 @@ public class Parser
 			ParseTreeNode command = this.parseCommand( functionType, result, false, true, true );
 			if ( command == null )
 			{
-				if ( !";".equals( this.currentToken() ) )
+				if ( ";".equals( this.currentToken() ) )
 				{
-					throw this.parseException( ";", this.currentToken() );
+					this.readToken(); // ;
 				}
-
-				this.readToken(); // ;
+				else
+				{
+					this.parseException( ";", this.currentToken() );
+				}
 			}
 			else
 			{
