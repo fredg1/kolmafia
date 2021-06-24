@@ -1414,26 +1414,38 @@ public class Parser
 	{
 		ParseTreeNode result;
 
+		Position commandStart = this.here();
+
 		if ( "break".equalsIgnoreCase( this.currentToken() ) )
 		{
-			if ( !allowBreak )
-			{
-				throw this.parseException( "Encountered 'break' outside of loop" );
-			}
-
-			result = new LoopBreak();
 			this.readToken(); //break
+
+			if ( allowBreak )
+			{
+				result = new LoopBreak();
+			}
+			else
+			{
+				this.error( commandStart, "Encountered 'break' outside of loop" );
+
+				result = ScriptState.BAD_SCRIPT_STATE;
+			}
 		}
 
 		else if ( "continue".equalsIgnoreCase( this.currentToken() ) )
 		{
-			if ( !allowContinue )
-			{
-				throw this.parseException( "Encountered 'continue' outside of loop" );
-			}
-
-			result = new LoopContinue();
 			this.readToken(); //continue
+
+			if ( allowContinue )
+			{
+				result = new LoopContinue();
+			}
+			else
+			{
+				this.error( commandStart, "Encountered 'continue' outside of loop" );
+
+				result = ScriptState.BAD_SCRIPT_STATE;
+			}
 		}
 
 		else if ( "exit".equalsIgnoreCase( this.currentToken() ) )
@@ -1517,12 +1529,15 @@ public class Parser
 			return null;
 		}
 
-		if ( !";".equals( this.currentToken() ) )
+		if ( ";".equals( this.currentToken() ) )
 		{
-			throw this.parseException( ";", this.currentToken() );
+			this.readToken(); // ;
+		}
+		else
+		{
+			this.parseException( ";", this.currentToken() );
 		}
 
-		this.readToken(); // ;
 		return result;
 	}
 
