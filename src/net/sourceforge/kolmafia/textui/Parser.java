@@ -570,34 +570,41 @@ public class Parser
 
 	private Scope parseCommandOrDeclaration( final Scope result, final Type expectedType )
 	{
+		Position typeStart = this.here();
+
 		Type t = this.parseType( result, true );
 
 		// If there is no data type, it's a command of some sort
 		if ( t == null )
 		{
 			ParseTreeNode c = this.parseCommand( expectedType, result, false, false, false );
-			if ( c == null )
+			if ( c != null )
 			{
-				throw this.parseException( "command or declaration required" );
+				result.addCommand( c, this );
 			}
-
-			result.addCommand( c, this );
-			return result;
+			else
+			{
+				this.error( "command or declaration required" );
+			}
 		}
-
-		if ( this.parseVariables( t, result ) )
+		else if ( this.parseVariables( t, result ) )
 		{
-			if ( !";".equals( this.currentToken() ) )
+			if ( ";".equals( this.currentToken() ) )
 			{
-				throw this.parseException( ";", this.currentToken() );
+				this.readToken(); //read ;
 			}
-
-			this.readToken(); //read ;
-			return result;
+			else
+			{
+				this.parseException( typeStart, ";", this.currentToken() );
+			}
+		}
+		else
+		{
+			//Found a type but no function or variable to tie it to
+			this.error( typeStart, "Type given but not used to declare anything" );
 		}
 
-		//Found a type but no function or variable to tie it to
-		throw this.parseException( "Type given but not used to declare anything" );
+		return result;
 	}
 
 	private Scope parseScope( final Scope startScope,
