@@ -1771,8 +1771,6 @@ public class Parser
 			this.parseException( "}", this.currentToken() );
 		}
 
-		this.readToken(); //read }
-
 		return scope;
 	}
 
