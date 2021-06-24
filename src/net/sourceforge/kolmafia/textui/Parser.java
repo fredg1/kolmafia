@@ -1773,26 +1773,46 @@ public class Parser
 			return null;
 		}
 
-		if ( !"(".equals( this.nextToken() ) )
+		this.readToken(); // if
+
+		boolean ifError = false;
+
+		if ( "(".equals( this.currentToken() ) )
 		{
-			throw this.parseException( "(", this.nextToken() );
+			this.readToken(); // (
+		}
+		else if ( !ifError )
+		{
+			this.parseException( "(", this.currentToken() );
+			ifError = true;
 		}
 
-		this.readToken(); // if
-		this.readToken(); // (
+		Position conditionStart = this.here();
 
 		Value condition = this.parseExpression( parentScope );
-		if ( !")".equals( this.currentToken() ) )
+
+		Location conditionLocation = this.makeLocation( conditionStart );
+
+		if ( ")".equals( this.currentToken() ) )
 		{
-			throw this.parseException( ")", this.currentToken() );
+			this.readToken(); // )
+		}
+		else if ( !ifError )
+		{
+			this.parseException( ")", this.currentToken() );
+			ifError = true;
 		}
 
 		if ( condition == null || condition.getType() != DataTypes.BOOLEAN_TYPE )
 		{
-			throw this.parseException( "\"if\" requires a boolean conditional expression" );
-		}
+			if ( !ifError )
+			{
+				this.error( conditionLocation, "\"if\" requires a boolean conditional expression" );
+				ifError = true;
+			}
 
-		this.readToken(); // )
+			condition = Value.BAD_VALUE;
+		}
 
 		If result = null;
 		boolean elseFound = false;
@@ -1800,6 +1820,8 @@ public class Parser
 
 		do
 		{
+			boolean elseError = false;
+
 			Scope scope = parseBlockOrSingleCommand( functionType, null, parentScope, !elseFound, allowBreak, allowContinue );
 
 			if ( result == null )
@@ -1817,9 +1839,10 @@ public class Parser
 
 			if ( !noElse && "else".equalsIgnoreCase( this.currentToken() ) )
 			{
-				if ( finalElse )
+				if ( finalElse && !elseError )
 				{
-					throw this.parseException( "Else without if" );
+					this.error( "Else without if" );
+					elseError = true;
 				}
 
 				if ( "if".equalsIgnoreCase( this.nextToken() ) )
@@ -1827,25 +1850,42 @@ public class Parser
 					this.readToken(); //else
 					this.readToken(); //if
 
-					if ( !"(".equals( this.currentToken() ) )
+					if ( "(".equals( this.currentToken() ) )
 					{
-						throw this.parseException( "(", this.currentToken() );
+						this.readToken(); //(
+					}
+					else if ( !elseError )
+					{
+						this.parseException( "(", this.currentToken() );
+						elseError = true;
 					}
 
-					this.readToken(); //(
+					conditionStart = this.here();
+
 					condition = this.parseExpression( parentScope );
 
-					if ( !")".equals( this.currentToken() ) )
+					conditionLocation = this.makeLocation( conditionStart );
+
+					if ( ")".equals( this.currentToken() ) )
 					{
-						throw this.parseException( ")", this.currentToken() );
+						this.readToken(); // )
+					}
+					else if ( !elseError )
+					{
+						this.parseException( ")", this.currentToken() );
+						elseError = true;
 					}
 
 					if ( condition == null || condition.getType() != DataTypes.BOOLEAN_TYPE )
 					{
-						throw this.parseException( "\"if\" requires a boolean conditional expression" );
-					}
+						if ( !elseError )
+						{
+							this.error( conditionLocation, "\"if\" requires a boolean conditional expression" );
+							elseError = true;
+						}
 
-					this.readToken(); // )
+						condition = Value.BAD_VALUE;
+					}
 				}
 				else
 				//else without condition
