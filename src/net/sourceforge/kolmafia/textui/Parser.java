@@ -2652,70 +2652,129 @@ public class Parser
 			return null;
 		}
 
-		String name = this.nextToken();
-
-		if ( !this.parseIdentifier( name ) )
+		if ( !this.parseIdentifier( this.nextToken() ) )
 		{
 			return null;
 		}
 
-		if ( Parser.isReservedWord( name ) )
-		{
-			throw this.parseException( "Reserved word '" + name + "' cannot be an index variable name" );
-		}
-
-		if ( parentScope.findVariable( name ) != null )
-		{
-			throw this.parseException( "Index variable '" + name + "' is already defined" );
-		}
-
 		this.readToken(); // for
 
-		Position start = this.here();
+		String name = this.currentToken();
+		Position nameStart = this.here();
+
+		boolean forError = false, forSyntaxError = false;
 
 		this.readToken(); // name
 
-		if ( !"from".equalsIgnoreCase( this.currentToken() ) )
+		Location nameLocation = this.makeLocation( nameStart );
+
+		if ( Parser.isReservedWord( name ) )
 		{
-			throw this.parseException( "from", this.currentToken() );
+			if ( !forError )
+			{
+				this.error( nameLocation, "Reserved word '" + name + "' cannot be an index variable name" );
+				forError = true;
+			}
+
+			name = null;
+		}
+		else if ( parentScope.findVariable( name ) != null )
+		{
+			if ( !forError )
+			{
+				this.error( nameLocation, "Index variable '" + name + "' is already defined" );
+				forError = true;
+			}
+
+			name = null;
 		}
 
-		this.readToken(); // from
+		if ( "from".equalsIgnoreCase( this.currentToken() ) )
+		{
+			this.readToken(); // from
+		}
+		else
+		{
+			if ( !forSyntaxError )
+			{
+				this.parseException( "from", this.currentToken() );
+			}
+			forError = forSyntaxError = true;
+		}
 
 		Value initial = this.parseExpression( parentScope );
+
+		if ( initial == null )
+		{
+			if ( !forSyntaxError )
+			{
+				this.error( "Expression for initial value expected" );
+			}
+			forError = forSyntaxError = true;
+
+			initial = Value.BAD_VALUE;
+		}
 
 		int direction = 0;
 
 		if ( "upto".equalsIgnoreCase( this.currentToken() ) )
 		{
 			direction = 1;
+			this.readToken(); // upto
 		}
 		else if ( "downto".equalsIgnoreCase( this.currentToken() ) )
 		{
 			direction = -1;
+			this.readToken(); // downto
 		}
 		else if ( "to".equalsIgnoreCase( this.currentToken() ) )
 		{
 			direction = 0;
+			this.readToken(); // to
 		}
 		else
 		{
-			throw this.parseException( "to, upto, or downto", this.currentToken() );
+			if ( !forSyntaxError )
+			{
+				this.parseException( "to, upto, or downto", this.currentToken() );
+			}
+			forError = forSyntaxError = true;
 		}
 
-		this.readToken(); // upto/downto
-
 		Value last = this.parseExpression( parentScope );
+
+		if ( last == null )
+		{
+			if ( !forSyntaxError )
+			{
+				this.error( "Expression for floor/ceiling value expected" );
+			}
+			forError = forSyntaxError = true;
+
+			last = Value.BAD_VALUE;
+		}
 
 		Value increment = DataTypes.ONE_VALUE;
 		if ( "by".equalsIgnoreCase( this.currentToken() ) )
 		{
 			this.readToken(); // by
 			increment = this.parseExpression( parentScope );
+
+			if ( increment == null )
+			{
+				if ( !forSyntaxError )
+				{
+					this.error( "Expression for increment value expected" );
+				}
+				forError = forSyntaxError = true;
+
+				increment = Value.BAD_VALUE;
+			}
 		}
 
 		// Create integer index variable
-		Variable indexvar = new Variable( name, DataTypes.INT_TYPE, this.makeLocation( start ) );
+		Variable indexvar = name != null ?
+			new Variable( name, DataTypes.INT_TYPE, nameLocation ) : Variable.BAD_VARIABLE;
 
 		// Put index variable onto a list
 		VariableList varList = new VariableList();
