@@ -1717,12 +1717,15 @@ public class Parser
 		ParseTreeNode command = this.parseCommand( functionType, parentScope, noElse, allowBreak, allowContinue );
 		if ( command == null )
 		{
-			if ( !";".equals( this.currentToken() ) )
+			if ( ";".equals( this.currentToken() ) )
 			{
-				throw this.parseException( ";", this.currentToken() );
+				this.readToken(); // ;
+			}
+			else
+			{
+				this.parseException( ";", this.currentToken() );
 			}
 
-			this.readToken(); // ;
 			return new Scope( parentScope );
 		}
 		return new Scope( command, parentScope );
