@@ -1991,40 +1991,60 @@ public class Parser
 			return null;
 		}
 
-		if ( !"(".equals( this.nextToken() ) && !"{".equals( this.nextToken() ) )
-		{
-			throw this.parseException( "( or {", this.nextToken() );
-		}
-
 		this.readToken(); // switch
+
+		boolean switchError = false;
+
+		if ( !"(".equals( this.currentToken() ) && !"{".equals( this.currentToken() ) )
+		{
+			this.parseException( "( or {", this.currentToken() );
+			switchError = true;
+		}
 
 		Value condition = DataTypes.TRUE_VALUE;
 		if ( "(".equals( this.currentToken() ) )
 		{
 			this.readToken(); // (
 
-			condition = this.parseExpression( parentScope );
-			if ( !")".equals( this.currentToken() ) )
-			{
-				throw this.parseException( ")", this.currentToken() );
-			}
+			Position conditionStart = this.here();
 
-			this.readToken(); // )
+			condition = this.parseExpression( parentScope );
+
+			Location conditionLocation = this.makeLocation( conditionStart );
+
+			if ( ")".equals( this.currentToken() ) )
+			{
+				this.readToken(); // )
+			}
+			else if ( !switchError )
+			{
+				this.parseException( ")", this.currentToken() );
+				switchError = true;
+			}
 
 			if ( condition == null )
 			{
-				throw this.parseException( "\"switch ()\" requires an expression" );
+				if ( !switchError )
+				{
+					this.error( conditionLocation, "\"switch ()\" requires an expression" );
+					switchError = true;
+				}
+
+				condition = Value.BAD_VALUE;
 			}
 		}
 
 		Type type = condition.getType();
 
-		if ( !"{".equals( this.currentToken() ) )
+		if ( "{".equals( this.currentToken() ) )
 		{
-			throw this.parseException( "{", this.currentToken() );
+			this.readToken(); // {
 		}
-
-		this.readToken(); // {
+		else if ( !switchError )
+		{
+			this.parseException( "{", this.currentToken() );
+			switchError = true;
+		}
 
 		List<Value> tests = new ArrayList<Value>();
 		List<Integer> indices = new ArrayList<Integer>();
@@ -2039,23 +2059,54 @@ public class Parser
 
 		while ( true )
 		{
+			boolean caseError = false;
+
 			if ( "case".equalsIgnoreCase( this.currentToken() ) )
 			{
 				this.readToken(); // case
 
+				Position testStart = this.here();
+
 				Value test = this.parseExpression( parentScope );
 
-				if ( !":".equals( this.currentToken() ) )
+				Location testLocation = this.makeLocation( testStart );
+
+				if ( test == null )
 				{
-					throw this.parseException( ":", this.currentToken() );
+					if ( !caseError )
+					{
+						this.error( testLocation, "Case label needs to be followed by an expression" );
+					}
+					switchError = caseError = true;
+
+					test = Value.BAD_VALUE;
 				}
 
-				if ( !test.getType().equals( type ) )
+				if ( ":".equals( this.currentToken() ) )
 				{
-					throw this.parseException( "Switch conditional has type " + type + " but label expression has type " + test.getType() );
+					this.readToken(); // :
+				}
+				else
+				{
+					if ( !caseError )
+					{
+						this.parseException( ":", this.currentToken() );
+					}
+					switchError = caseError = true;
 				}
 
-				this.readToken(); // :
+				if ( !test.getType().equals( type ) &&
+				     type.simpleType() != Type.BAD_TYPE &&
+				     test.getType().simpleType() != Type.BAD_TYPE )
+				{
+					if ( !caseError )
+					{
+						this.error( testLocation, "Switch conditional has type " + type + " but label expression has type " + test.getType() );
+					}
+					switchError = caseError = true;
+
+					test = Value.BAD_VALUE;
+				}
 
 				if ( currentInteger == null )
 				{
@@ -2066,11 +2117,18 @@ public class Parser
 				{
 					if ( labels.get( test ) != null )
 					{
-						throw this.parseException( "Duplicate case label: " + test );
+						if ( !caseError )
+						{
+							this.error( testLocation, "Duplicate case label: " + test );
+						}
+						switchError = caseError = true;
 					}
-					labels.put( test, currentInteger );
+					else if ( test != Value.BAD_VALUE )
+					{
+						labels.put( test, currentInteger );
+					}
 				}
-				else
+				else if ( test != Value.BAD_VALUE ) // just in case we make BAD_<x> their own class (which may happen)
 				{
 					constantLabels = false;
 				}
@@ -2087,19 +2145,32 @@ public class Parser
 			{
 				this.readToken(); // default
 
-				if ( !":".equals( this.currentToken() ) )
+				if ( ":".equals( this.currentToken() ) )
 				{
-					throw this.parseException( ":", this.currentToken() );
+					this.readToken(); // :
+				}
+				else
+				{
+					if ( !caseError )
+					{
+						this.parseException( ":", this.currentToken() );
+					}
+					switchError = caseError = true;
 				}
 
-				if ( defaultIndex != -1 )
+				if ( defaultIndex == -1 )
 				{
-					throw this.parseException( "Only one default label allowed in a switch statement" );
+					defaultIndex = currentIndex;
+				}
+				else
+				{
+					if ( !caseError )
+					{
+						this.error( "Only one default label allowed in a switch statement" );
+					}
+					switchError = caseError = true;
 				}
 
-				this.readToken(); // :
-
-				defaultIndex = currentIndex;
 				scope.resetBarrier();
 
 				continue;
@@ -2124,29 +2195,42 @@ public class Parser
 				break;
 			}
 
-			if ( this.parseVariables( t, scope ) )
+			if ( !this.parseVariables( t, scope ) )
 			{
-				if ( !";".equals( this.currentToken() ) )
+				//Found a type but no function or variable to tie it to
+				if ( !caseError )
 				{
-					throw this.parseException( ";", this.currentToken() );
+					this.error( "Type given but not used to declare anything" );
 				}
-
-				this.readToken(); //read ;
-				currentIndex = scope.commandCount();
-				currentInteger = null;
-				continue;
+				switchError = caseError = true;
 			}
 
-			//Found a type but no function or variable to tie it to
-			throw this.parseException( "Type given but not used to declare anything" );
+			if ( ";".equals( this.currentToken() ) )
+			{
+				this.readToken(); //read ;
+			}
+			else
+			{
+				if ( !caseError )
+				{
+					this.parseException( ";", this.currentToken() );
+				}
+				switchError = caseError = true;
+			}
+
+			currentIndex = scope.commandCount();
+			currentInteger = null;
 		}
 
-		if ( !"}".equals( this.currentToken() ) )
+		if ( "}".equals( this.currentToken() ) )
 		{
-			throw this.parseException( "}", this.currentToken() );
+			this.readToken(); // }
 		}
-
-		this.readToken(); // }
+		else if ( !switchError )
+		{
+			this.parseException( "}", this.currentToken() );
+			switchError = true;
+		}
 
 		return new Switch( condition, tests, indices, defaultIndex, scope,
 		                   constantLabels ? labels : null );
