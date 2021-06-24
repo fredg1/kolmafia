@@ -1383,15 +1383,34 @@ public class Parser
 		List<Value> keys = new ArrayList<Value>();
 		List<Value> values = new ArrayList<Value>();
 
+		Position aggregateStart = this.here();
+		boolean aggregateError = false;
+
 		// If index type is an int, it could be an array or a map
 		boolean arrayAllowed = index.equals( DataTypes.INT_TYPE );
 
 		// Assume it is a map.
 		boolean isArray = false;
 
-		while ( !"}".equals( this.currentToken() ) )
+		Position previousPosition = null;
+		while ( this.madeProgress( previousPosition, previousPosition = this.here() ) )
 		{
 			Value lhs;
+
+			Position keyStart = this.here();
+
+			if ( this.atEndOfFile() )
+			{
+				this.parseException( keyStart, "}", "end of file" );
+				aggregateError = true;
+				break;
+			}
+
+			if ( "}".equals( this.currentToken() ) )
+			{
+				this.readToken(); // read }
+				break;
+			}
 
 			// If we know we are reading an ArrayLiteral or haven't
 			// yet ensured we are reading a MapLiteral, allow any
@@ -1402,19 +1421,31 @@ public class Parser
 			{
 				this.readToken(); // read {
 
-				if ( !isArray && !arrayAllowed )
+				if ( !isArray && !arrayAllowed && aggr != AggregateType.BAD_AGGREGATE )
 				{
-					// We know this is a map, but they placed an
-					// aggregate literal as a key
-					throw this.parseException( "a key of type " + index.toString(), "an aggregate" );
+					// We know this is a map, but they placed
+					// an aggregate literal as a key
+					if ( !aggregateError )
+					{
+						this.parseException( keyStart, "a key of type " + index.toString(), "an aggregate" );
+						aggregateError = true;
+					}
 				}
 
-				if ( !( dataType instanceof AggregateType ) )
+				if ( dataType instanceof AggregateType )
 				{
-					throw this.parseException( "an element of type " + dataType.toString(), "an aggregate" );
+					lhs = parseAggregateLiteral( scope, (AggregateType) dataType );
 				}
+				else
+				{
+					if ( dataType != Type.BAD_TYPE && !aggregateError )
+					{
+						this.parseException( keyStart, "an element of type " + dataType.toString(), "an aggregate" );
+						aggregateError = true;
+					}
 
-				lhs = parseAggregateLiteral( scope, (AggregateType) dataType );
+					lhs = parseAggregateLiteral( scope, AggregateType.BAD_AGGREGATE );
+				}
 			}
 			else
 			{
@@ -1423,7 +1454,13 @@ public class Parser
 
 			if ( lhs == null )
 			{
-				throw this.parseException( "Script parsing error" );
+				if ( !aggregateError )
+				{
+					this.error( keyStart, "Script parsing error; couldn't figure out value of aggregage key" );
+					aggregateError = true;
+				}
+
+				lhs = Value.BAD_VALUE;
 			}
 
 			String delim = this.currentToken();
@@ -1440,49 +1477,73 @@ public class Parser
 				arrayAllowed = false;
 			}
 
-			// If parsing an ArrayLiteral, accumulate only values
-			if ( isArray )
+			if ( !":".equals( delim ) )
 			{
-				// The value must have the correct data type
-				lhs = this.autoCoerceValue( data, lhs, scope );
-				if ( !Operator.validCoercion( dataType, lhs.getType(), "assign" ) )
+				// If parsing an ArrayLiteral, accumulate only values
+				if ( isArray )
 				{
-					throw this.parseException( "Invalid array literal" );
+					// The value must have the correct data type
+					lhs = this.autoCoerceValue( data, lhs, scope );
+					if ( !aggregateError && !Operator.validCoercion( dataType, lhs.getType(), "assign" ) )
+					{
+						this.error( keyStart, "Invalid array literal; cannot assign type " +
+							dataType.toString() +
+								" to type " +
+							lhs.getType().toString() );
+						aggregateError = true;
+					}
+
+					values.add( lhs );
+				}
+				else if ( !aggregateError )
+				{
+					this.parseException( keyStart, ":", this.currentToken() );
+					aggregateError = true;
 				}
 
-				values.add( lhs );
-
-				// If there is not another value, done parsing values
-				if ( !",".equals( delim ) )
+				// Move on to the next value
+				if ( ",".equals( this.currentToken() ) )
 				{
-					break;
+					this.readToken(); // read ,
 				}
 
-				// Otherwise, move on to the next value
-				this.readToken(); // read ,
 				continue;
 			}
 
 			// We are parsing a MapLiteral
-			if ( !":".equals( delim ) )
-			{
-				throw this.parseException( ":", this.currentToken() );
-			}
-
 			this.readToken(); // read :
 
+			if ( isArray && !aggregateError )
+			{
+				// not really correct since, to get here, what we got so far must have matched
+				// the value's datatype, but we can't tell what they put after the :, so just assume
+				// it's a key:value pair anyway
+				this.error( keyStart, "cannot include keys when making an array literal" );
+				aggregateError = true;
+			}
+
 			Value rhs;
+
+			Position valueStart = this.here();
 
 			if ( "{".equals( this.currentToken() ) )
 			{
 				this.readToken(); // read {
 
-				if ( !( dataType instanceof AggregateType ) )
+				if ( dataType instanceof AggregateType )
 				{
-					throw this.parseException( "a value of type " + dataType.toString(), "an aggregate" );
+					rhs = parseAggregateLiteral( scope, (AggregateType) dataType );
 				}
+				else
+				{
+					if ( dataType != Type.BAD_TYPE && !aggregateError )
+					{
+						this.parseException( valueStart, "an value of type " + dataType.toString(), "an aggregate" );
+						aggregateError = true;
+					}
 
-				rhs = parseAggregateLiteral( scope, (AggregateType) dataType );
+					rhs = parseAggregateLiteral( scope, AggregateType.BAD_AGGREGATE );
+				}
 			}
 			else
 			{
@@ -1491,46 +1552,62 @@ public class Parser
 
 			if ( rhs == null )
 			{
-				throw this.parseException( "Script parsing error" );
+				if ( !aggregateError )
+				{
+					this.error( keyStart, "Script parsing error; couldn't figure out value of aggregage value" );
+					aggregateError = true;
+				}
+
+				rhs = Value.BAD_VALUE;
 			}
 
 			// Check that each type is valid via validCoercion
 			lhs = this.autoCoerceValue( index, lhs, scope );
 			rhs = this.autoCoerceValue( data, rhs, scope );
-			if ( !Operator.validCoercion( index, lhs.getType(), "assign" ) ||
-			     !Operator.validCoercion( data, rhs.getType(), "assign" ) )
+			if ( !aggregateError )
 			{
-				throw this.parseException( "Invalid map literal" );
+				if ( !Operator.validCoercion( index, lhs.getType(), "assign" ) )
+				{
+					this.error( valueStart, "Invalid map literal; cannot assign type " +
+							dataType.toString() +
+							" to key of type " +
+							lhs.getType().toString() );
+					aggregateError = true;
+				}
+
+				if ( !Operator.validCoercion( data, rhs.getType(), "assign" ) )
+				{
+					this.error( valueStart, "Invalid map literal; cannot assign type " +
+							dataType.toString() +
+							" to value of type " +
+							rhs.getType().toString() );
+					aggregateError = true;
+				}
 			}
 
 			keys.add( lhs );
 			values.add( rhs );
 
-			if ( !",".equals( this.currentToken() ) )
+			// Move on to the next value
+			if ( ",".equals( this.currentToken() ) )
 			{
-				break;
+				this.readToken(); // read ,
 			}
-
-			this.readToken();
 		}
-
-		if ( !"}".equals( this.currentToken() ) )
-		{
-			throw this.parseException( "}", this.currentToken() );
-		}
-
-		this.readToken(); // "}"
 
 		if ( isArray )
 		{
 			int size = aggr.getSize();
-			if ( size > 0 && size < values.size() )
+			if ( !aggregateError && size > 0 && size < values.size() )
 			{
-				throw this.parseException( "Array has " + size + " elements but " + values.size() + " initializers." );
+				this.error( aggregateStart, "Array has " + size + " elements but " + values.size() + " initializers." );
+				aggregateError = true;
 			}
 		}
 
-		return isArray ? new ArrayLiteral( aggr, values ) :  new MapLiteral( aggr, keys, values );
+		return aggregateError ? Value.BAD_VALUE :
+		       isArray ? new ArrayLiteral( aggr, values ) :
+		       new MapLiteral( aggr, keys, values );
 	}
 
 	private Type parseAggregateType( Type dataType, final BasicScope scope )
