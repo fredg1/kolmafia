@@ -4791,7 +4791,11 @@ public class Parser
 			type = Type.BAD_TYPE;
 		}
 
-		if ( !"[".equals( this.currentToken() ) )
+		if ( "[".equals( this.currentToken() ) )
+		{
+			this.readToken();
+		}
+		else
 		{
 			if ( !typedConstantSyntaxError )
 			{
@@ -4825,7 +4829,7 @@ public class Parser
 		StringBuilder resultString = new StringBuilder();
 
 		int level = 1;
-		for ( int i = 1;; ++i )
+		for ( int i = 0; ; ++i )
 		{
 			if ( i == this.currentLine.line.length() )
 			{
@@ -4874,8 +4878,6 @@ public class Parser
 	{
 		// Directly work with currentLine - ignore any "tokens" you meet until
 		// the string is closed
-
-		this.readToken();
 
 		List<Value> list = new ArrayList<>();
 		int level = 1;
