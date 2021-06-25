@@ -4566,7 +4566,7 @@ public class Parser
 						resultString.append( (char) hex08 );
 						i += 2;
 					}
-					catch ( NumberFormatException e )
+					catch ( IndexOutOfBoundsException | NumberFormatException e )
 					{
 						this.error( "Hexadecimal character escape requires 2 digits" );
 
@@ -4581,7 +4581,7 @@ public class Parser
 						resultString.append( (char) hex16 );
 						i += 4;
 					}
-					catch ( NumberFormatException e )
+					catch ( IndexOutOfBoundsException | NumberFormatException e )
 					{
 						this.error( "Unicode character escape requires 4 digits" );
 
@@ -4599,7 +4599,7 @@ public class Parser
 							i += 2;
 							break;
 						}
-						catch ( NumberFormatException e )
+						catch ( IndexOutOfBoundsException | NumberFormatException e )
 						{
 							this.error( "Octal character escape requires 3 digits" );
 						}
