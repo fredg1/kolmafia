@@ -4293,7 +4293,7 @@ public class Parser
 
 		else if ( "\"".equals( this.currentToken() ) || "'".equals( this.currentToken() ) || "`".equals( this.currentToken() ) )
 		{
-			result = this.parseString( scope, null );
+			result = this.parseString( scope );
 		}
 
 		else if ( "$".equals( this.currentToken() ) )
@@ -4449,7 +4449,7 @@ public class Parser
 		return true;
 	}
 
-	private Value parseString( final BasicScope scope, final Type type )
+	private Value parseString( final BasicScope scope )
 	{
 		// Directly work with currentLine - ignore any "tokens" you meet until
 		// the string is closed
@@ -4459,21 +4459,6 @@ public class Parser
 
 		char stopCharacter = startCharacter;
 		boolean template = startCharacter == '`';
-		boolean allowComments = false;
-
-		List<Value> list = null;
-
-		if ( type != null )
-		{
-			// Typed plural constant - handled by same code as plain strings
-			// so that they can share escape character processing
-			stopCharacter = ']';
-			allowComments = true;
-			list = new ArrayList<Value>();
-		}
-
-		int level = 1;
-		boolean slash = false;
 
 		Concatenate conc = null;
 		StringBuilder resultString = new StringBuilder();
@@ -4485,41 +4470,18 @@ public class Parser
 				this.currentToken = null;
 
 				// Plain strings can't span lines
-				if ( type == null )
+				this.error( "No closing " + stopCharacter + " found" );
+
+				Value result = new Value( resultString.toString() );
+
+				if ( conc == null )
 				{
-					this.error( "No closing " + stopCharacter + " found" );
-
-					Value result = new Value( resultString.toString() );
-
-					if ( conc == null )
-					{
-						return result;
-					}
-					else
-					{
-						conc.addString( result );
-						return conc;
-					}
+					return result;
 				}
-
-				this.fixLines();
-				i = 0;
-				if ( this.currentLine == null )
+				else
 				{
-					this.error( "No closing " + stopCharacter + " found" );
-
-					String element = resultString.toString().trim();
-					if ( element.length() != 0 )
-					{
-						list.add( this.parseLiteral( type, element ) );
-					}
-
-					if ( list.size() == 0 )
-					{
-						// Empty list - caller will interpret this specially
-						return null;
-					}
-					return new PluralValue( type, list );
+					conc.addString( result );
+					return conc;
 				}
 			}
 
@@ -4528,84 +4490,7 @@ public class Parser
 			// Handle escape sequences
 			if ( ch == '\\' )
 			{
-				if ( i == this.currentLine.line.length() - 1 )
-				{
-					i = -1;
-					ch = '\n';
-					this.previousLine = this.currentLine;
-					this.currentLine = this.nextLine;
-					this.nextLine = this.getNextLine();
-				}
-				else
-				{
-					ch = this.currentLine.line.charAt( ++i );
-				}
-
-				switch ( ch )
-				{
-				case 'n':
-					resultString.append( '\n' );
-					break;
-
-				case 'r':
-					resultString.append( '\r' );
-					break;
-
-				case 't':
-					resultString.append( '\t' );
-					break;
-
-				case ',':
-					resultString.append( ',' );
-					break;
-
-				case 'x':
-					try
-					{
-						int hex08 = Integer.parseInt( this.currentLine.line.substring( i + 1, i + 3 ), 16 );
-						resultString.append( (char) hex08 );
-						i += 2;
-					}
-					catch ( IndexOutOfBoundsException | NumberFormatException e )
-					{
-						this.error( "Hexadecimal character escape requires 2 digits" );
-
-						resultString.append( ch );
-					}
-					break;
-
-				case 'u':
-					try
-					{
-						int hex16 = Integer.parseInt( this.currentLine.line.substring( i + 1, i + 5 ), 16 );
-						resultString.append( (char) hex16 );
-						i += 4;
-					}
-					catch ( IndexOutOfBoundsException | NumberFormatException e )
-					{
-						this.error( "Unicode character escape requires 4 digits" );
-
-						resultString.append( ch );
-					}
-					break;
-
-				default:
-					if ( Character.isDigit( ch ) )
-					{
-						try
-						{
-							int octal = Integer.parseInt( this.currentLine.line.substring( i, i + 3 ), 8 );
-							resultString.append( (char) octal );
-							i += 2;
-							break;
-						}
-						catch ( IndexOutOfBoundsException | NumberFormatException e )
-						{
-							this.error( "Octal character escape requires 3 digits" );
-						}
-					}
-					resultString.append( ch );
-				}
+				i = this.parseEscapeSequence( resultString, i );
 				continue;
 			}
 
@@ -4644,94 +4529,107 @@ public class Parser
 				continue;
 			}
 
-			// Potentially handle comments
-			if ( allowComments )
-			{
-				// If we've already seen a slash
-				if ( slash )
-				{
-					slash = false;
-					if ( ch == '/' )
-					{
-						// Throw away the rest of the line
-						i = this.currentLine.line.length() - 1;
-						continue;
-					}
-					resultString.append( '/' );
-				}
-				else if ( ch == '/' )
-				{
-					slash = true;
-					continue;
-				}
-			}
-
-			// Handle plain strings
-			if ( type == null )
-			{
-				if ( ch == stopCharacter )
-				{
-					this.currentLine = this.currentLine.substring( i + 1 ); //+ 1 to get rid of stop character token
-					this.currentToken = null;
-
-					Value result = new Value( resultString.toString() );
-
-					if ( conc == null )
-					{
-						return result;
-					}
-					else
-					{
-						conc.addString( result );
-						return conc;
-					}
-				}
-				resultString.append( ch );
-				continue;
-			}
-
-			// Handle typed constants
-			// Allow start char without escaping
-			if ( ch == startCharacter )
-			{
-				level++;
-				resultString.append( ch );
-				continue;
-			}
-
-			// Match non-initial start char
-			if ( ch == stopCharacter && --level > 0 )
-			{
-				resultString.append( ch );
-				continue;
-			}
-
-			if ( ch != stopCharacter && ch != ',' )
-			{
-				resultString.append( ch );
-				continue;
-			}
-
-			// Add a new element to the list
-			String element = resultString.toString().trim();
-			resultString.setLength( 0 );
-			if ( element.length() != 0 )
-			{
-				list.add( this.parseLiteral( type, element ) );
-			}
-
 			if ( ch == stopCharacter )
 			{
-				this.currentLine = this.currentLine.substring( i + 1 );
+				this.currentLine = this.currentLine.substring( i + 1 ); //+ 1 to get rid of stop character token
 				this.currentToken = null;
-				if ( list.size() == 0 )
+
+				Value result = new Value( resultString.toString() );
+
+				if ( conc == null )
 				{
-					// Empty list - caller will interpret this specially
-					return null;
+					return result;
 				}
-				return new PluralValue( type, list );
+				else
+				{
+					conc.addString( result );
+					return conc;
+				}
 			}
+			resultString.append( ch );
 		}
+	}
+
+	private int parseEscapeSequence( final StringBuilder resultString, int i )
+	{
+		if ( i == this.currentLine.line.length() - 1 )
+		{
+			resultString.append( '\n' );
+			this.previousLine = this.currentLine;
+			this.currentLine = this.nextLine;
+			this.nextLine = this.getNextLine();
+			return -1;
+		}
+
+		char ch = this.currentLine.line.charAt( ++i );
+
+		switch ( ch )
+		{
+		case 'n':
+			resultString.append( '\n' );
+			break;
+
+		case 'r':
+			resultString.append( '\r' );
+			break;
+
+		case 't':
+			resultString.append( '\t' );
+			break;
+
+		case ',':
+			resultString.append( ',' );
+			break;
+
+		case 'x':
+			try
+			{
+				int hex08 = Integer.parseInt( this.currentLine.line.substring( i + 1, i + 3 ), 16 );
+				resultString.append( (char) hex08 );
+				i += 2;
+			}
+			catch ( IndexOutOfBoundsException | NumberFormatException e )
+			{
+				this.error( "Hexadecimal character escape requires 2 digits" );
+
+				resultString.append( ch );
+			}
+			break;
+
+		case 'u':
+			try
+			{
+				int hex16 = Integer.parseInt( this.currentLine.line.substring( i + 1, i + 5 ), 16 );
+				resultString.append( (char) hex16 );
+				i += 4;
+			}
+			catch ( IndexOutOfBoundsException | NumberFormatException e )
+			{
+				this.error( "Unicode character escape requires 4 digits" );
+
+				resultString.append( ch );
+			}
+			break;
+
+		default:
+			if ( Character.isDigit( ch ) )
+			{
+				try
+				{
+					int octal = Integer.parseInt( this.currentLine.line.substring( i, i + 3 ), 8 );
+					resultString.append( (char) octal );
+					i += 2;
+					break;
+				}
+				catch ( IndexOutOfBoundsException | NumberFormatException e )
+				{
+					this.error( "Octal character escape requires 3 digits" );
+				}
+			}
+			resultString.append( ch );
+		}
+
+		return i;
 	}
 
 	private Value parseLiteral( final Type type, final String element )
@@ -4905,7 +4803,7 @@ public class Parser
 
 		if ( plurals )
 		{
-			Value value = this.parseString( scope, type );
+			Value value = this.parsePluralConstant( scope, type );
 			if ( value != null )
 			{
 				return value;	// explicit list of values
@@ -4968,6 +4866,116 @@ public class Parser
 			else
 			{
 				resultString.append( c );
+			}
+		}
+	}
+
+	private PluralValue parsePluralConstant( final BasicScope scope, final Type type )
+	{
+		// Directly work with currentLine - ignore any "tokens" you meet until
+		// the string is closed
+
+		this.readToken();
+
+		List<Value> list = new ArrayList<>();
+		int level = 1;
+		boolean slash = false;
+
+		StringBuilder resultString = new StringBuilder();
+		for ( int i = 0; ; ++i )
+		{
+			if ( i == this.currentLine.line.length() )
+			{
+				this.currentLine = this.currentLine.clear();
+				this.currentToken = null;
+				this.fixLines();
+				i = 0;
+				if ( this.currentLine == null )
+				{
+					this.error( "No closing ] found" );
+
+					String element = resultString.toString().trim();
+					if ( element.length() != 0 )
+					{
+						list.add( this.parseLiteral( type, element ) );
+					}
+
+					if ( list.size() == 0 )
+					{
+						// Empty list - caller will interpret this specially
+						return null;
+					}
+					return new PluralValue( type, list );
+				}
+			}
+
+			char ch = this.currentLine.line.charAt( i );
+
+			// Handle escape sequences
+			if ( ch == '\\' )
+			{
+				i = this.parseEscapeSequence( resultString, i );
+				continue;
+			}
+
+			// Potentially handle comments
+			// If we've already seen a slash
+			if ( slash )
+			{
+				slash = false;
+				if ( ch == '/' )
+				{
+					// Throw away the rest of the line
+					i = this.currentLine.line.length() - 1;
+					continue;
+				}
+				resultString.append( '/' );
+			}
+			else if ( ch == '/' )
+			{
+				slash = true;
+				continue;
+			}
+
+			// Allow start char without escaping
+			if ( ch == '[' )
+			{
+				level++;
+				resultString.append( ch );
+				continue;
+			}
+
+			// Match non-initial start char
+			if ( ch == ']' && --level > 0 )
+			{
+				resultString.append( ch );
+				continue;
+			}
+
+			if ( ch != ']' && ch != ',' )
+			{
+				resultString.append( ch );
+				continue;
+			}
+
+			// Add a new element to the list
+			String element = resultString.toString().trim();
+			resultString.setLength( 0 );
+			if ( element.length() != 0 )
+			{
+				list.add( this.parseLiteral( type, element ) );
+			}
+
+			if ( ch == ']' )
+			{
+				this.currentLine = this.currentLine.substring( i + 1 );
+				this.currentToken = null;
+				if ( list.size() == 0 )
+				{
+					// Empty list - caller will interpret this specially
+					return null;
+				}
+				return new PluralValue( type, list );
 			}
 		}
 	}
