@@ -4848,7 +4848,7 @@ public class Parser
 			char c = this.currentLine.line.charAt( i );
 			if ( c == '\\' )
 			{
-				resultString.append( this.currentLine.line.charAt( ++i ) );
+				i = this.parseEscapeSequence( resultString, i );
 			}
 			else if ( c == '[' )
 			{
