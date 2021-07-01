@@ -3492,9 +3492,18 @@ public class Parser
 
 	private Value parseNewRecord( final BasicScope scope )
 	{
-		if ( !this.parseIdentifier( this.currentToken().value ) )
+		if ( !"new".equalsIgnoreCase( this.currentToken().value ) )
 		{
 			return null;
+		}
+
+		this.readToken();
+
+		if ( !this.parseIdentifier( this.currentToken().value ) )
+		{
+			this.parseException( "Record name", this.currentToken().value );
+
+			return Value.BAD_VALUE;
 		}
 
 		String name = this.currentToken().value;
@@ -4275,20 +4284,16 @@ public class Parser
 		{
 		}
 
-		else if ( "\"".equals( this.currentToken().value ) || "'".equals( this.currentToken().value ) || "`".equals( this.currentToken().value ) )
+		else if ( ( result = this.parseString( scope ) ) != null )
 		{
-			result = this.parseString( scope );
 		}
 
-		else if ( "$".equals( this.currentToken().value ) )
+		else if ( ( result = this.parseTypedConstant( scope ) ) != null )
 		{
-			result = this.parseTypedConstant( scope );
 		}
 
-		else if ( "new".equalsIgnoreCase( this.currentToken().value ) )
+		else if ( ( result = this.parseNewRecord( scope ) ) != null )
 		{
-			this.readToken();
-			result = this.parseNewRecord( scope );
 		}
 
 		else if ( ( result = this.parseCatchValue( scope ) ) != null )
@@ -4437,6 +4442,13 @@ public class Parser
 
 	private Value parseString( final BasicScope scope )
 	{
+		if ( !"\"".equals( this.currentToken().value ) &&
+		     !"'".equals( this.currentToken().value ) &&
+		     !"`".equals( this.currentToken().value ) )
+		{
+			return null;
+		}
+
 		// Directly work with currentLine - ignore any "tokens" you meet until
 		// the string is closed
 
@@ -4482,7 +4494,7 @@ public class Parser
 			// Handle escape sequences
 			if ( ch == '\\' )
 			{
-				i = this.parseEscapeSequence( resultString, i );
+				i = this.parseEscapeSequence( resultString, ++i );
 				continue;
 			}
 
@@ -4555,7 +4567,7 @@ public class Parser
 	{
 		final String line = this.restOfLine();
 
-		if ( i == line.length() - 1 )
+		if ( i == line.length() )
 		{
 			resultString.append( '\n' );
 			this.currentLine.makeToken( i );
@@ -4564,7 +4576,7 @@ public class Parser
 			return -1;
 		}
 
-		char ch = line.charAt( ++i );
+		char ch = line.charAt( i );
 
 		switch ( ch )
 		{
@@ -4578,10 +4590,6 @@ public class Parser
 
 		case 't':
 			resultString.append( '\t' );
-			break;
-
-		case ',':
-			resultString.append( ',' );
 			break;
 
 		case 'x':
@@ -4856,7 +4864,7 @@ public class Parser
 			char c = line.charAt( i );
 			if ( c == '\\' )
 			{
-				i = this.parseEscapeSequence( resultString, i );
+				i = this.parseEscapeSequence( resultString, ++i );
 			}
 			else if ( c == '[' )
 			{
@@ -4934,7 +4942,7 @@ public class Parser
 			// Handle escape sequences
 			if ( ch == '\\' )
 			{
-				i = this.parseEscapeSequence( resultString, i );
+				i = this.parseEscapeSequence( resultString, ++i );
 				continue;
 			}
 
