@@ -6104,6 +6104,26 @@ public class Parser
 		this.error( this.rangeToHere( start ), msg1, msg2 );
 	}
 
+	public final void error( final Token token, final String msg )
+	{
+		this.error( token, msg, "" );
+	}
+
+	public final void error( final Token token, final String msg1, final String msg2 )
+	{
+		this.error( token.range, msg1, msg2 );
+	}
+
+	public final void error( final Token start, final Token end, final String msg )
+	{
+		this.error( start, end, msg, "" );
+	}
+
+	public final void error( final Token start, final Token end, final String msg1, final String msg2 )
+	{
+		this.error( new Range( start.getStart(), end.getEnd() ), msg1, msg2 );
+	}
+
 	public final void error( final Range range, final String msg )
 	{
 		this.error( range, msg, "" );
@@ -6142,6 +6162,26 @@ public class Parser
 	public final void warning( final Position start, final String msg1, final String msg2 )
 	{
 		this.warning( this.rangeToHere( start ), msg1, msg2 );
+	}
+
+	public final void warning( final Token token, final String msg )
+	{
+		this.warning( token, msg, "" );
+	}
+
+	public final void warning( final Token token, final String msg1, final String msg2 )
+	{
+		this.warning( token.range, msg1, msg2 );
+	}
+
+	public final void warning( final Token start, final Token end, final String msg )
+	{
+		this.warning( start, end, msg, "" );
+	}
+
+	public final void warning( final Token start, final Token end, final String msg1, final String msg2 )
+	{
+		this.warning( new Range( start.getStart(), end.getEnd() ), msg1, msg2 );
 	}
 
 	public final void warning( final Range range, final String msg )
