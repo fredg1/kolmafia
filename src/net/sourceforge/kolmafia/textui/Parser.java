@@ -6091,7 +6091,7 @@ public class Parser
 
 	public final void error( final String msg1, final String msg2 )
 	{
-		this.error( this.make0WidthLocation(), msg1, msg2 );
+		this.error( this.here(), msg1, msg2 );
 	}
 
 	public final void error( final Position start, final String msg )
@@ -6101,7 +6101,17 @@ public class Parser
 
 	public final void error( final Position start, final String msg1, final String msg2 )
 	{
-		this.error( this.makeLocation( start ), msg1, msg2 );
+		this.error( this.rangeToHere( start ), msg1, msg2 );
+	}
+
+	public final void error( final Range range, final String msg )
+	{
+		this.error( range, msg, "" );
+	}
+
+	public final void error( final Range range, final String msg1, final String msg2 )
+	{
+		this.error( this.makeLocation( range ), msg1, msg2 );
 	}
 
 	public final void error( final Location location, final String msg )
@@ -6121,7 +6131,27 @@ public class Parser
 
 	public final void warning( final String msg1, final String msg2 )
 	{
-		this.warning( this.make0WidthLocation(), msg1, msg2 );
+		this.warning( this.here(), msg1, msg2 );
+	}
+
+	public final void warning( final Position start, final String msg )
+	{
+		this.warning( start, msg, "" );
+	}
+
+	public final void warning( final Position start, final String msg1, final String msg2 )
+	{
+		this.warning( this.rangeToHere( start ), msg1, msg2 );
+	}
+
+	public final void warning( final Range range, final String msg )
+	{
+		this.warning( range, msg, "" );
+	}
+
+	public final void warning( final Range range, final String msg1, final String msg2 )
+	{
+		this.warning( this.makeLocation( range ), msg1, msg2 );
 	}
 
 	public final void warning( final Location location, final String msg )
@@ -6131,7 +6161,7 @@ public class Parser
 
 	public final void warning( final Location location, final String msg1, final String msg2 )
 	{
-		this.diagnostics.add( new AshDiagnostic( location, Warning, msg1, msg2 ) );
+		this.diagnostics.add( new AshDiagnostic( location != null ? location : this.make0WidthLocation(), Warning, msg1, msg2 ) );
 	}
 
 	private static void appendFunctionCall( final StringBuilder buffer, final String name, final List<Value> params )
