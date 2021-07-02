@@ -927,16 +927,16 @@ public class Parser
 			return null;
 		}
 
+		Token functionNameToken = this.currentToken();
 		String functionName = this.currentToken().value;
 
-		Position functionStart = this.here();
 		boolean functionError = false;
 
 		this.readToken(); //read Function name
 
 		if ( Parser.isReservedWord( functionName ) )
 		{
-			this.error( functionStart, "Reserved word '" + functionName + "' cannot be used as a function name" );
+			this.error( functionNameToken, "Reserved word '" + functionName + "' cannot be used as a function name" );
 			functionError = true;
 		}
 
@@ -1054,13 +1054,13 @@ public class Parser
 		// Add the function to the parent scope before we parse the
 		// function scope to allow recursion.
 
-		Location functionLocation = this.makeLocation( functionStart );
+		Location functionLocation = this.makeLocation( functionNameToken );
 
 		UserDefinedFunction f = new UserDefinedFunction( functionName, functionType, functionLocation, variableReferences );
 
 		if ( !functionError && f.overridesLibraryFunction() )
 		{
-			this.overridesLibraryFunctionError( functionStart, f );
+			this.overridesLibraryFunctionError( functionLocation, f );
 			functionError = true;
 		}
 
@@ -1068,7 +1068,7 @@ public class Parser
 
 		if ( !functionError && existing != null && existing.getScope() != null )
 		{
-			this.multiplyDefinedFunctionError( functionStart, f );
+			this.multiplyDefinedFunctionError( functionLocation, f );
 			functionError = true;
 		}
 
@@ -1078,7 +1078,7 @@ public class Parser
 
 			if ( clash != null )
 			{
-				this.varargClashError( functionStart, f, clash );
+				this.varargClashError( functionLocation, f, clash );
 				functionError = true;
 			}
 		}
@@ -1439,38 +1439,36 @@ public class Parser
 	{
 		ParseTreeNode result;
 
-		Position commandStart = this.here();
-
 		if ( "break".equalsIgnoreCase( this.currentToken().value ) )
 		{
-			this.readToken(); //break
-
 			if ( allowBreak )
 			{
 				result = new LoopBreak();
 			}
 			else
 			{
-				this.error( commandStart, "Encountered 'break' outside of loop" );
+				this.error( this.currentToken(), "Encountered 'break' outside of loop" );
 
 				result = ScriptState.BAD_SCRIPT_STATE;
 			}
+
+			this.readToken(); //break
 		}
 
 		else if ( "continue".equalsIgnoreCase( this.currentToken().value ) )
 		{
-			this.readToken(); //continue
-
 			if ( allowContinue )
 			{
 				result = new LoopContinue();
 			}
 			else
 			{
-				this.error( commandStart, "Encountered 'continue' outside of loop" );
+				this.error( this.currentToken(), "Encountered 'continue' outside of loop" );
 
 				result = ScriptState.BAD_SCRIPT_STATE;
 			}
+
+			this.readToken(); //continue
 		}
 
 		else if ( "exit".equalsIgnoreCase( this.currentToken().value ) )
@@ -5534,6 +5532,30 @@ public class Parser
 		}
 	}
 
+	private final Token peekPreviousToken()
+	{
+		if ( this.currentToken != null )
+		{
+			// Temporarily remove currentToken
+			this.currentLine.tokens.removeLast();
+		}
+
+		final Token previousToken = this.peekLastToken();
+
+		if ( this.currentToken != null )
+		{
+			// Add the previously removed token back in
+			this.currentLine.tokens.addLast( this.currentToken );
+		}
+
+		return previousToken;
+	}
+
+	private final Token peekLastToken()
+	{
+		return this.currentLine.peekLastToken();
+	}
+
 	private void readToken()
 	{
 		// at "end of file"
@@ -5744,6 +5766,33 @@ public class Parser
 			return newToken;
 		}
 
+		private Token peekLastToken()
+		{
+			if ( this.tokens.isEmpty() )
+			{
+				if ( this.previousLine == null )
+				{
+					return null;
+				}
+
+				return this.previousLine.peekLastToken();
+			}
+
+			final Token lastToken = this.tokens.peekLast();
+
+			if ( lastToken instanceof Comment )
+			{
+				// Temporarily remove it before digging deeper
+				this.tokens.removeLast();
+				final Token previousToken = this.peekLastToken();
+				this.tokens.addLast( lastToken );
+
+				return previousToken;
+			}
+
+			return lastToken;
+		}
+
 		public String toString()
 		{
 			return this.content;
@@ -5854,6 +5903,11 @@ public class Parser
 		return new Range( start != null ? start : this.here(), this.here() );
 	}
 
+	private Range makeRange( final Token start, final Token end )
+	{
+		return new Range( start.getStart(), end.getEnd() );
+	}
+
 	// temporary, we want to not need this
 	private Range make0WidthRange()
 	{
@@ -5863,6 +5917,16 @@ public class Parser
 	private Location makeLocation( final Position start )
 	{
 		return this.makeLocation( this.rangeToHere( start ) );
+	}
+
+	private Location makeLocation( final Token start )
+	{
+		return this.makeLocation( start, this.peekLastToken() );
+	}
+
+	private Location makeLocation( final Token start, final Token end )
+	{
+		return this.makeLocation( this.makeRange( start, end ) );
 	}
 
 	private Location makeLocation( final Range range )
@@ -5983,30 +6047,30 @@ public class Parser
 		this.error( found, "Expected " + expected + ", found " + foundString );
 	}
 
-	private void multiplyDefinedFunctionError( final Position start, final Function f )
+	private void multiplyDefinedFunctionError( final Location location, final Function f )
 	{
 		String buffer = "Function '" +
 				f.getSignature() +
 				"' defined multiple times.";
-		this.error( start, buffer );
+		this.error( location, buffer );
 	}
 
-	private void overridesLibraryFunctionError( final Position start, final Function f )
+	private void overridesLibraryFunctionError( final Location location, final Function f )
 	{
 		String buffer = "Function '" +
 				f.getSignature() +
 				"' overrides a library function.";
-		this.error( start, buffer );
+		this.error( location, buffer );
 	}
 
-	private void varargClashError( final Position start, final Function f, final Function clash )
+	private void varargClashError( final Location location, final Function f, final Function clash )
 	{
 		String buffer = "Function '" +
 				f.getSignature() +
 				"' clashes with existing function '" +
 				clash.getSignature() +
 				"'.";
-		this.error( start, buffer );
+		this.error( location, buffer );
 	}
 
 	public final void sinceError( final String current, final String target, final Range directiveRange, final boolean targetIsRevision )
@@ -6125,7 +6189,7 @@ public class Parser
 
 	public final void error( final Token start, final Token end, final String msg1, final String msg2 )
 	{
-		this.error( new Range( start.getStart(), end.getEnd() ), msg1, msg2 );
+		this.error( this.makeRange( start, end ), msg1, msg2 );
 	}
 
 	public final void error( final Range range, final String msg )
