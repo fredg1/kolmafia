@@ -52,8 +52,6 @@ public class AggregateType
 		this.indexType = indexType;
 		this.size = size;
 		this.caseInsensitive = caseInsensitive && indexType.equals( DataTypes.STRING_TYPE );
-
-		this.references = DataTypes.AGGREGATE_TYPE.references;
 	}
 
 	public AggregateType( final AggregateType original )

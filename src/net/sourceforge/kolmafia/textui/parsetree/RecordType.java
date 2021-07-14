@@ -78,8 +78,6 @@ public class RecordType
 		{
 			this.fieldIndices[ i ] = new Value( fieldNames[ i ] );
 		}
-
-		this.references = DataTypes.RECORD_TYPE.references;
 	}
 
 	public String[] getFieldNames()
