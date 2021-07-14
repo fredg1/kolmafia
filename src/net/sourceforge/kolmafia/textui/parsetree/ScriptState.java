@@ -35,19 +35,20 @@ package net.sourceforge.kolmafia.textui.parsetree;
 
 import java.io.PrintStream;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.textui.DataTypes;
 import net.sourceforge.kolmafia.textui.AshRuntime;
 import net.sourceforge.kolmafia.textui.ScriptRuntime;
 
 public abstract class ScriptState
-	extends ParseTreeNode
+	extends Command
 {
-	public static final BadScriptState BAD_SCRIPT_STATE = new BadScriptState();
-
 	private final ScriptRuntime.State state;
 
-	public ScriptState( final ScriptRuntime.State state )
+	public ScriptState( final Location location, final ScriptRuntime.State state )
 	{
+		super( location );
 		this.state = state;
 	}
 
@@ -86,9 +87,9 @@ public abstract class ScriptState
 	public static final class BadScriptState
 		extends ScriptState
 	{
-		public BadScriptState()
+		public BadScriptState( final Location location )
 		{
-			super( ScriptRuntime.State.NORMAL );
+			super( location, ScriptRuntime.State.NORMAL );
 		}
 
 		@Override

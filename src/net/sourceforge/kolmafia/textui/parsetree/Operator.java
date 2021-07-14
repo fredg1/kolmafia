@@ -35,6 +35,8 @@ package net.sourceforge.kolmafia.textui.parsetree;
 
 import java.io.PrintStream;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.VYKEACompanionData;
 
 import net.sourceforge.kolmafia.textui.DataTypes;
@@ -43,7 +45,7 @@ import net.sourceforge.kolmafia.textui.Parser;
 import net.sourceforge.kolmafia.textui.ScriptRuntime;
 
 public class Operator
-	extends ParseTreeNode
+	extends Command
 {
 	String operator;
 
@@ -51,8 +53,9 @@ public class Operator
 	String fileName;
 	int lineNumber;
 
-	public Operator( final String operator, final Parser parser )
+	public Operator( final Location location, final String operator, final Parser parser )
 	{
+		super( location );
 		this.operator = operator;
 		this.fileName = parser.getShortFileName();
 		this.lineNumber = parser.getLineNumber();
@@ -415,7 +418,7 @@ public class Operator
 		Value result;
 
 		// If either side is non-numeric, perform string operations
-		if ( Operator.isStringLike( ltype) || Operator.isStringLike( rtype ) )
+		if ( Operator.isStringLike( ltype ) || Operator.isStringLike( rtype ) )
 		{
 			// Since we only do string concatenation, we should
 			// only get here if the operator is "+".
@@ -433,8 +436,8 @@ public class Operator
 		else if ( ltype.equals( DataTypes.TYPE_FLOAT ) || rtype.equals( DataTypes.TYPE_FLOAT ) )
 		{
 			double rfloat = rightValue.toFloatValue().floatValue();
-			if (  ( this.operator.equals( "/" ) || this.operator.equals( "%" ) ) &&
-			      rfloat == 0.0 )
+			if ( ( this.operator.equals( "/" ) || this.operator.equals( "%" ) ) &&
+			     rfloat == 0.0 )
 			{
 				throw interpreter.runtimeException( "Division by zero", this.fileName, this.lineNumber );
 			}

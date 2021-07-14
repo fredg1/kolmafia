@@ -35,6 +35,8 @@ package net.sourceforge.kolmafia.textui.parsetree;
 
 import java.io.PrintStream;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.KoLmafia;
 import net.sourceforge.kolmafia.KoLConstants.MafiaState;
 import net.sourceforge.kolmafia.StaticEntity;
@@ -44,12 +46,13 @@ import net.sourceforge.kolmafia.textui.AshRuntime;
 import net.sourceforge.kolmafia.textui.ScriptRuntime;
 
 public class Try
-	extends ParseTreeNode
+	extends Command
 {
 	private final Scope body, finalClause;
 
-	public Try( final Scope body, final Scope finalClause )
+	public Try( final Location location, final Scope body, final Scope finalClause )
 	{
+		super( location );
 		this.body = body;
 		this.finalClause = finalClause;
 	}

@@ -74,6 +74,7 @@ import net.sourceforge.kolmafia.textui.parsetree.Assignment;
 import net.sourceforge.kolmafia.textui.parsetree.BasicScope;
 import net.sourceforge.kolmafia.textui.parsetree.BasicScript;
 import net.sourceforge.kolmafia.textui.parsetree.Catch;
+import net.sourceforge.kolmafia.textui.parsetree.Command;
 import net.sourceforge.kolmafia.textui.parsetree.CompositeReference;
 import net.sourceforge.kolmafia.textui.parsetree.Concatenate;
 import net.sourceforge.kolmafia.textui.parsetree.Conditional;
@@ -95,7 +96,6 @@ import net.sourceforge.kolmafia.textui.parsetree.LoopContinue;
 import net.sourceforge.kolmafia.textui.parsetree.MapLiteral;
 import net.sourceforge.kolmafia.textui.parsetree.Operation;
 import net.sourceforge.kolmafia.textui.parsetree.Operator;
-import net.sourceforge.kolmafia.textui.parsetree.ParseTreeNode;
 import net.sourceforge.kolmafia.textui.parsetree.PluralValue;
 import net.sourceforge.kolmafia.textui.parsetree.RecordType;
 import net.sourceforge.kolmafia.textui.parsetree.RepeatUntilLoop;
@@ -328,7 +328,10 @@ public class Parser
 
 	public Scope parse()
 	{
-		Scope scope = this.parseScope( null, null, null, Parser.getExistingFunctionScope(), true, false, false );
+		Token firstToken = this.currentToken();
+		Scope scope = this.parseFile( null );
+
+		scope.setScopeLocation( this.makeLocation( firstToken, this.peekPreviousToken() ) );
 
 		if ( this.currentLine.nextLine != null )
 		{
@@ -513,9 +516,8 @@ public class Parser
 
 		this.imports.put( scriptFile, scriptFile.lastModified() );
 
-		Scope result = scope;
 		Parser parser = new Parser( scriptFile, null, this.imports );
-		result = parser.parseScope( scope, null, null, scope.getParentScope(), true, false, false );
+		Scope result = parser.parseFile( scope );
 
 		if ( parser.currentLine.nextLine != null )
 		{
@@ -553,7 +555,7 @@ public class Parser
 		// If there is no data type, it's a command of some sort
 		if ( t == null )
 		{
-			ParseTreeNode c = this.parseCommand( expectedType, result, false, false, false );
+			Command c = this.parseCommand( expectedType, result, false, false, false );
 			if ( c != null )
 			{
 				result.addCommand( c, this );
@@ -583,36 +585,41 @@ public class Parser
 		return result;
 	}
 
-	private Scope parseScope( final Scope startScope,
-	                          final Type expectedType,
-	                          final VariableList variables,
-	                          final BasicScope parentScope,
-	                          final boolean wholeFile,
-	                          final boolean allowBreak,
-	                          final boolean allowContinue )
+	private Scope parseFile( final Scope startScope )
 	{
-		Scope result = startScope == null ? new Scope( variables, parentScope ) : startScope;
-		return this.parseScope( result, expectedType, parentScope, wholeFile, allowBreak, allowContinue );
-	}
-
-	private Scope parseScope( Scope result,
-	                          final Type expectedType,
-	                          final BasicScope parentScope,
-	                          final boolean wholeFile,
-	                          final boolean allowBreak,
-	                          final boolean allowContinue )
-	{
-		Directive importDirective;
+		Scope scope = startScope != null ? startScope :
+		              new Scope( (VariableList) null, Parser.getExistingFunctionScope() );
 
 		this.parseScriptName();
 		this.parseNotify();
 		this.parseSince();
 
+		Directive importDirective;
 		while ( ( importDirective = this.parseImport() ) != null )
 		{
-			result = this.importFile( importDirective.value, result );
+			scope = this.importFile( importDirective.value, scope );
 		}
 
+		return this.parseScope( scope, null, scope.getParentScope(), true, false, false );
+	}
+
+	private Scope parseScope( final Type expectedType,
+	                          final VariableList variables,
+	                          final BasicScope parentScope,
+	                          final boolean allowBreak,
+	                          final boolean allowContinue )
+	{
+		Scope result = new Scope( variables, parentScope );
+		return this.parseScope( result, expectedType, parentScope, false, allowBreak, allowContinue );
+	}
+
+	private Scope parseScope( final Scope result,
+	                          final Type expectedType,
+	                          final BasicScope parentScope,
+	                          final boolean wholeFile,
+	                          final boolean allowBreak,
+	                          final boolean allowContinue )
+	{
 		Position previousPosition = null;
 		while ( !this.atEndOfFile() )
 		{
@@ -652,7 +659,7 @@ public class Parser
 			if ( t == null )
 			{
 				// See if it's a regular command
-				ParseTreeNode c = this.parseCommand( expectedType, result, false, allowBreak, allowContinue );
+				Command c = this.parseCommand( expectedType, result, false, allowBreak, allowContinue );
 				if ( c != null )
 				{
 					result.addCommand( c, this );
@@ -1436,25 +1443,25 @@ public class Parser
 		return true;
 	}
 
-	private ParseTreeNode parseCommand( final Type functionType,
-	                                    final BasicScope scope,
-	                                    final boolean noElse,
-	                                    final boolean allowBreak,
-	                                    final boolean allowContinue )
+	private Command parseCommand( final Type functionType,
+	                              final BasicScope scope,
+	                              final boolean noElse,
+	                              final boolean allowBreak,
+	                              final boolean allowContinue )
 	{
-		ParseTreeNode result;
+		Command result;
 
 		if ( "break".equalsIgnoreCase( this.currentToken().value ) )
 		{
 			if ( allowBreak )
 			{
-				result = new LoopBreak();
+				result = new LoopBreak( this.makeLocation( this.currentToken() ) );
 			}
 			else
 			{
 				this.error( this.currentToken(), "Encountered 'break' outside of loop" );
 
-				result = ScriptState.BAD_SCRIPT_STATE;
+				result = new ScriptState.BadScriptState( this.makeLocation( this.currentToken() ) );
 			}
 
 			this.readToken(); //break
@@ -1464,13 +1471,13 @@ public class Parser
 		{
 			if ( allowContinue )
 			{
-				result = new LoopContinue();
+				result = new LoopContinue( this.makeLocation( this.currentToken() ) );
 			}
 			else
 			{
 				this.error( this.currentToken(), "Encountered 'continue' outside of loop" );
 
-				result = ScriptState.BAD_SCRIPT_STATE;
+				result = new ScriptState.BadScriptState( this.makeLocation( this.currentToken() ) );
 			}
 
 			this.readToken(); //continue
@@ -1478,7 +1485,7 @@ public class Parser
 
 		else if ( "exit".equalsIgnoreCase( this.currentToken().value ) )
 		{
-			result = new ScriptExit();
+			result = new ScriptExit( this.makeLocation( this.currentToken() ) );
 			this.readToken(); //exit
 		}
 
@@ -1608,7 +1615,7 @@ public class Parser
 		          // may become available again once we are able to get rid of the 'replaceToken' in 'parseValue'
 		          false )
 		{
-			this.error( typeStart, "Unknown type " + this.currentToken().value );
+			this.error( this.currentToken(), "Unknown type " + this.currentToken().value );
 
 			valType = Type.BAD_TYPE;
 			this.readToken();
@@ -2036,7 +2043,7 @@ public class Parser
 
 		for ( int i = 1; i < identifier.length(); ++i )
 		{
-			if ( !Character.isLetterOrDigit( identifier.charAt( i ) ) && identifier.charAt( i ) != '_'  && identifier.charAt( i ) != '@' )
+			if ( !Character.isLetterOrDigit( identifier.charAt( i ) ) && identifier.charAt( i ) != '_' && identifier.charAt( i ) != '@' )
 			{
 				return false;
 			}
@@ -2052,6 +2059,7 @@ public class Parser
 			return null;
 		}
 
+		Token returnStartToken = this.currentToken();
 		Position returnStart = this.here();
 
 		this.readToken(); //return
@@ -2063,7 +2071,7 @@ public class Parser
 				this.error( returnStart, "Return needs " + expectedType + " value" );
 			}
 
-			return new FunctionReturn( null, DataTypes.VOID_TYPE );
+			return new FunctionReturn( this.makeLocation( returnStartToken ), null, DataTypes.VOID_TYPE );
 		}
 
 		if ( expectedType != null && expectedType.equals( DataTypes.TYPE_VOID ) )
@@ -2089,7 +2097,8 @@ public class Parser
 			this.error( returnStart, "Cannot return " + value.getType() + " value from " + expectedType + " function" );
 		}
 
-		return new FunctionReturn( value, expectedType );
+		Location returnLocation = this.makeLocation( returnStartToken, this.peekPreviousToken() );
+		return new FunctionReturn( returnLocation, value, expectedType );
 	}
 
 	private Scope parseSingleCommandScope( final Type functionType,
@@ -2098,7 +2107,7 @@ public class Parser
 	                                       final boolean allowBreak,
 	                                       final boolean allowContinue )
 	{
-		ParseTreeNode command = this.parseCommand( functionType, parentScope, noElse, allowBreak, allowContinue );
+		Command command = this.parseCommand( functionType, parentScope, noElse, allowBreak, allowContinue );
 		if ( command == null )
 		{
 			if ( ";".equals( this.currentToken().value ) )
@@ -2110,7 +2119,10 @@ public class Parser
 				this.unexpectedTokenError( ";", this.currentToken() );
 			}
 
-			return new Scope( parentScope );
+			Scope result = new Scope( parentScope );
+			result.setScopeLocation( this.make0WidthLocation() );
+
+			return result;
 		}
 		return new Scope( command, parentScope );
 	}
@@ -2142,9 +2154,11 @@ public class Parser
 			return null;
 		}
 
+		Token blockStartToken = this.currentToken();
+
 		this.readToken(); // {
 
-		Scope scope = this.parseScope( null, functionType, variables, parentScope, false, allowBreak, allowContinue );
+		Scope scope = this.parseScope( functionType, variables, parentScope, allowBreak, allowContinue );
 
 		if ( "}".equals( this.currentToken().value ) )
 		{
@@ -2154,6 +2168,9 @@ public class Parser
 		{
 			this.unexpectedTokenError( "}", this.currentToken() );
 		}
+
+		Location blockLocation = this.makeLocation( blockStartToken, this.peekPreviousToken() );
+		scope.setScopeLocation( blockLocation );
 
 		return scope;
 	}
@@ -2168,6 +2185,8 @@ public class Parser
 		{
 			return null;
 		}
+
+		Token conditionalStartToken = this.currentToken();
 
 		this.readToken(); // if
 
@@ -2220,21 +2239,25 @@ public class Parser
 
 			Scope scope = parseBlockOrSingleCommand( functionType, null, parentScope, !elseFound, allowBreak, allowContinue );
 
+			Location conditionalLocation = this.makeLocation( conditionalStartToken, this.peekPreviousToken() );
+
 			if ( result == null )
 			{
-				result = new If( scope, condition );
+				result = new If( conditionalLocation, scope, condition );
 			}
 			else if ( finalElse )
 			{
-				result.addElseLoop( new Else( scope, condition ) );
+				result.addElseLoop( new Else( conditionalLocation, scope, condition ) );
 			}
 			else
 			{
-				result.addElseLoop( new ElseIf( scope, condition ) );
+				result.addElseLoop( new ElseIf( conditionalLocation, scope, condition ) );
 			}
 
 			if ( !noElse && "else".equalsIgnoreCase( this.currentToken().value ) )
 			{
+				conditionalStartToken = this.currentToken();
+
 				if ( finalElse && !elseError )
 				{
 					this.error( "Else without if" );
@@ -2314,6 +2337,8 @@ public class Parser
 			return null;
 		}
 
+		Token basicScriptStartToken = this.currentToken();
+
 		this.readToken(); // cli_execute
 		this.readToken(); // {
 
@@ -2359,7 +2384,8 @@ public class Parser
 			this.currentIndex = this.currentLine.offset;
 		}
 
-		return new BasicScript( ostream );
+		Location basicScriptLocation = this.makeLocation( basicScriptStartToken, this.peekPreviousToken() );
+		return new BasicScript( basicScriptLocation, ostream );
 	}
 
 	private Loop parseWhile( final Type functionType, final BasicScope parentScope )
@@ -2368,6 +2394,8 @@ public class Parser
 		{
 			return null;
 		}
+
+		Token whileStartToken = this.currentToken();
 
 		this.readToken(); // while
 
@@ -2412,7 +2440,8 @@ public class Parser
 
 		Scope scope = this.parseLoopScope( functionType, null, parentScope );
 
-		return new WhileLoop( scope, condition );
+		Location whileLocation = this.makeLocation( whileStartToken, this.peekPreviousToken() );
+		return new WhileLoop( whileLocation, scope, condition );
 	}
 
 	private Loop parseRepeat( final Type functionType, final BasicScope parentScope )
@@ -2421,6 +2450,8 @@ public class Parser
 		{
 			return null;
 		}
+
+		Token repeatStartToken = this.currentToken();
 
 		this.readToken(); // repeat
 
@@ -2475,7 +2506,8 @@ public class Parser
 			condition = Value.BAD_VALUE;
 		}
 
-		return new RepeatUntilLoop( scope, condition );
+		Location repeatLocation = this.makeLocation( repeatStartToken, this.peekPreviousToken() );
+		return new RepeatUntilLoop( repeatLocation, scope, condition );
 	}
 
 	private Switch parseSwitch( final Type functionType, final BasicScope parentScope, final boolean allowContinue )
@@ -2484,6 +2516,8 @@ public class Parser
 		{
 			return null;
 		}
+
+		Token switchStartToken = this.currentToken();
 
 		this.readToken(); // switch
 
@@ -2529,6 +2563,8 @@ public class Parser
 		}
 
 		Type type = condition.getType();
+
+		Token switchScopeStartToken = this.currentToken();
 
 		if ( "{".equals( this.currentToken().value ) )
 		{
@@ -2676,7 +2712,7 @@ public class Parser
 			if ( t == null )
 			{
 				// See if it's a regular command
-				ParseTreeNode c = this.parseCommand( functionType, scope, false, true, allowContinue );
+				Command c = this.parseCommand( functionType, scope, false, true, allowContinue );
 				if ( c != null )
 				{
 					scope.addCommand( c, this );
@@ -2726,7 +2762,12 @@ public class Parser
 			switchError = true;
 		}
 
-		return new Switch( condition, tests, indices, defaultIndex, scope,
+		Location switchLocation = this.makeLocation( switchStartToken, this.peekPreviousToken() );
+		Location switchScopeLocation = this.makeLocation( switchScopeStartToken, this.peekPreviousToken() );
+
+		scope.setScopeLocation( switchScopeLocation );
+
+		return new Switch( switchLocation, condition, tests, indices, defaultIndex, scope,
 		                   constantLabels ? labels : null );
 	}
 
@@ -2737,6 +2778,8 @@ public class Parser
 		{
 			return null;
 		}
+
+		Token tryStartToken = this.currentToken();
 
 		this.readToken(); // try
 
@@ -2759,7 +2802,8 @@ public class Parser
 			finalClause = new Scope( body );
 		}
 
-		return new Try( body, finalClause );
+		Location tryLocation = this.makeLocation( tryStartToken, this.peekPreviousToken() );
+		return new Try( tryLocation, body, finalClause );
 	}
 
 	private Catch parseCatch( final Type functionType, final BasicScope parentScope,
@@ -2770,11 +2814,14 @@ public class Parser
 			return null;
 		}
 
+		Token catchStartToken = this.currentToken();
+
 		this.readToken(); // catch
 
 		Scope body = this.parseBlockOrSingleCommand( functionType, null, parentScope, false, allowBreak, allowContinue );
 
-		return new Catch( body );
+		Location catchLocation = this.makeLocation( catchStartToken, this.peekPreviousToken() );
+		return new Catch( catchLocation, body );
 	}
 
 	private Catch parseCatchValue( final BasicScope parentScope )
@@ -2784,22 +2831,25 @@ public class Parser
 			return null;
 		}
 
+		Token catchStartToken = this.currentToken();
+
 		this.readToken(); // catch
 
-		Scope body = this.parseBlock( null, null, parentScope, true, false, false );
-		if ( body != null )
+		Command body;
+		if ( ( body = this.parseBlock( null, null, parentScope, true, false, false ) ) != null )
 		{
-			return new Catch( body );
+		}
+		else if ( ( body = this.parseExpression( parentScope ) ) != null )
+		{
+		}
+		else
+		{
+			this.error( "\"catch\" requires a block or an expression" );
+			body = Value.BAD_VALUE;
 		}
 
-		Value value = this.parseExpression( parentScope );
-		if ( value != null )
-		{
-			return new Catch( value );
-		}
-
-		this.error( "\"catch\" requires a block or an expression" );
-		return new Catch( Value.BAD_VALUE );
+		Location catchLocation = this.makeLocation( catchStartToken, this.peekPreviousToken() );
+		return new Catch( catchLocation, body );
 	}
 
 	private Scope parseStatic( final Type functionType, final BasicScope parentScope )
@@ -2808,6 +2858,8 @@ public class Parser
 		{
 			return null;
 		}
+
+		Token staticStartToken = this.currentToken();
 
 		this.readToken(); // static
 
@@ -2831,6 +2883,9 @@ public class Parser
 			this.unexpectedTokenError( "}", this.currentToken() );
 		}
 
+		Location staticLocation = this.makeLocation( staticStartToken, this.peekPreviousToken() );
+		result.setScopeLocation( staticLocation );
+
 		return result;
 	}
 
@@ -2850,6 +2905,8 @@ public class Parser
 			// a variable named sort, not the sort statement.
 			return null;
 		}
+
+		Token sortStartToken = this.currentToken();
 
 		this.readToken(); // sort
 
@@ -2895,7 +2952,8 @@ public class Parser
 		Scope scope = new Scope( varList, parentScope );
 		Value expr = this.parseExpression( scope );
 
-		return new SortBy( (VariableReference) aggregate, indexvar, valuevar, expr, this );
+		Location sortLocation = this.makeLocation( sortStartToken, this.peekPreviousToken() );
+		return new SortBy( sortLocation, (VariableReference) aggregate, indexvar, valuevar, expr, this );
 	}
 
 	private Loop parseForeach( final Type functionType, final BasicScope parentScope )
@@ -2906,6 +2964,8 @@ public class Parser
 		{
 			return null;
 		}
+
+		Token foreachStartToken = this.currentToken();
 
 		this.readToken(); // foreach
 
@@ -3026,8 +3086,10 @@ public class Parser
 		// Parse the scope with the list of keyVars
 		Scope scope = this.parseLoopScope( functionType, varList, parentScope );
 
+		Location foreachLocation = this.makeLocation( foreachStartToken, this.peekPreviousToken() );
+
 		// Add the foreach node with the list of varRefs
-		return new ForEachLoop( scope, variableReferences, aggregate, this );
+		return new ForEachLoop( foreachLocation, scope, variableReferences, aggregate, this );
 	}
 
 	private Loop parseFor( final Type functionType, final BasicScope parentScope )
@@ -3043,6 +3105,8 @@ public class Parser
 		{
 			return null;
 		}
+
+		Token forStartToken = this.currentToken();
 
 		this.readToken(); // for
 
@@ -3167,7 +3231,8 @@ public class Parser
 
 		Scope scope = this.parseLoopScope( functionType, varList, parentScope );
 
-		return new ForLoop( scope, new VariableReference( indexvar ), initial, last, increment, direction, this );
+		Location forLocation = this.makeLocation( forStartToken, this.peekPreviousToken() );
+		return new ForLoop( forLocation, scope, new VariableReference( indexvar ), initial, last, increment, direction, this );
 	}
 
 	private Loop parseJavaFor( final Type functionType, final BasicScope parentScope )
@@ -3182,8 +3247,12 @@ public class Parser
 			return null;
 		}
 
+		Token javaForStartToken = this.currentToken();
+
 		this.readToken(); // for
 		this.readToken(); // (
+
+		Token loopScopeStartToken = this.currentToken();
 
 		// Parse variables and initializers
 
@@ -3357,7 +3426,7 @@ public class Parser
 
 		// Parse incrementers in context of scope
 
-		List<ParseTreeNode> incrementers = new ArrayList<ParseTreeNode>();
+		List<Command> incrementers = new ArrayList<>();
 
 		while ( !this.atEndOfFile() && !")".equals( this.currentToken().value ) )
 		{
@@ -3434,12 +3503,26 @@ public class Parser
 		// Parse scope body
 		this.parseLoopScope( scope, functionType, parentScope );
 
-		return new JavaForLoop( scope, initializers, condition, incrementers );
+		Location loopScopeLocation = this.makeLocation( loopScopeStartToken, this.peekPreviousToken() );
+		Location javaForLocation = this.makeLocation( javaForStartToken, this.peekPreviousToken() );
+
+		scope.setScopeLocation( loopScopeLocation );
+
+		return new JavaForLoop( javaForLocation, scope, initializers, condition, incrementers );
 	}
 
 	private Scope parseLoopScope( final Type functionType, final VariableList varList, final BasicScope parentScope )
 	{
-		return this.parseLoopScope( new Scope( varList, parentScope ), functionType, parentScope );
+		Scope result = new Scope( varList, parentScope );
+
+		Token loopScopeStartToken = this.currentToken();
+
+		this.parseLoopScope( result, functionType, parentScope );
+
+		Location loopScopeLocation = this.makeLocation( loopScopeStartToken, this.peekPreviousToken() );
+		result.setScopeLocation( loopScopeLocation );
+
+		return result;
 	}
 
 	private Scope parseLoopScope( final Scope result, final Type functionType, final BasicScope parentScope )
@@ -3464,7 +3547,7 @@ public class Parser
 		else
 		{
 			// Scope is a single command
-			ParseTreeNode command = this.parseCommand( functionType, result, false, true, true );
+			Command command = this.parseCommand( functionType, result, false, true, true );
 			if ( command == null )
 			{
 				if ( ";".equals( this.currentToken().value ) )
@@ -3491,6 +3574,8 @@ public class Parser
 		{
 			return null;
 		}
+
+		Token newRecordStartToken = this.currentToken();
 
 		this.readToken();
 
@@ -3631,6 +3716,8 @@ public class Parser
 				}
 			}
 		}
+
+		Location newRecordLocation = this.makeLocation( newRecordStartToken, this.peekPreviousToken() );
 
 		return target.initialValueExpression( params );
 	}
@@ -3825,6 +3912,7 @@ public class Parser
 
 	private Assignment parseAssignment( final BasicScope scope, final VariableReference lhs )
 	{
+		Token operToken = this.currentToken();
 		String operStr = this.currentToken().value;
 		if ( !"=".equals( operStr ) &&
 		     !"+=".equals( operStr ) &&
@@ -3853,7 +3941,7 @@ public class Parser
 			assignmentError = true;
 		}
 
-		Operator oper = new Operator( operStr, this );
+		Operator oper = new Operator( this.makeLocation( operToken ), operStr, this );
 		this.readToken(); // oper
 
 		Value rhs;
@@ -3908,7 +3996,13 @@ public class Parser
 			assignmentError = true;
 		}
 
-		Operator op = "=".equals( operStr ) ? null : new Operator( operStr.substring( 0, operStr.length() - 1 ), this );
+		Operator op = null;
+
+		if ( !"=".equals( operStr ) )
+		{
+			op = new Operator( this.makeLocation( this.makeInlineRange( operToken.range.getStart(), operStr.length() - 1 ) ),
+			                   operStr.substring( 0, operStr.length() - 1 ), this );
+		}
 
 		return new Assignment( lhs, rhs, op );
 	}
@@ -3948,6 +4042,7 @@ public class Parser
 			return null;
 		}
 
+		Token operToken = this.currentToken();
 		String operStr = "++".equals( this.currentToken().value ) ? Parser.PRE_INCREMENT : Parser.PRE_DECREMENT;
 
 		this.readToken(); // oper
@@ -3966,7 +4061,7 @@ public class Parser
 			this.error( operStr + " requires a numeric variable reference" );
 		}
 
-		Operator oper = new Operator( operStr, this );
+		Operator oper = new Operator( this.makeLocation( operToken ), operStr, this );
 
 		return new IncDec( (VariableReference) lhs, oper );
 	}
@@ -3982,6 +4077,7 @@ public class Parser
 			return lhs;
 		}
 
+		Token operToken = this.currentToken();
 		String operStr = "++".equals( this.currentToken().value ) ? Parser.POST_INCREMENT : Parser.POST_DECREMENT;
 
 		this.readToken(); // oper
@@ -3992,7 +4088,7 @@ public class Parser
 			this.error( operStr + " requires a numeric variable reference" );
 		}
 
-		Operator oper = new Operator( operStr, this );
+		Operator oper = new Operator( this.makeLocation( operToken ), operStr, this );
 
 		return new IncDec( lhs, oper );
 	}
@@ -4015,6 +4111,7 @@ public class Parser
 
 		if ( "!".equals( this.currentToken().value ) )
 		{
+			Token operatorToken = this.currentToken();
 			String operator = this.currentToken().value;
 			this.readToken(); // !
 			if ( ( lhs = this.parseValue( scope ) ) == null )
@@ -4025,7 +4122,7 @@ public class Parser
 			}
 
 			lhs = this.autoCoerceValue( DataTypes.BOOLEAN_TYPE, lhs, scope );
-			lhs = new Operation( lhs, new Operator( operator, this ) );
+			lhs = new Operation( lhs, new Operator( this.makeLocation( operatorToken ), operator, this ) );
 			if ( lhs.getType() != DataTypes.BOOLEAN_TYPE && lhs.getType() != Type.BAD_TYPE )
 			{
 				this.error( "\"!\" operator requires a boolean value" );
@@ -4033,6 +4130,7 @@ public class Parser
 		}
 		else if ( "~".equals( this.currentToken().value ) )
 		{
+			Token operatorToken = this.currentToken();
 			String operator = this.currentToken().value;
 			this.readToken(); // ~
 			if ( ( lhs = this.parseValue( scope ) ) == null )
@@ -4042,7 +4140,7 @@ public class Parser
 				lhs = Value.BAD_VALUE;
 			}
 
-			lhs = new Operation( lhs, new Operator( operator, this ) );
+			lhs = new Operation( lhs, new Operator( this.makeLocation( operatorToken ), operator, this ) );
 			if ( lhs.getType() != DataTypes.INT_TYPE && lhs.getType() != DataTypes.BOOLEAN_TYPE && lhs.getType() != Type.BAD_TYPE )
 			{
 				this.error( "\"~\" operator requires an integer or boolean value" );
@@ -4054,6 +4152,7 @@ public class Parser
 			if ( ( lhs = this.parseValue( scope ) ) == null )
 			{
 				// Nope. Unary minus.
+				Token operatorToken = this.currentToken();
 				String operator = this.currentToken().value;
 				this.readToken(); // -
 				if ( ( lhs = this.parseValue( scope ) ) == null )
@@ -4063,11 +4162,12 @@ public class Parser
 					lhs = Value.BAD_VALUE;
 				}
 
-				lhs = new Operation( lhs, new Operator( operator, this ) );
+				lhs = new Operation( lhs, new Operator( this.makeLocation( operatorToken ), operator, this ) );
 			}
 		}
 		else if ( "remove".equals( this.currentToken().value ) )
 		{
+			Token operatorToken = this.currentToken();
 			String operator = this.currentToken().value;
 			this.readToken(); // remove
 
@@ -4079,7 +4179,7 @@ public class Parser
 				lhs = VariableReference.BAD_VARIABLE_REFERENCE;
 			}
 
-			lhs = new Operation( lhs, new Operator( operator, this ) );
+			lhs = new Operation( lhs, new Operator( this.makeLocation( operatorToken ), operator, this ) );
 		}
 		else if ( ( lhs = this.parseValue( scope ) ) == null )
 		{
@@ -4091,7 +4191,7 @@ public class Parser
 		Position previousPosition = null;
 		while ( this.madeProgress( previousPosition, previousPosition = this.here() ) )
 		{
-			oper = this.parseOperator( this.currentToken().value );
+			oper = this.parseOperator( this.currentToken() );
 
 			if ( oper == null )
 			{
@@ -4731,6 +4831,7 @@ public class Parser
 
 		this.readToken(); // read $
 
+		Token typedConstantTypeToken = this.currentToken();
 		String name = this.currentToken().value;
 		Type type = null;
 		boolean plurals = false;
@@ -5009,14 +5110,14 @@ public class Parser
 		}
 	}
 
-	private Operator parseOperator( final String oper )
+	private Operator parseOperator( final Token oper )
 	{
-		if ( !this.isOperator( oper ) )
+		if ( !this.isOperator( oper.value ) )
 		{
 			return null;
 		}
 
-		return new Operator( oper, this );
+		return new Operator( this.makeLocation( oper ), oper.value, this );
 	}
 
 	private boolean isOperator( final String oper )
@@ -5540,6 +5641,7 @@ public class Parser
 		}
 	}
 
+	/** Finds the last token that was *read* */
 	private final Token peekPreviousToken()
 	{
 		if ( this.currentToken != null )
@@ -5909,6 +6011,15 @@ public class Parser
 	private Range rangeToHere( final Position start )
 	{
 		return new Range( start != null ? start : this.here(), this.here() );
+	}
+
+	private Range makeInlineRange( final Position start, final int offset )
+	{
+		Position end = new Position( start.getLine(), start.getCharacter() + offset );
+
+		return offset >= 0 ?
+		       new Range( start, end ) :
+		       new Range( end, start );
 	}
 
 	private Range makeRange( final Token start, final Token end )

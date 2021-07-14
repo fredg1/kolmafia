@@ -38,6 +38,8 @@ import java.io.PrintStream;
 import java.util.Comparator;
 import java.util.List;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.KoLConstants;
 import net.sourceforge.kolmafia.RequestLogger;
 import net.sourceforge.kolmafia.VYKEACompanionData;
@@ -54,7 +56,7 @@ import net.sourceforge.kolmafia.textui.Parser;
 import org.json.JSONException;
 
 public class Value
-	extends ParseTreeNode
+	extends Command
 	implements Comparable<Value>
 {
 	public static final Value BAD_VALUE = new Value( Type.BAD_TYPE );
@@ -65,46 +67,60 @@ public class Value
 	public String contentString = null;
 	public Object content = null;
 
+	@Deprecated
 	public Value()
 	{
 		this.type = DataTypes.VOID_TYPE;
 	}
 
+	@Deprecated
 	public Value( final long value )
 	{
 		this.type = DataTypes.INT_TYPE;
 		this.contentLong = value;
 	}
 
+	@Deprecated
 	public Value( final boolean value )
 	{
 		this.type = DataTypes.BOOLEAN_TYPE;
 		this.contentLong = value ? 1 : 0;
 	}
 
+	@Deprecated
 	public Value( final String value )
 	{
 		this.type = DataTypes.STRING_TYPE;
 		this.contentString = value == null ? "" : value;
 	}
 
+	@Deprecated
 	public Value( final double value )
 	{
 		this.type = DataTypes.FLOAT_TYPE;
 		this.contentLong = Double.doubleToRawLongBits( value );
 	}
 
+	@Deprecated
 	public Value( final Type type )
 	{
 		this.type = type;
 	}
 
+	public Value( final Location location, final Type type )
+	{
+		super( location );
+		this.type = type;
+	}
+
+	@Deprecated
 	public Value( final Type type, final String contentString )
 	{
 		this.type = type;
 		this.contentString = contentString;
 	}
 
+	@Deprecated
 	public Value( final Type type, final long contentLong, final String contentString )
 	{
 		this.type = type;
@@ -112,6 +128,7 @@ public class Value
 		this.contentString = contentString;
 	}
 
+	@Deprecated
 	public Value( final Type type, final String contentString, final Object content )
 	{
 		this.type = type;
@@ -119,6 +136,7 @@ public class Value
 		this.content = content;
 	}
 
+	@Deprecated
 	public Value( final Type type, final long contentLong, final String contentString, final Object content )
 	{
 		this.type = type;
@@ -127,6 +145,7 @@ public class Value
 		this.content = content;
 	}
 
+	@Deprecated
 	public Value( final Value original )
 	{
 		this.type = original.type;

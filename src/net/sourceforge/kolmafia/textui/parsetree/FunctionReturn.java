@@ -35,6 +35,8 @@ package net.sourceforge.kolmafia.textui.parsetree;
 
 import java.io.PrintStream;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.KoLmafia;
 
 import net.sourceforge.kolmafia.textui.DataTypes;
@@ -42,13 +44,14 @@ import net.sourceforge.kolmafia.textui.AshRuntime;
 import net.sourceforge.kolmafia.textui.ScriptRuntime;
 
 public class FunctionReturn
-	extends ParseTreeNode
+	extends Command
 {
 	private final Value returnValue;
 	private final Type expectedType;
 
-	public FunctionReturn( final Value returnValue, final Type expectedType )
+	public FunctionReturn( final Location location, final Value returnValue, final Type expectedType )
 	{
+		super( location );
 		this.returnValue = returnValue;
 		this.expectedType = expectedType;
 	}

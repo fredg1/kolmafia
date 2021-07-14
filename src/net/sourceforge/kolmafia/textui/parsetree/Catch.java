@@ -35,6 +35,8 @@ package net.sourceforge.kolmafia.textui.parsetree;
 
 import java.io.PrintStream;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.KoLmafia;
 
 import net.sourceforge.kolmafia.textui.DataTypes;
@@ -43,13 +45,13 @@ import net.sourceforge.kolmafia.textui.ScriptRuntime;
 import net.sourceforge.kolmafia.textui.ScriptException;
 
 public class Catch
-        extends Value
+	extends Value
 {
-	private final ParseTreeNode node;
+	private final Command node;
 
-	public Catch( final ParseTreeNode node  )
+	public Catch( final Location location, final Command node )
 	{
-		super( DataTypes.STRING_TYPE );
+		super( location, DataTypes.STRING_TYPE );
 		this.node = node;
 	}
 
@@ -109,13 +111,13 @@ public class Catch
 
 		return new Value( errorMessage );
 	}
-	
+
 	@Override
 	public boolean assertBarrier()
 	{
 		return this.node.assertBarrier();
 	}
-	
+
 	@Override
 	public boolean assertBreakable()
 	{
