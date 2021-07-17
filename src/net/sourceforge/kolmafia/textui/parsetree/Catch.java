@@ -51,7 +51,7 @@ public class Catch
 
 	public Catch( final Location location, final Command node )
 	{
-		super( location, DataTypes.STRING_TYPE );
+		super( DataTypes.STRING_TYPE, location );
 		this.node = node;
 	}
 

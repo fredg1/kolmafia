@@ -43,8 +43,6 @@ import net.sourceforge.kolmafia.textui.AshRuntime;
 public class Variable
 	extends Symbol
 {
-	public static final Variable BAD_VARIABLE = new Variable( Type.BAD_TYPE );
-
 	Type type;
 	Value content;
 	Value expression = null;
@@ -167,5 +165,15 @@ public class Variable
 	{
 		AshRuntime.indentLine( stream, indent );
 		stream.println( "<VAR " + this.getType() + " " + this.getName() + ">" );
+	}
+
+	public static class BadVariable
+		extends Variable
+		implements BadNode
+	{
+		public BadVariable( final String name, final Type type, final Location location )
+		{
+			super( name, type, location );
+		}
 	}
 }

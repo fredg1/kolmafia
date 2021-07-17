@@ -77,4 +77,10 @@ public class TypeDef
 	{
 		return o instanceof TypeDef && this.name.equals( o.name );
 	}
+
+	@Override
+	public boolean isBad()
+	{
+		return this.base.isBad();
+	}
 }

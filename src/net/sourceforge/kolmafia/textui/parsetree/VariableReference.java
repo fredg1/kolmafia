@@ -42,8 +42,6 @@ import net.sourceforge.kolmafia.textui.AshRuntime;
 public class VariableReference
 	extends Value
 {
-	public static final VariableReference BAD_VARIABLE_REFERENCE = new VariableReference( Variable.BAD_VARIABLE );
-
 	public Variable target;
 
 	public VariableReference( final Variable target )

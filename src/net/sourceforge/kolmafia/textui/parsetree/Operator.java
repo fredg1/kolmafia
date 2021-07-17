@@ -239,9 +239,9 @@ public class Operator
 		int ltype = lhs.getBaseType().getType();
 		int rtype = rhs.getBaseType().getType();
 
-		if ( lhs.getBaseType().simpleType() == Type.BAD_TYPE || rhs.getBaseType().simpleType() == Type.BAD_TYPE )
+		if ( lhs.isBad() || rhs.isBad() )
 		{
-			// Type.BAD_TYPE is only generated through errors, which
+			// BadNode's are only generated through errors, which
 			// means one was already generated about this type.
 			return true;
 		}
@@ -267,9 +267,9 @@ public class Operator
 		lhs = lhs.getBaseType();
 		rhs = rhs.getBaseType();
 
-		if ( lhs.simpleType() == Type.BAD_TYPE || rhs.simpleType() == Type.BAD_TYPE )
+		if ( lhs.isBad() || rhs.isBad() )
 		{
-			// Type.BAD_TYPE is only generated through errors, which
+			// BadNode's are only generated through errors, which
 			// means one was already generated about this type.
 			return true;
 		}

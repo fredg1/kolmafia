@@ -69,6 +69,7 @@ import net.sourceforge.kolmafia.preferences.Preferences;
 import net.sourceforge.kolmafia.textui.Parser.Line.Token;
 
 import net.sourceforge.kolmafia.textui.parsetree.AggregateType;
+import net.sourceforge.kolmafia.textui.parsetree.AggregateType.BadAggregateType;
 import net.sourceforge.kolmafia.textui.parsetree.ArrayLiteral;
 import net.sourceforge.kolmafia.textui.parsetree.Assignment;
 import net.sourceforge.kolmafia.textui.parsetree.BasicScope;
@@ -83,6 +84,7 @@ import net.sourceforge.kolmafia.textui.parsetree.ElseIf;
 import net.sourceforge.kolmafia.textui.parsetree.ForEachLoop;
 import net.sourceforge.kolmafia.textui.parsetree.ForLoop;
 import net.sourceforge.kolmafia.textui.parsetree.Function;
+import net.sourceforge.kolmafia.textui.parsetree.Function.BadFunction;
 import net.sourceforge.kolmafia.textui.parsetree.Function.MatchType;
 import net.sourceforge.kolmafia.textui.parsetree.FunctionCall;
 import net.sourceforge.kolmafia.textui.parsetree.FunctionInvocation;
@@ -98,6 +100,7 @@ import net.sourceforge.kolmafia.textui.parsetree.Operation;
 import net.sourceforge.kolmafia.textui.parsetree.Operator;
 import net.sourceforge.kolmafia.textui.parsetree.PluralValue;
 import net.sourceforge.kolmafia.textui.parsetree.RecordType;
+import net.sourceforge.kolmafia.textui.parsetree.RecordType.BadRecordType;
 import net.sourceforge.kolmafia.textui.parsetree.RepeatUntilLoop;
 import net.sourceforge.kolmafia.textui.parsetree.Scope;
 import net.sourceforge.kolmafia.textui.parsetree.ScriptExit;
@@ -109,11 +112,14 @@ import net.sourceforge.kolmafia.textui.parsetree.SwitchScope;
 import net.sourceforge.kolmafia.textui.parsetree.TernaryExpression;
 import net.sourceforge.kolmafia.textui.parsetree.Try;
 import net.sourceforge.kolmafia.textui.parsetree.Type;
+import net.sourceforge.kolmafia.textui.parsetree.Type.BadType;
+import net.sourceforge.kolmafia.textui.parsetree.Type.TypeReference;
 import net.sourceforge.kolmafia.textui.parsetree.TypeDef;
 import net.sourceforge.kolmafia.textui.parsetree.UserDefinedFunction;
 import net.sourceforge.kolmafia.textui.parsetree.Value;
 import net.sourceforge.kolmafia.textui.parsetree.VarArgType;
 import net.sourceforge.kolmafia.textui.parsetree.Variable;
+import net.sourceforge.kolmafia.textui.parsetree.Variable.BadVariable;
 import net.sourceforge.kolmafia.textui.parsetree.VariableList;
 import net.sourceforge.kolmafia.textui.parsetree.VariableReference;
 import net.sourceforge.kolmafia.textui.parsetree.WhileLoop;
@@ -729,53 +735,51 @@ public class Parser
 			return null;
 		}
 
-		Token recordHeadToken = this.currentToken();
+		Token recordStartToken = this.currentToken();
 
 		this.readToken(); // read record
 
 		if ( ";".equals( this.currentToken().value ) )
 		{
-			this.error( recordHeadToken, "Record name expected" );
+			this.error( this.currentToken(), "Record name expected" );
 
-			return Type.BAD_TYPE;
+			return new BadRecordType( null, this.makeLocation( recordStartToken ) );
 		}
 
 		// Allow anonymous records
 		String recordName = null;
-		Location recordDefinition = null;
-		Position recordStart = this.here();
+
 		boolean recordError = false;
+		boolean recordSyntaxError = false;
 
 		if ( !"{".equals( this.currentToken().value ) )
 		{
 			// Named record
 			recordName = this.currentToken().value;
 
-			this.readToken(); // read name
-
-			recordDefinition = this.makeLocation( recordStart );
-
 			if ( !this.parseIdentifier( recordName ) )
 			{
-				this.error( recordDefinition, "Invalid record name '" + recordName + "'" );
-				recordError = true;
+				this.error( this.currentToken(), "Invalid record name '" + recordName + "'" );
+				recordError = recordSyntaxError = true;
 
 				recordName = null;
 			}
 			else if ( Parser.isReservedWord( recordName ) )
 			{
-				this.error( recordDefinition, "Reserved word '" + recordName + "' cannot be a record name" );
+				this.error( this.currentToken(), "Reserved word '" + recordName + "' cannot be a record name" );
 				recordError = true;
 
 				recordName = null;
 			}
 			else if ( parentScope.findType( recordName ) != null )
 			{
-				this.error( recordDefinition, "Record name '" + recordName + "' is already defined" );
+				this.error( this.currentToken(), "Record name '" + recordName + "' is already defined" );
 				recordError = true;
 
 				recordName = null;
 			}
+
+			this.readToken(); // read name
 		}
 
 		if ( "{".equals( this.currentToken().value ) )
@@ -786,7 +790,7 @@ public class Parser
 		{
 			this.unexpectedTokenError( "{", this.currentToken() );
 
-			return Type.BAD_TYPE;
+			return new BadRecordType( recordName, this.makeLocation( recordStartToken, this.peekPreviousToken() ) );
 		}
 
 		// Loop collecting fields
@@ -796,13 +800,16 @@ public class Parser
 		Position previousPosition = null;
 		while ( this.madeProgress( previousPosition, previousPosition = this.here() ) )
 		{
-			Position fieldStart = this.here();
 			boolean fieldError = false;
+			boolean fieldSyntaxError = false;
 
 			if ( this.atEndOfFile() )
 			{
-				this.unexpectedTokenError( "}", this.currentToken() );
-				recordError = fieldError = true;
+				if ( !recordSyntaxError )
+				{
+					this.unexpectedTokenError( "}", this.currentToken() );
+				}
+				recordError = recordSyntaxError = true;
 				break;
 			}
 
@@ -810,8 +817,8 @@ public class Parser
 			{
 				if ( fieldTypes.isEmpty() && !recordError )
 				{
-					this.error( fieldStart, "Record field(s) expected" );
-					recordError = fieldError = true;
+					this.error( this.currentToken(), "Record field(s) expected" );
+					recordError = true;
 				}
 
 				this.readToken(); // read }
@@ -822,32 +829,33 @@ public class Parser
 			Type fieldType = this.parseType( parentScope, true );
 			if ( fieldType == null )
 			{
-				this.error( fieldStart, "Type name expected" );
-				recordError = fieldError = true;
-
-				fieldType = Type.BAD_TYPE;
+				if ( !fieldSyntaxError )
+				{
+					this.error( this.currentToken(), "Type name expected" );
+				}
+				recordError = recordSyntaxError = fieldError = fieldSyntaxError = true;
 			}
 
 			// Get the field name
 			String fieldName = this.currentToken().value;
 			if ( ";".equals( fieldName ) )
 			{
-				if ( !fieldError )
+				if ( !fieldSyntaxError )
 				{
-					this.error( fieldStart, "Field name expected" );
+					this.error( this.currentToken(), "Field name expected" );
 				}
-				recordError = fieldError = true;
+				recordError = recordSyntaxError = fieldError = fieldSyntaxError = true;
 
 				fieldName = null;
 				// don't read
 			}
 			else if ( !this.parseIdentifier( fieldName ) )
 			{
-				if ( !fieldError )
+				if ( !fieldSyntaxError )
 				{
-					this.error( fieldStart, "Invalid field name '" + fieldName + "'" );
+					this.error( this.currentToken(), "Invalid field name '" + fieldName + "'" );
 				}
-				recordError = fieldError = true;
+				recordError = recordSyntaxError = fieldError = fieldSyntaxError = true;
 
 				fieldName = null;
 				// don't read
@@ -856,7 +864,7 @@ public class Parser
 			{
 				if ( !fieldError )
 				{
-					this.error( fieldStart, "Reserved word '" + fieldName + "' cannot be used as a field name" );
+					this.error( this.currentToken(), "Reserved word '" + fieldName + "' cannot be used as a field name" );
 				}
 				recordError = fieldError = true;
 
@@ -867,7 +875,7 @@ public class Parser
 			{
 				if ( !fieldError )
 				{
-					this.error( fieldStart, "Field name '" + fieldName + "' is already defined" );
+					this.error( this.currentToken(), "Field name '" + fieldName + "' is already defined" );
 				}
 				recordError = fieldError = true;
 
@@ -885,24 +893,21 @@ public class Parser
 			}
 			else
 			{
-				if ( !fieldError )
+				if ( !fieldSyntaxError )
 				{
 					this.unexpectedTokenError( ";", this.currentToken() );
 				}
-				recordError = fieldError = true;
+				recordError = recordSyntaxError = fieldError = fieldSyntaxError = true;
 			}
 
-			if ( fieldName != null )
+			if ( fieldType != null && fieldName != null )
 			{
 				fieldTypes.add( fieldType );
 				fieldNames.add( fieldName.toLowerCase() );
 			}
 		}
 
-		if ( recordDefinition == null )
-		{
-			recordDefinition = this.makeLocation( recordStart );
-		}
+		Location recordDefinition = this.makeLocation( recordStartToken, this.peekPreviousToken() );
 
 		String[] fieldNameArray = new String[ fieldNames.size() ];
 		Type[] fieldTypeArray = new Type[ fieldTypes.size() ];
@@ -915,7 +920,7 @@ public class Parser
 					( "(anonymous record " + Integer.toHexString( Arrays.hashCode( fieldNameArray ) ) + ")" ),
 				fieldNameArray, fieldTypeArray, recordDefinition );
 
-		if ( !recordError && recordName != null )
+		if ( recordName != null )
 		{
 			// Enter into type table
 			parentScope.addType( rec );
@@ -988,27 +993,9 @@ public class Parser
 
 			if ( "...".equals( this.currentToken().value ) )
 			{
-				// We can only have a single vararg parameter
-				if ( vararg )
-				{
-					if ( !parameterError )
-					{
-						this.error( parameterTypeToken, this.currentToken(), "Only one vararg parameter is allowed" );
-					}
-					functionError = parameterError = true;
-
-					paramType = Type.BAD_TYPE;
-				}
-				else
-				{
-					// Make a vararg type out of the previously parsed type.
-					paramType = new VarArgType( paramType );
-
-					paramType.getReferenceLocations().add( this.makeLocation( parameterTypeToken, this.currentToken() ) );
-
-					// Only one vararg is allowed
-					vararg = true;
-				}
+				// Make a vararg type out of the previously parsed type.
+				paramType = new VarArgType( paramType );
+				paramType = new TypeReference( paramType, this.makeLocation( parameterTypeToken, this.currentToken() ) );
 
 				this.readToken(); //read ...
 			}
@@ -1027,7 +1014,27 @@ public class Parser
 				continue;
 			}
 
-			if ( !paramList.add( param ) )
+			if ( vararg )
+			{
+				if ( !functionError )
+				{
+					if ( paramType instanceof TypeReference &&
+					     ((TypeReference) paramType).getTarget() instanceof VarArgType )
+					{
+						// We can only have a single vararg parameter
+						this.error( paramType.getLocation(), "Only one vararg parameter is allowed" );
+					}
+					else
+					{
+						// The single vararg parameter must be the last one
+						this.error( paramType.getLocation(), "The vararg parameter must be the last one" );
+					}
+					// The check uses functionError, but we set parameterError to true anyway.
+					// This is not a mistake.
+					functionError = parameterError = true;
+				}
+			}
+			else if ( !paramList.add( param ) )
 			{
 				if ( !parameterError )
 				{
@@ -1035,16 +1042,20 @@ public class Parser
 				}
 				functionError = parameterError = true;
 			}
+			else
+			{
+				variableReferences.add( new VariableReference( param ) );
+			}
+
+			if ( paramType instanceof TypeReference &&
+			     ((TypeReference) paramType).getTarget() instanceof VarArgType )
+			{
+				// Only one vararg is allowed
+				vararg = true;
+			}
 
 			if ( !")".equals( this.currentToken().value ) )
 			{
-				// The single vararg parameter must be the last one
-				if ( vararg && !parameterError )
-				{
-					this.error( parameterTypeToken, paramNameToken, "The vararg parameter must be the last one" );
-					functionError = parameterError = true;
-				}
-
 				if ( ",".equals( this.currentToken().value ) )
 				{
 					this.readToken(); //read comma
@@ -1058,8 +1069,6 @@ public class Parser
 					functionError = parameterError = true;
 				}
 			}
-
-			variableReferences.add( new VariableReference( param ) );
 		}
 
 		// Add the function to the parent scope before we parse the
@@ -1156,13 +1165,13 @@ public class Parser
 		if ( Parser.isReservedWord( variableName ) )
 		{
 			this.error( variableToken, "Reserved word '" + variableName + "' cannot be a variable name" );
-			result = Variable.BAD_VARIABLE;
+			result = new BadVariable( variableName, t, this.makeLocation( variableToken ) );
 			variableError = true;
 		}
 		else if ( scope != null && scope.findVariable( variableName ) != null )
 		{
 			this.error( variableToken, "Variable " + variableName + " is already defined" );
-			result = Variable.BAD_VARIABLE;
+			result = new BadVariable( variableName, t, this.makeLocation( variableToken ) );
 			variableError = true;
 		}
 		else
@@ -1192,12 +1201,12 @@ public class Parser
 				this.readToken(); // read {
 				if ( !( ltype instanceof AggregateType ) )
 				{
-					if ( !variableError && ltype != Type.BAD_TYPE )
+					if ( !variableError && !ltype.isBad() )
 					{
 						this.error( variableStart, "Cannot initialize " + variableName + " of type " + t + " with an aggregate literal" );
 						variableError = true;
 					}
-					rhs = this.parseAggregateLiteral( scope, AggregateType.BAD_AGGREGATE );
+					rhs = this.parseAggregateLiteral( scope, new BadAggregateType( null ) );
 				}
 				else
 				{
@@ -1237,12 +1246,12 @@ public class Parser
 			}
 			else
 			{
-				if ( !variableError && ltype != Type.BAD_TYPE )
+				if ( !variableError && !ltype.isBad() )
 				{
 					this.error( variableStart, "Cannot initialize " + variableName + " of type " + t + " with an aggregate literal" );
 					variableError = true;
 				}
-				rhs = this.parseAggregateLiteral( scope, AggregateType.BAD_AGGREGATE );
+				rhs = this.parseAggregateLiteral( scope, new BadAggregateType( null ) );
 			}
 		}
 		else
@@ -1250,7 +1259,7 @@ public class Parser
 			rhs = null;
 		}
 
-		if ( scope != null && result != Variable.BAD_VARIABLE )
+		if ( scope != null && !result.isBad() )
 		{
 			scope.addVariable( result );
 			VariableReference lhs = new VariableReference( variableName, scope );
@@ -1260,7 +1269,7 @@ public class Parser
 		return result;
 	}
 
-	private Value autoCoerceValue( final Type ltype, final Value rhs, final BasicScope scope )
+	private Value autoCoerceValue( Type ltype, final Value rhs, final BasicScope scope )
 	{
 		// DataTypes.TYPE_ANY has no name
 		if ( ltype == null || ltype.getName() == null )
@@ -1269,9 +1278,14 @@ public class Parser
 		}
 
 		// Error propagation
-		if ( ltype.simpleType() == Type.BAD_TYPE || rhs.getType().simpleType() == Type.BAD_TYPE )
+		if ( ltype.isBad() || rhs.getType().isBad() )
 		{
 			return Value.BAD_VALUE;
+		}
+
+		if ( ltype instanceof TypeReference )
+		{
+			ltype = ((TypeReference) ltype).getTarget();
 		}
 
 		// If the types are the same no coercion needed
@@ -1292,9 +1306,7 @@ public class Parser
 			Function target = scope.findFunction( name, params, MatchType.EXACT );
 			if ( target != null && target.getType().equals( ltype ) )
 			{
-				target.addReference( this.make0WidthLocation() );
-
-				return new FunctionCall( target, params, this );
+				return new FunctionCall( rhs.getLocation(), target, params, this );
 			}
 		}
 
@@ -1308,9 +1320,7 @@ public class Parser
 			Function target = scope.findFunction( name, params, MatchType.EXACT );
 			if ( target != null && target.getType().equals( ltype ) )
 			{
-				target.addReference( this.make0WidthLocation() );
-
-				return new FunctionCall( target, params, this );
+				return new FunctionCall( rhs.getLocation(), target, params, this );
 			}
 		}
 
@@ -1373,7 +1383,7 @@ public class Parser
 				typedefError = true;
 			}
 
-			t = Type.BAD_TYPE;
+			t = new BadType( null, null );
 		}
 
 		String typeName = this.currentToken().value;
@@ -1421,7 +1431,7 @@ public class Parser
 		if ( existingType != null )
 		{
 			if ( existingType.getBaseType().equals( t ) ||
-			     existingType.getBaseType().simpleType() == Type.BAD_TYPE )
+			     existingType.isBad() )
 			{
 				// It is OK to redefine a typedef with an equivalent type
 				return true;
@@ -1436,7 +1446,7 @@ public class Parser
 		else if ( typeName != null )
 		{
 			// Add the type to the type table
-			TypeDef type = new TypeDef( typeName, t, this.makeLocation( typeToken ) );
+			TypeDef type = new TypeDef( typeName, t, this.makeLocation( typedefToken, this.peekPreviousToken() ) );
 			parentScope.addType( type );
 		}
 
@@ -1583,21 +1593,18 @@ public class Parser
 			return null;
 		}
 
-		Position typeStart = this.here();
-
 		Type valType;
 
 		if ( ( valType = this.parseRecord( scope ) ) != null )
 		{
 			if ( !records )
 			{
-				this.error( typeStart, "Record creation is not allowed here" );
-
-				valType = Type.BAD_TYPE;
+				this.error( valType.getLocation(), "Record creation is not allowed here" );
 			}
 		}
 		else if ( ( valType = scope.findType( this.currentToken().value ) ) != null )
 		{
+			valType = new TypeReference( valType, this.makeLocation( this.currentToken() ) );
 			this.readToken();
 		}
 		// We can safely assume that two non-reserved identifiers in a row
@@ -1617,7 +1624,7 @@ public class Parser
 		{
 			this.error( this.currentToken(), "Unknown type " + this.currentToken().value );
 
-			valType = Type.BAD_TYPE;
+			valType = new BadType( this.currentToken().value, this.makeLocation( this.currentToken() ) );
 			this.readToken();
 
 			/* However, this only checks for single word (simple) types.
@@ -1636,12 +1643,7 @@ public class Parser
 
 		if ( "[".equals( this.currentToken().value ) )
 		{
-			valType = this.parseAggregateType( valType, scope );
-		}
-
-		if ( valType != null && valType.simpleType() != Type.BAD_TYPE )
-		{
-			valType.addReference( this.makeLocation( typeStart ) );
+			return this.parseAggregateType( valType, scope );
 		}
 
 		return valType;
@@ -1693,7 +1695,7 @@ public class Parser
 			{
 				this.readToken(); // read {
 
-				if ( !isArray && !arrayAllowed && aggr != AggregateType.BAD_AGGREGATE )
+				if ( !isArray && !arrayAllowed && !aggr.isBad() )
 				{
 					// We know this is a map, but they placed
 					// an aggregate literal as a key
@@ -1706,17 +1708,17 @@ public class Parser
 
 				if ( dataType instanceof AggregateType )
 				{
-					lhs = parseAggregateLiteral( scope, (AggregateType) dataType );
+					lhs = this.parseAggregateLiteral( scope, (AggregateType) dataType );
 				}
 				else
 				{
-					if ( dataType != Type.BAD_TYPE && !aggregateError )
+					if ( !dataType.isBad() && !aggregateError )
 					{
 						this.error( keyStart, "Expected an element of type " + dataType.toString() + ", found an aggregate" );
 						aggregateError = true;
 					}
 
-					lhs = parseAggregateLiteral( scope, AggregateType.BAD_AGGREGATE );
+					lhs = this.parseAggregateLiteral( scope, new BadAggregateType( null ) );
 				}
 			}
 			else
@@ -1804,17 +1806,17 @@ public class Parser
 
 				if ( dataType instanceof AggregateType )
 				{
-					rhs = parseAggregateLiteral( scope, (AggregateType) dataType );
+					rhs = this.parseAggregateLiteral( scope, (AggregateType) dataType );
 				}
 				else
 				{
-					if ( dataType != Type.BAD_TYPE && !aggregateError )
+					if ( !dataType.isBad() && !aggregateError )
 					{
 						this.error( valueStart, "Expected a value of type " + dataType.toString() + ", found an aggregate" );
 						aggregateError = true;
 					}
 
-					rhs = parseAggregateLiteral( scope, AggregateType.BAD_AGGREGATE );
+					rhs = this.parseAggregateLiteral( scope, new BadAggregateType( null ) );
 				}
 			}
 			else
@@ -1891,6 +1893,7 @@ public class Parser
 		int size = 0;
 
 		Position typeStart = this.here();
+		Token indexToken = this.currentToken();
 
 		if ( this.readIntegerToken( this.currentToken().value ) )
 		{
@@ -1904,23 +1907,28 @@ public class Parser
 
 			indexType = scope.findType( name );
 
-			if ( indexType == null )
+			if ( indexType != null )
 			{
-				if ( dataType.simpleType() != Type.BAD_TYPE )
-				{
-					this.error( typeStart, "Invalid type name '" + name + "'" );
-				}
+				indexType = new TypeReference( indexType, this.makeLocation( indexToken ) );
 
-				indexType = Type.BAD_TYPE;
+				if ( !indexType.isPrimitive() )
+				{
+					if ( !dataType.isBad() )
+					{
+						this.error( indexToken, "Index type '" + name + "' is not a primitive type" );
+					}
+
+					indexType = new BadType( name, this.makeLocation( indexToken ) );
+				}
 			}
-			else if ( !indexType.isPrimitive() )
+			else
 			{
-				if ( dataType.simpleType() != Type.BAD_TYPE )
+				if ( !dataType.isBad() )
 				{
-					this.error( typeStart, "Index type '" + name + "' is not a primitive type" );
+					this.error( indexToken, "Invalid type name '" + name + "'" );
 				}
 
-				indexType = Type.BAD_TYPE;
+				indexType = new BadType( name, this.makeLocation( indexToken ) );
 			}
 		}
 		else if ( "]".equals( this.currentToken().value ) )
@@ -1961,12 +1969,12 @@ public class Parser
 		}
 		else
 		{
-			if ( dataType.simpleType() != Type.BAD_TYPE )
+			if ( !dataType.isBad() )
 			{
-				this.error( typeStart, "Missing index token" );
+				this.error( indexToken, "Missing index token" );
 			}
 
-			return AggregateType.BAD_AGGREGATE;
+			return new AggregateType( dataType, new BadType( null, null ) );
 		}
 
 		if ( ",".equals( this.currentToken().value ) ||
@@ -1993,18 +2001,8 @@ public class Parser
 			this.unexpectedTokenError( empty ? "]" : ", or ]", this.currentToken() );
 		}
 
-		if ( dataType.simpleType() == Type.BAD_TYPE )
-		{
-			return AggregateType.BAD_AGGREGATE;
-		}
-
 		if ( indexType != null )
 		{
-			if ( indexType.simpleType() == Type.BAD_TYPE )
-			{
-				return AggregateType.BAD_AGGREGATE;
-			}
-
 			return new AggregateType( dataType, indexType );
 		}
 
@@ -2626,8 +2624,8 @@ public class Parser
 				}
 
 				if ( !test.getType().equals( type ) &&
-				     type.simpleType() != Type.BAD_TYPE &&
-				     test.getType().simpleType() != Type.BAD_TYPE )
+				     !type.isBad() &&
+				     !test.getType().isBad() )
 				{
 					if ( !caseError )
 					{
@@ -2919,18 +2917,23 @@ public class Parser
 		if ( !( aggregate instanceof VariableReference ) ||
 		     !( aggregate.getType().getBaseType() instanceof AggregateType ) )
 		{
-			if ( aggregate.getType().getBaseType().simpleType() != Type.BAD_TYPE )
+			if ( aggregate == null || !aggregate.getType().isBad() )
 			{
 				this.error( aggregateStart, "Aggregate reference expected" );
 			}
 
-			aggregate = VariableReference.BAD_VARIABLE_REFERENCE;
-			type = AggregateType.BAD_AGGREGATE;
+			String name = null;
+			Location location = null;
+			if ( aggregate instanceof VariableReference )
+			{
+				name = ((VariableReference) aggregate).target.getName();
+				location = ((VariableReference) aggregate).target.getLocation();
+			}
+
+			aggregate = new VariableReference( new BadVariable( name, new BadAggregateType( null ), location ) );
 		}
-		else
-		{
-			type = (AggregateType) aggregate.getType().getBaseType();
-		}
+
+		type = (AggregateType) aggregate.getType().getBaseType();
 
 		if ( "by".equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -3065,9 +3068,9 @@ public class Parser
 				itype = ( (AggregateType) type ).getIndexType();
 				type = ( (AggregateType) type ).getDataType();
 			}
-			else if ( type.simpleType() == Type.BAD_TYPE )
+			else if ( type.isBad() )
 			{
-				itype = Type.BAD_TYPE;
+				itype = new BadType( null, null );
 			}
 			else
 			{	// Variable after all key vars holds the value instead
@@ -3115,7 +3118,7 @@ public class Parser
 
 		boolean forError = false, forSyntaxError = false;
 
-		this.readToken(); // name
+		Variable indexvar;
 
 		if ( Parser.isReservedWord( name ) )
 		{
@@ -3125,7 +3128,7 @@ public class Parser
 				forError = true;
 			}
 
-			name = null;
+			indexvar = new BadVariable( name, DataTypes.INT_TYPE, this.makeLocation( nameToken ) );
 		}
 		else if ( parentScope.findVariable( name ) != null )
 		{
@@ -3135,8 +3138,14 @@ public class Parser
 				forError = true;
 			}
 
-			name = null;
+			indexvar = new BadVariable( name, DataTypes.INT_TYPE, this.makeLocation( nameToken ) );
 		}
+		else
+		{
+			indexvar = new Variable( name, DataTypes.INT_TYPE, this.makeLocation( nameToken ) );
+		}
+
+		this.readToken(); // name
 
 		if ( "from".equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -3221,10 +3230,6 @@ public class Parser
 			}
 		}
 
-		// Create integer index variable
-		Variable indexvar = name != null ?
-			new Variable( name, DataTypes.INT_TYPE, this.makeLocation( nameToken ) ) : Variable.BAD_VARIABLE;
-
 		// Put index variable onto a list
 		VariableList varList = new VariableList();
 		varList.add( indexvar );
@@ -3299,7 +3304,7 @@ public class Parser
 						javaForError = true;
 					}
 
-					variable = Variable.BAD_VARIABLE;
+					variable = new BadVariable( name, new BadType( null, null ), this.makeLocation( nameToken ) );
 				}
 
 				t = variable.getType();
@@ -3310,19 +3315,14 @@ public class Parser
 				if ( scope.findVariable( name, true ) == null )
 				{
 					variable = new Variable( name, t, this.makeLocation( nameToken ) );
+
+					scope.addVariable( variable );
 				}
-				else
+				else if ( !javaForError )
 				{
-					if ( !javaForError )
-					{
-						this.error( nameToken, "Variable '" + name + "' already defined" );
-						javaForError = true;
-					}
-
-					variable = Variable.BAD_VARIABLE;
+					this.error( nameToken, "Variable '" + name + "' already defined" );
+					javaForError = true;
 				}
-
-				scope.addVariable( variable );
 			}
 
 			VariableReference lhs = new VariableReference( name, scope );
@@ -3413,7 +3413,7 @@ public class Parser
 			javaForError = javaForSyntaxError = true;
 		}
 
-		if ( condition == null || condition.getType() != DataTypes.BOOLEAN_TYPE && condition.getType().simpleType() != Type.BAD_TYPE )
+		if ( condition == null || condition.getType() != DataTypes.BOOLEAN_TYPE && !condition.getType().isBad() )
 		{
 			if ( !javaForError )
 			{
@@ -3446,7 +3446,7 @@ public class Parser
 					}
 					javaForError = javaForSyntaxError = true;
 
-					value = VariableReference.BAD_VARIABLE_REFERENCE;
+					value = new VariableReference( new BadVariable( null, new BadType( null, null ), null ) );
 				}
 
 				VariableReference ref = (VariableReference) value;
@@ -3596,12 +3596,14 @@ public class Parser
 
 		if ( type != null )
 		{
-			type.addReference( this.makeLocation( nameToken ) );
+			// Make one (to add to the type's references), but don't use it
+			// (since we'd want to fetch its target immediately)
+			new TypeReference( type, this.makeLocation( nameToken ) );
 		}
 
 		if ( !( type instanceof RecordType ) )
 		{
-			if ( type.getBaseType() != Type.BAD_TYPE )
+			if ( type == null || !type.isBad() )
 			{
 				if ( !newRecordSyntaxError )
 				{
@@ -3610,7 +3612,7 @@ public class Parser
 				newRecordError = newRecordSyntaxError = true;
 			}
 
-			type = RecordType.BAD_RECORD;
+			type = new BadRecordType( null, this.makeLocation( nameToken ) );
 		}
 
 		RecordType target = (RecordType) type;
@@ -3640,7 +3642,27 @@ public class Parser
 					break;
 				}
 
-				Type expected = types[param].getBaseType();
+				Type currentType;
+				// Shouldn't be used if blank, but just in case, to avoid another OutOfBoundsException
+				String errorMessageFieldName = "";
+
+				if ( param < types.length )
+				{
+					currentType = types[param];
+					errorMessageFieldName = " (" + names[param] + ")";
+				}
+				else
+				{
+					if ( !newRecordSyntaxError )
+					{
+						this.error( this.currentToken(), "Too many field initializers for record " + name );
+					}
+					newRecordError = newRecordSyntaxError = true;
+
+					currentType = new BadType( null, null );
+				}
+
+				Type expected = currentType.getBaseType();
 				Value val;
 
 				if ( ",".equals( this.currentToken().value ) )
@@ -3657,13 +3679,7 @@ public class Parser
 					}
 					else
 					{
-						if ( !newRecordError )
-						{
-							this.error( "Aggregate found when " + expected + " expected for field #" + ( param + 1 ) + " (" + names[param] + ")" );
-							newRecordError = true;
-						}
-
-						val = this.parseAggregateLiteral( scope, AggregateType.BAD_AGGREGATE );
+						val = this.parseAggregateLiteral( scope, new BadAggregateType( null ) );
 					}
 				}
 				else
@@ -3675,7 +3691,7 @@ public class Parser
 				{
 					if ( !newRecordSyntaxError )
 					{
-						this.error( "Expression expected for field #" + ( param + 1 ) + " (" + names[param] + ")" );
+						this.error( "Expression expected for field #" + ( param + 1 ) + errorMessageFieldName );
 					}
 					newRecordError = newRecordSyntaxError = true;
 
@@ -3684,13 +3700,13 @@ public class Parser
 
 				if ( val != DataTypes.VOID_VALUE )
 				{
-					val = this.autoCoerceValue( types[param], val, scope );
+					val = this.autoCoerceValue( currentType, val, scope );
 					Type given = val.getType();
 					if ( !Operator.validCoercion( expected, given, "assign" ) )
 					{
 						if ( !newRecordError )
 						{
-							this.error( given + " found when " + expected + " expected for field #" + ( param + 1 ) + " (" + names[param] + ")" );
+							this.error( given + " found when " + expected + " expected for field #" + ( param + 1 ) + errorMessageFieldName );
 							newRecordError = true;
 						}
 
@@ -3703,16 +3719,12 @@ public class Parser
 
 				if ( ",".equals( this.currentToken().value ) )
 				{
-					if ( param == names.length )
-					{
-						if ( !newRecordSyntaxError )
-						{
-							this.error( "Too many field initializers for record " + name );
-						}
-						newRecordError = newRecordSyntaxError = true;
-					}
-
 					this.readToken(); // ,
+				}
+				else if ( !")".equals( this.currentToken().value ) &&
+				          !newRecordSyntaxError )
+				{
+					this.warning( this.make0WidthLocation( this.currentToken().getStart() ), "Missing comma between record field initializers" );
 				}
 			}
 		}
@@ -3749,19 +3761,36 @@ public class Parser
 
 		if ( target != null )
 		{
-			target.addReference( this.makeLocation( nameToken ) );
+			params = this.autoCoerceParameters( target, params, scope );
 		}
 		else
 		{
-			this.error( nameToken, Parser.undefinedFunctionMessage( name, params ) );
+			target = new BadFunction( name );
 
-			target = Function.BAD_FUNCTION;
+			// Don't make an error if the function couldn't be found
+			// because the user messed up one of the parameters
+			// (since that means we already made one earlier)
+			boolean error = true;
+
+			for ( Value param : params )
+			{
+				if ( param.getType().isBad() )
+				{
+					error = false;
+					break;
+				}
+			}
+
+			if ( error )
+			{
+				this.error( nameToken, Parser.undefinedFunctionMessage( name, params ) );
+			}
 		}
 
-		params = this.autoCoerceParameters( target, params, scope );
-		FunctionCall call = new FunctionCall( target, params, this );
+		Location functionCallLocation = this.makeLocation( nameToken, this.peekPreviousToken() );
+		FunctionCall call = new FunctionCall( functionCallLocation, target, params, this );
 
-		return parsePostCall( scope, call );
+		return this.parsePostCall( scope, call );
 	}
 
 	private List<Value> parseParameters( final BasicScope scope, final Value firstParam )
@@ -3854,6 +3883,8 @@ public class Parser
 			return null;
 		}
 
+		Token invokeStartToken = this.currentToken();
+
 		this.readToken(); // call
 
 		Type type = this.parseType( scope, false );
@@ -3873,7 +3904,7 @@ public class Parser
 		{
 			name = this.parseExpression( scope );
 
-			if ( name == null || !name.getType().equals( DataTypes.STRING_TYPE ) && name.getType() != Type.BAD_TYPE )
+			if ( name == null || !name.getType().equals( DataTypes.STRING_TYPE ) && !name.getType().isBad() )
 			{
 				this.error( "String expression expected for function name" );
 
@@ -3888,7 +3919,7 @@ public class Parser
 			{
 				this.error( "Variable reference expected for function name" );
 
-				name = VariableReference.BAD_VARIABLE_REFERENCE;
+				name = new VariableReference( new BadVariable( null, new BadType( null, null ), null ) );;
 			}
 		}
 
@@ -3896,7 +3927,7 @@ public class Parser
 
 		if ( "(".equals( this.currentToken().value ) )
 		{
-			params = parseParameters( scope, null );
+			params = this.parseParameters( scope, null );
 		}
 		else
 		{
@@ -3905,9 +3936,10 @@ public class Parser
 			params = new ArrayList<>();
 		}
 
-		FunctionInvocation call = new FunctionInvocation( scope, type, name, params, this );
+		Location invokeLocation = this.makeLocation( invokeStartToken, this.peekPreviousToken() );
+		FunctionInvocation call = new FunctionInvocation( invokeLocation, scope, type, name, params, this );
 
-		return parsePostCall( scope, call );
+		return this.parsePostCall( scope, call );
 	}
 
 	private Assignment parseAssignment( final BasicScope scope, final VariableReference lhs )
@@ -3958,7 +3990,7 @@ public class Parser
 			}
 			else
 			{
-				rhs = this.parseAggregateLiteral( scope, AggregateType.BAD_AGGREGATE );
+				rhs = this.parseAggregateLiteral( scope, new BadAggregateType( null ) );
 
 				if ( !assignmentError && "=".equals( operStr ) ) // otherwise the coercion check can catch this instead
 				{
@@ -4052,11 +4084,11 @@ public class Parser
 		{
 			this.error( "Variable reference expected" );
 
-			lhs = VariableReference.BAD_VARIABLE_REFERENCE;
+			lhs = new VariableReference( new BadVariable( null, new BadType( null, null ), null ) );
 		}
 
 		int ltype = lhs.getType().getType();
-		if ( ltype != DataTypes.TYPE_INT && ltype != DataTypes.TYPE_FLOAT && lhs.getType() != Type.BAD_TYPE )
+		if ( ltype != DataTypes.TYPE_INT && ltype != DataTypes.TYPE_FLOAT && !lhs.getType().isBad() )
 		{
 			this.error( operStr + " requires a numeric variable reference" );
 		}
@@ -4083,7 +4115,7 @@ public class Parser
 		this.readToken(); // oper
 
 		int ltype = lhs.getType().getType();
-		if ( ltype != DataTypes.TYPE_INT && ltype != DataTypes.TYPE_FLOAT && lhs.getType() != Type.BAD_TYPE )
+		if ( ltype != DataTypes.TYPE_INT && ltype != DataTypes.TYPE_FLOAT && !lhs.getType().isBad() )
 		{
 			this.error( operStr + " requires a numeric variable reference" );
 		}
@@ -4123,7 +4155,7 @@ public class Parser
 
 			lhs = this.autoCoerceValue( DataTypes.BOOLEAN_TYPE, lhs, scope );
 			lhs = new Operation( lhs, new Operator( this.makeLocation( operatorToken ), operator, this ) );
-			if ( lhs.getType() != DataTypes.BOOLEAN_TYPE && lhs.getType() != Type.BAD_TYPE )
+			if ( lhs.getType() != DataTypes.BOOLEAN_TYPE && !lhs.getType().isBad() )
 			{
 				this.error( "\"!\" operator requires a boolean value" );
 			}
@@ -4141,7 +4173,7 @@ public class Parser
 			}
 
 			lhs = new Operation( lhs, new Operator( this.makeLocation( operatorToken ), operator, this ) );
-			if ( lhs.getType() != DataTypes.INT_TYPE && lhs.getType() != DataTypes.BOOLEAN_TYPE && lhs.getType() != Type.BAD_TYPE )
+			if ( lhs.getType() != DataTypes.INT_TYPE && lhs.getType() != DataTypes.BOOLEAN_TYPE && !lhs.getType().isBad() )
 			{
 				this.error( "\"~\" operator requires an integer or boolean value" );
 			}
@@ -4172,11 +4204,17 @@ public class Parser
 			this.readToken(); // remove
 
 			lhs = this.parseVariableReference( scope );
-			if ( lhs == null || !( lhs instanceof CompositeReference ) && lhs.getType().simpleType() != Type.BAD_TYPE )
+			if ( lhs == null || !( lhs instanceof CompositeReference ) )
 			{
-				this.error( "Aggregate reference expected" );
+				if ( lhs == null || !lhs.getType().isBad() )
+				{
+					this.error( "Aggregate reference expected" );
+				}
 
-				lhs = VariableReference.BAD_VARIABLE_REFERENCE;
+				if ( !( lhs instanceof VariableReference ) )
+				{
+					lhs = new VariableReference( new BadVariable( null, new BadType( null, null ), null ) );
+				}
 			}
 
 			lhs = new Operation( lhs, new Operator( this.makeLocation( operatorToken ), operator, this ) );
@@ -4215,7 +4253,7 @@ public class Parser
 				Value conditional = lhs;
 
 				if ( conditional.getType() != DataTypes.BOOLEAN_TYPE &&
-				     conditional.getType() != Type.BAD_TYPE && !expressionError )
+				     !conditional.getType().isBad() && !expressionError )
 				{
 					this.error( "Non-boolean expression " + conditional + " (" + conditional.getType() + ")" );
 					expressionError = true;
@@ -4744,7 +4782,10 @@ public class Parser
 		Value value = DataTypes.parseValue( type, element, false );
 		if ( value == null )
 		{
-			this.error( "Bad " + type.toString() + " value: \"" + element + "\"" );
+			if ( !type.isBad() )
+			{
+				this.error( "Bad " + type.toString() + " value: \"" + element + "\"" );
+			}
 
 			return Value.BAD_VALUE;
 		}
@@ -4827,7 +4868,7 @@ public class Parser
 			return null;
 		}
 
-		Position typedConstantStart = this.here();
+		Token typedConstantStartToken = this.currentToken();
 
 		this.readToken(); // read $
 
@@ -4877,26 +4918,26 @@ public class Parser
 		{
 			if ( !typedConstantSyntaxError )
 			{
-				this.error( typedConstantStart, "Unknown type " + name );
+				this.error( typedConstantTypeToken, "Unknown type " + name );
 			}
 			typedConstantError = typedConstantSyntaxError = true;
 
-			type = Type.BAD_TYPE;
+			type = new BadType( name, this.makeLocation( typedConstantTypeToken ) );
 		}
 		else
 		{
-			type.addReference( this.makeLocation( typedConstantStart ) );
+			type = new TypeReference( type, this.makeLocation( typedConstantTypeToken ) );
 		}
 
-		if ( !type.isPrimitive() && type != Type.BAD_TYPE )
+		if ( !type.isPrimitive() && !type.isBad() )
 		{
 			if ( !typedConstantError )
 			{
-				this.error( typedConstantStart, "Non-primitive type " + name );
+				this.error( typedConstantTypeToken, "Non-primitive type " + name );
 				typedConstantError = true;
 			}
 
-			type = Type.BAD_TYPE;
+			type = new BadType( name, this.makeLocation( typedConstantTypeToken ) );
 		}
 
 		if ( "[".equals( this.currentToken().value ) )
@@ -5173,7 +5214,7 @@ public class Parser
 		{
 			this.error( variableToken, "Unknown variable '" + name + "'" );
 
-			var = Variable.BAD_VARIABLE;
+			var = new BadVariable( name, new BadType( null, null ), this.makeLocation( variableToken ) );
 		}
 
 		if ( !"[".equals( this.currentToken().value ) && !".".equals( this.currentToken().value ) )
@@ -5184,6 +5225,16 @@ public class Parser
 		return this.parseVariableReference( scope, var );
 	}
 
+	/**
+	 * Look for an index/key, and return the corresponding data, expecting
+	 * {@code var} to be a {@link AggregateType}/{@link RecordType}.
+	 * <p>
+	 * E.g. {@code map.key}, {@code array[0]}
+	 * <p>
+	 * May also return a {@link FunctionCall} if the chain ends with/is a function call
+	 * <p>
+	 * E.g. {@code var.function()}
+	 */
 	private Value parseVariableReference( final BasicScope scope, final Variable var )
 	{
 		Type type = var.getType();
@@ -5207,7 +5258,7 @@ public class Parser
 
 				if ( !( type instanceof AggregateType ) )
 				{
-					if ( !variableReferenceError && type != Type.BAD_TYPE )
+					if ( !variableReferenceError && !type.isBad() )
 					{
 						String message;
 						if ( indices.isEmpty() )
@@ -5222,7 +5273,7 @@ public class Parser
 						variableReferenceError = true;
 					}
 
-					type = AggregateType.BAD_AGGREGATE;
+					type = new BadAggregateType( null );
 				}
 
 				AggregateType atype = (AggregateType) type;
@@ -5240,8 +5291,8 @@ public class Parser
 
 				if ( !variableReferenceError &&
 				     !index.getType().getBaseType().equals( atype.getIndexType().getBaseType() ) &&
-				     index.getType().getBaseType() != Type.BAD_TYPE &&
-				     atype.getIndexType().getBaseType() != Type.BAD_TYPE )
+				     !index.getType().isBad() &&
+				     !atype.getIndexType().isBad() )
 				{
 					this.error( "Index for '" + var.getName() + "' has wrong data type " +
 							"(expected " + atype.getIndexType() + ", got " + index.getType() + ")" );
@@ -5265,22 +5316,23 @@ public class Parser
 				type = type.asProxy();
 				if ( !( type instanceof RecordType ) )
 				{
-					if ( type != Type.BAD_TYPE )
+					if ( !type.isBad() )
 					{
 						// See this as a syntax error, since we don't know yet
 						// if what follows is even an identifier.
 						if ( !variableReferenceSyntaxError )
 						{
-							this.error( "Record expected" );
+							this.error( var.getLocation(), "Record expected" );
 						}
 						variableReferenceError = variableReferenceSyntaxError = true;
 					}
 
-					type = RecordType.BAD_RECORD;
+					type = new BadRecordType( null, null );
 				}
 
 				RecordType rtype = (RecordType) type;
 
+				Token fieldToken = this.currentToken();
 				String field = this.currentToken().value;
 				if ( this.parseIdentifier( field ) )
 				{
@@ -5290,9 +5342,11 @@ public class Parser
 				{
 					if ( !variableReferenceSyntaxError )
 					{
-						this.error( "Field name expected" );
+						this.error( fieldToken, "Field name expected" );
 					}
 					variableReferenceError = variableReferenceSyntaxError = true;
+
+					field = null;
 				}
 
 				index = rtype.getFieldIndex( field );
@@ -5300,12 +5354,12 @@ public class Parser
 				{
 					if ( !variableReferenceError )
 					{
-						this.error( "Invalid field name '" + field + "'" );
+						this.error( fieldToken, "Invalid field name '" + field + "'" );
 						variableReferenceError = true;
 					}
 
 					index = Value.BAD_VALUE;
-					type = Type.BAD_TYPE;
+					type = new BadType( null, null );
 				}
 				else
 				{
@@ -6058,6 +6112,11 @@ public class Parser
 	private Location make0WidthLocation()
 	{
 		return this.makeLocation( this.here() );
+	}
+
+	private Location make0WidthLocation( final Position position )
+	{
+		return this.makeLocation( new Range( position, position ) );
 	}
 
 	// **************** Parse errors *****************

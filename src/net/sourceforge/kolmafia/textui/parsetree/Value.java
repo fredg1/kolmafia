@@ -59,7 +59,7 @@ public class Value
 	extends Command
 	implements Comparable<Value>
 {
-	public static final Value BAD_VALUE = new Value( Type.BAD_TYPE );
+	public static final Value BAD_VALUE = new Value( new Type.BadType( null, null ) );
 
 	public Type type;
 
@@ -107,7 +107,7 @@ public class Value
 		this.type = type;
 	}
 
-	public Value( final Location location, final Type type )
+	public Value( final Type type, final Location location )
 	{
 		super( location );
 		this.type = type;
