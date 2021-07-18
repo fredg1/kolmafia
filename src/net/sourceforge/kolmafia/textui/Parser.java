@@ -1262,7 +1262,7 @@ public class Parser
 		if ( scope != null && !result.isBad() )
 		{
 			scope.addVariable( result );
-			VariableReference lhs = new VariableReference( variableName, scope );
+			VariableReference lhs = new VariableReference( result );
 			scope.addCommand( new Assignment( lhs, rhs ), this );
 		}
 
@@ -3277,8 +3277,6 @@ public class Parser
 			String name = this.currentToken().value;
 			Token nameToken = this.currentToken();
 
-			this.readToken(); // name
-
 			if ( !this.parseIdentifier( name ) || Parser.isReservedWord( name ) )
 			{
 				if ( !javaForSyntaxError )
@@ -3290,13 +3288,17 @@ public class Parser
 				name = null;
 			}
 
-			Variable variable;
+			VariableReference lhs;
 
 			// If there is no data type, it is using an existing variable
 			if ( t == null )
 			{
-				variable = parentScope.findVariable( name );
-				if ( variable == null )
+				Variable variable = parentScope.findVariable( name );
+				if ( variable != null )
+				{
+					lhs = new VariableReference( variable, this.makeLocation( nameToken ) );
+				}
+				else
 				{
 					if ( !javaForError )
 					{
@@ -3305,6 +3307,7 @@ public class Parser
 					}
 
 					variable = new BadVariable( name, new BadType( null, null ), this.makeLocation( nameToken ) );
+					lhs = new VariableReference( variable );
 				}
 
 				t = variable.getType();
@@ -3312,20 +3315,28 @@ public class Parser
 			else
 			{
 				// Create variable and add it to the scope
-				if ( scope.findVariable( name, true ) == null )
+				Variable variable = scope.findVariable( name, true );
+				if ( variable == null )
 				{
 					variable = new Variable( name, t, this.makeLocation( nameToken ) );
 
 					scope.addVariable( variable );
+					lhs = new VariableReference( variable );
 				}
-				else if ( !javaForError )
+				else
 				{
-					this.error( nameToken, "Variable '" + name + "' already defined" );
-					javaForError = true;
+					if ( !javaForError )
+					{
+						this.error( nameToken, "Variable '" + name + "' already defined" );
+						javaForError = true;
+					}
+
+					lhs = new VariableReference( variable, this.makeLocation( nameToken ) );
 				}
 			}
 
-			VariableReference lhs = new VariableReference( name, scope );
+			this.readToken(); // name
+
 			Value rhs = null;
 
 			if ( "=".equals( this.currentToken().value ) )
@@ -4464,7 +4475,9 @@ public class Parser
 			Variable current = new Variable( result.getType() );
 			current.setExpression( result );
 
-			result = this.parseVariableReference( scope, current );
+			VariableReference ref = new VariableReference( current, result.getLocation() );
+
+			result = this.parseVariableReference( scope, ref );
 		}
 
 		if ( result instanceof VariableReference )
@@ -5188,23 +5201,21 @@ public class Parser
 
 		this.readToken(); // read name
 
+		VariableReference reference;
+
 		if ( var != null )
 		{
-			var.addReference( this.makeLocation( variableToken ) );
+			reference = new VariableReference( var, this.makeLocation( variableToken ) );
 		}
 		else
 		{
 			this.error( variableToken, "Unknown variable '" + name + "'" );
 
 			var = new BadVariable( name, new BadType( null, null ), this.makeLocation( variableToken ) );
+			reference = new VariableReference( var );
 		}
 
-		if ( !"[".equals( this.currentToken().value ) && !".".equals( this.currentToken().value ) )
-		{
-			return new VariableReference( var );
-		}
-
-		return this.parseVariableReference( scope, var );
+		return this.parseVariableReference( scope, reference );
 	}
 
 	/**
@@ -5217,8 +5228,9 @@ public class Parser
 	 * <p>
 	 * E.g. {@code var.function()}
 	 */
-	private Value parseVariableReference( final BasicScope scope, final Variable var )
+	private Value parseVariableReference( final BasicScope scope, final VariableReference var )
 	{
+		VariableReference current = var;
 		Type type = var.getType();
 		List<Value> indices = new ArrayList<Value>();
 
@@ -5242,6 +5254,7 @@ public class Parser
 				{
 					if ( !variableReferenceError && !type.isBad() )
 					{
+						Location location = this.makeLocation( current.getLocation(), this.makeLocation( this.peekPreviousToken() ) );
 						String message;
 						if ( indices.isEmpty() )
 						{
@@ -5251,7 +5264,7 @@ public class Parser
 						{
 							message = "Too many keys for '" + var.getName() + "'";
 						}
-						this.error( message );
+						this.error( location, message );
 						variableReferenceError = true;
 					}
 
@@ -5264,7 +5277,7 @@ public class Parser
 				{
 					if ( !variableReferenceSyntaxError )
 					{
-						this.error( "Index for '" + var.getName() + "' expected" );
+						this.error( this.currentToken(), "Index for '" + current.getName() + "' expected" );
 					}
 					variableReferenceError = variableReferenceSyntaxError = true;
 
@@ -5276,7 +5289,7 @@ public class Parser
 				     !index.getType().isBad() &&
 				     !atype.getIndexType().isBad() )
 				{
-					this.error( "Index for '" + var.getName() + "' has wrong data type " +
+					this.error( "Index for '" + current.getName() + "' has wrong data type " +
 							"(expected " + atype.getIndexType() + ", got " + index.getType() + ")" );
 					variableReferenceError = true;
 				}
@@ -5291,8 +5304,7 @@ public class Parser
 
 				if ( "(".equals( this.nextToken() ) )
 				{
-					return this.parseCall(
-						scope, indices.isEmpty() ? new VariableReference( var ) : new CompositeReference( var, indices, this ) );
+					return this.parseCall( scope, current );
 				}
 
 				type = type.asProxy();
@@ -5304,7 +5316,7 @@ public class Parser
 						// if what follows is even an identifier.
 						if ( !variableReferenceSyntaxError )
 						{
-							this.error( var.getLocation(), "Record expected" );
+							this.error( current.getLocation(), "Record expected" );
 						}
 						variableReferenceError = variableReferenceSyntaxError = true;
 					}
@@ -5356,6 +5368,9 @@ public class Parser
 				this.readToken(); // read ]
 				parseAggregate = false;
 			}
+
+			Location currentLocation = this.makeLocation( current.getLocation(), this.makeLocation( this.peekPreviousToken() ) );
+			current = new CompositeReference( current.target, currentLocation, indices, this );
 		}
 
 		if ( parseAggregate && !variableReferenceSyntaxError )
@@ -5363,7 +5378,7 @@ public class Parser
 			this.unexpectedTokenError( "]", this.currentToken() );
 		}
 
-		return new CompositeReference( var, indices, this );
+		return current;
 	}
 
 	private class Directive
@@ -6058,6 +6073,11 @@ public class Parser
 		       new Range( end, start );
 	}
 
+	private Range makeRange( final Location start, final Location end )
+	{
+		return new Range( start.getRange().getStart(), end.getRange().getEnd() );
+	}
+
 	private Range makeRange( final Token start, final Token end )
 	{
 		return new Range( start.getStart(), end.getEnd() );
@@ -6072,6 +6092,11 @@ public class Parser
 	private Location makeLocation( final Position start )
 	{
 		return this.makeLocation( this.rangeToHere( start ) );
+	}
+
+	private Location makeLocation( final Location start, final Location end )
+	{
+		return this.makeLocation( this.makeRange( start, end ) );
 	}
 
 	private Location makeLocation( final Token token )
