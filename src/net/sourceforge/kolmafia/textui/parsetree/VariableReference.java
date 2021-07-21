@@ -37,8 +37,6 @@ import java.io.PrintStream;
 
 import java.util.List;
 
-import org.eclipse.lsp4j.Location;
-
 import net.sourceforge.kolmafia.textui.AshRuntime;
 
 public class VariableReference
@@ -48,17 +46,7 @@ public class VariableReference
 
 	public VariableReference( final Variable target )
 	{
-		this( target, null );
-	}
-
-	public VariableReference( final Variable target, final Location location )
-	{
-		super( location != null ? location : target != null ? target.getLocation() : null );
 		this.target = target;
-		if ( target != null && location != null )
-		{
-			target.addReference( location );
-		}
 	}
 
 	public boolean valid()

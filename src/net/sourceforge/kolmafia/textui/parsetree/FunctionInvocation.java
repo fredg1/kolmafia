@@ -37,8 +37,6 @@ import java.io.PrintStream;
 
 import java.util.List;
 
-import org.eclipse.lsp4j.Location;
-
 import net.sourceforge.kolmafia.KoLmafia;
 
 import net.sourceforge.kolmafia.textui.AshRuntime;
@@ -52,9 +50,9 @@ public class FunctionInvocation
 	private final Value name;
 	private final Type type;
 
-	public FunctionInvocation( final Location location, final BasicScope scope, final Type type, final Value name, final List<Value> params, final Parser parser )
+	public FunctionInvocation( final BasicScope scope, final Type type, final Value name, final List<Value> params, final Parser parser )
 	{
-		super( location, null, params, parser );
+		super( null, params, parser );
 		this.scope = scope;
 		this.type = type;
 		this.name = name;

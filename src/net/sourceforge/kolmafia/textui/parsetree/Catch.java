@@ -35,8 +35,6 @@ package net.sourceforge.kolmafia.textui.parsetree;
 
 import java.io.PrintStream;
 
-import org.eclipse.lsp4j.Location;
-
 import net.sourceforge.kolmafia.KoLmafia;
 
 import net.sourceforge.kolmafia.textui.DataTypes;
@@ -49,9 +47,9 @@ public class Catch
 {
 	private final Command node;
 
-	public Catch( final Location location, final Command node )
+	public Catch( final Command node )
 	{
-		super( DataTypes.STRING_TYPE, location );
+		super( DataTypes.STRING_TYPE );
 		this.node = node;
 	}
 

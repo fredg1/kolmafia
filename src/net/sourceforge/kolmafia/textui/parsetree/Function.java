@@ -218,7 +218,7 @@ public abstract class Function
 
 	public boolean paramsMatch( final List<Value> params, MatchType match, boolean vararg )
 	{
-		return ( vararg ) ? this.paramsMatchVararg( params, match ) : this.paramsMatchNoVararg(  params, match );
+		return ( vararg ) ? this.paramsMatchVararg( params, match ) : this.paramsMatchNoVararg( params, match );
 	}
 
 	private boolean paramsMatchNoVararg( final List<Value> params, MatchType match )
@@ -453,7 +453,7 @@ public abstract class Function
 	public Value execute( final AshRuntime interpreter )
 	{
 		// Dereference variables and pass Values to function
-		Object[] values = new Object[ this.variableReferences.size() + 1];
+		Object[] values = new Object[ this.variableReferences.size() + 1 ];
 		values[ 0 ] = interpreter;
 
 		int index = 1;

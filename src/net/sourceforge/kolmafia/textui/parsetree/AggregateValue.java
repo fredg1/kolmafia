@@ -33,7 +33,6 @@
 
 package net.sourceforge.kolmafia.textui.parsetree;
 
-
 public abstract class AggregateValue
 	extends CompositeValue
 {

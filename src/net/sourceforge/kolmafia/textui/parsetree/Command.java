@@ -44,7 +44,9 @@ public abstract class Command
 {
 	private Location location;
 
-	@Deprecated
+	/**
+	 * For {@link Value}, which use {@link Value.LocatedValue} instead
+	 */
 	public Command()
 	{
 		this.location = null;

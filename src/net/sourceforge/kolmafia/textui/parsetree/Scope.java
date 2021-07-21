@@ -58,16 +58,6 @@ public class Scope
 		this.commands = new ArrayList<>();
 	}
 
-	public Scope( final Command command, final BasicScope parentScope )
-	{
-		super( parentScope );
-		this.setScopeLocation( command.getLocation() );
-		this.commands = new ArrayList<>();
-		this.commands.add( command );
-		this.barrier = command.assertBarrier() ? BasicScope.BARRIER_SEEN : 0;
-		this.breakable = command.assertBreakable();
-	}
-
 	public Scope( FunctionList functions, VariableList variables, TypeList types )
 	{
 		super( functions, variables, types, null );
