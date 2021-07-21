@@ -1008,7 +1008,7 @@ public class Parser
 
 			Token paramNameToken = this.currentToken();
 
-			Variable param = this.parseVariable( paramType, null );
+			Variable param = this.parseVariable( paramType, parentScope, false );
 			if ( param == null )
 			{
 				if ( !parameterError )
@@ -1135,7 +1135,7 @@ public class Parser
 	{
 		while ( true )
 		{
-			Variable v = this.parseVariable( t, parentScope );
+			Variable v = this.parseVariable( t, parentScope, true );
 			if ( v == null )
 			{
 				return false;
@@ -1151,7 +1151,7 @@ public class Parser
 		}
 	}
 
-	private Variable parseVariable( final Type t, final BasicScope scope )
+	private Variable parseVariable( final Type t, final BasicScope scope, final boolean allowInitialization )
 	{
 		if ( !this.parseIdentifier( this.currentToken().value ) )
 		{
@@ -1173,7 +1173,7 @@ public class Parser
 			result = new BadVariable( variableName, t, this.makeLocation( variableToken ) );
 			variableError = true;
 		}
-		else if ( scope != null && scope.findVariable( variableName ) != null )
+		else if ( scope.findVariable( variableName ) != null )
 		{
 			this.error( variableToken, "Variable " + variableName + " is already defined" );
 			result = new BadVariable( variableName, t, this.makeLocation( variableToken ) );
@@ -1184,22 +1184,17 @@ public class Parser
 			result = new Variable( variableName, t, this.makeLocation( variableToken ) );
 		}
 
-		// If we are parsing a parameter declaration (if "scope" is null), we are done.
+		// If we are parsing a parameter declaration, we are done.
 		// Otherwise, we must initialize the variable.
 
 		LocatedValue rhs;
 
+		Token postVariableToken = this.currentToken();
+
 		Type ltype = t.getBaseType();
-		if ( "=".equals( this.currentToken().value ) )
+		if ( "=".equals( postVariableToken.value ) )
 		{
 			this.readToken(); // read =
-
-			if ( !variableError && scope == null )
-			{
-				// this is a function's parameter declaration
-				this.error( this.peekLastToken(), "Cannot initialize parameter " + variableName );
-				variableError = true;
-			}
 
 			if ( "{".equals( this.currentToken().value ) )
 			{
@@ -1207,7 +1202,7 @@ public class Parser
 				{
 					rhs = this.parseAggregateLiteral( scope, new BadAggregateType( null ) );
 
-					if ( !variableError && !ltype.isBad() )
+					if ( !variableError && allowInitialization && !ltype.isBad() )
 					{
 						Location errorLocation = rhs != null ? rhs.location :
 							this.makeLocation( this.peekLastToken() );
@@ -1228,7 +1223,7 @@ public class Parser
 
 			if ( rhs == null )
 			{
-				if ( !variableError )
+				if ( !variableError && allowInitialization )
 				{
 					this.error( this.currentToken(), "Expression expected" );
 					variableError = true;
@@ -1237,22 +1232,15 @@ public class Parser
 			else
 			{
 				rhs = this.autoCoerceValue( t, rhs, scope );
-				if ( !variableError && !Operator.validCoercion( ltype, rhs.value.getType(), "assign" ) )
+				if ( !variableError && allowInitialization && !Operator.validCoercion( ltype, rhs.value.getType(), "assign" ) )
 				{
 					this.error( rhs.location, "Cannot store " + rhs.value.getType() + " in " + variableName + " of type " + ltype );
 					variableError = true;
 				}
 			}
 		}
-		else if ( "{".equals( this.currentToken().value ) )
+		else if ( "{".equals( postVariableToken.value ) )
 		{
-			if ( !variableError && scope == null )
-			{
-				// this is a function's parameter declaration
-				this.error( this.currentToken(), "Cannot initialize parameter " + variableName );
-				variableError = true;
-			}
-
 			if ( ltype instanceof AggregateType )
 			{
 				rhs = this.parseAggregateLiteral( scope, (AggregateType) ltype );
@@ -1261,7 +1249,7 @@ public class Parser
 			{
 				rhs = this.parseAggregateLiteral( scope, new BadAggregateType( null ) );
 
-				if ( !variableError && !ltype.isBad() )
+				if ( !variableError && allowInitialization && !ltype.isBad() )
 				{
 					Location errorLocation = rhs != null ? rhs.location :
 						this.makeLocation( this.peekLastToken() );
@@ -1276,7 +1264,20 @@ public class Parser
 			rhs = null;
 		}
 
-		if ( scope != null && !result.isBad() )
+		if ( !variableError &&
+		     !allowInitialization &&
+		     ( "=".equals( postVariableToken.value ) ||
+		       "{".equals( postVariableToken.value ) ) )
+		{
+			Location errorLocation = rhs != null ? rhs.location :
+				this.makeLocation( postVariableToken );
+
+			// this is a function's parameter declaration
+			this.error( errorLocation, "Cannot initialize parameter " + variableName );
+			variableError = true;
+		}
+
+		if ( allowInitialization && !result.isBad() )
 		{
 			scope.addVariable( result );
 			VariableReference lhs = new VariableReference( result );
