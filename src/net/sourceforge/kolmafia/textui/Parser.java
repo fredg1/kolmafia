@@ -2271,7 +2271,9 @@ public class Parser
 			ifError = true;
 		}
 
-		if ( condition == null || condition.value.getType() != DataTypes.BOOLEAN_TYPE )
+		if ( condition == null ||
+		     !condition.value.getType().isBad() &&
+		     !condition.value.getType().equals( DataTypes.BOOLEAN_TYPE ) )
 		{
 			Location errorLocation = condition != null ? condition.location :
 				this.makeLocation( this.currentToken() );
@@ -2347,7 +2349,9 @@ public class Parser
 						elseError = true;
 					}
 
-					if ( condition == null || condition.value.getType() != DataTypes.BOOLEAN_TYPE )
+					if ( condition == null ||
+					     !condition.value.getType().isBad() &&
+					     !condition.value.getType().equals( DataTypes.BOOLEAN_TYPE ) )
 					{
 						Location errorLocation = condition != null ? condition.location :
 							this.makeLocation( this.currentToken() );
@@ -2478,7 +2482,9 @@ public class Parser
 			whileError = true;
 		}
 
-		if ( condition == null || condition.value.getType() != DataTypes.BOOLEAN_TYPE )
+		if ( condition == null ||
+		     !condition.value.getType().isBad() &&
+		     !condition.value.getType().equals( DataTypes.BOOLEAN_TYPE ) )
 		{
 			Location errorLocation = condition != null ? condition.location :
 				this.makeLocation( this.currentToken() );
@@ -2545,7 +2551,9 @@ public class Parser
 			repeatError = true;
 		}
 
-		if ( condition == null || condition.value.getType() != DataTypes.BOOLEAN_TYPE )
+		if ( condition == null ||
+		     !condition.value.getType().isBad() &&
+		     !condition.value.getType().equals( DataTypes.BOOLEAN_TYPE ) )
 		{
 			Location errorLocation = condition != null ? condition.location :
 				this.makeLocation( this.currentToken() );
@@ -3494,7 +3502,9 @@ public class Parser
 			javaForError = javaForSyntaxError = true;
 		}
 
-		if ( condition == null || condition.value.getType() != DataTypes.BOOLEAN_TYPE && !condition.value.getType().isBad() )
+		if ( condition == null ||
+		     !condition.value.getType().isBad() &&
+		     !condition.value.getType().equals( DataTypes.BOOLEAN_TYPE ) )
 		{
 			Location errorLocation = condition != null ? condition.location :
 				this.makeLocation( this.currentToken() );
@@ -4270,7 +4280,8 @@ public class Parser
 			lhs = this.autoCoerceValue( DataTypes.BOOLEAN_TYPE, lhs, scope );
 			lhs = new Operation( lhs.value, oper )
 				.wrap( this.makeLocation( oper.getLocation(), lhs.location ) );
-			if ( lhs.value.getType() != DataTypes.BOOLEAN_TYPE && !lhs.value.getType().isBad() )
+			if ( !lhs.value.getType().isBad() &&
+			     !lhs.value.getType().equals( DataTypes.BOOLEAN_TYPE ) )
 			{
 				this.error( lhs.location, "\"!\" operator requires a boolean value" );
 			}
@@ -4290,9 +4301,9 @@ public class Parser
 
 			lhs = new Operation( lhs.value, oper )
 				.wrap( this.makeLocation( oper.getLocation(), lhs.location ) );
-			if ( lhs.value.getType() != DataTypes.INT_TYPE &&
-			     lhs.value.getType() != DataTypes.BOOLEAN_TYPE &&
-			     !lhs.value.getType().isBad() )
+			if ( !lhs.value.getType().isBad() &&
+			     !lhs.value.getType().equals( DataTypes.INT_TYPE ) &&
+			     !lhs.value.getType().equals( DataTypes.BOOLEAN_TYPE ) )
 			{
 				this.error( lhs.location, "\"~\" operator requires an integer or boolean value" );
 			}
@@ -4378,8 +4389,9 @@ public class Parser
 
 				LocatedValue conditional = lhs;
 
-				if ( conditional.value.getType() != DataTypes.BOOLEAN_TYPE &&
-				     !conditional.value.getType().isBad() && !expressionError )
+				if ( !expressionError &&
+				     !conditional.value.getType().isBad() &&
+				     !conditional.value.getType().equals( DataTypes.BOOLEAN_TYPE ) )
 				{
 					this.error( conditional.location, "Non-boolean expression " + conditional.value + " (" + conditional.value.getType() + ")" );
 					expressionError = true;
@@ -4972,7 +4984,7 @@ public class Parser
 				String s1 = CharacterEntities.escape( StringUtilities.globalStringReplace( element, ",", "\\," ).replaceAll( "(?<= ) ", "\\\\ " ) );
 				String s2 = CharacterEntities.escape( StringUtilities.globalStringReplace( fullName, ",", "\\," ).replaceAll( "(?<= ) ", "\\\\ " ) );
 				List<String> names = new ArrayList<String>();
-				if ( type == DataTypes.ITEM_TYPE )
+				if ( type.equals( DataTypes.ITEM_TYPE ) )
 				{
 					int itemId = (int)value.contentLong;
 					String name = ItemDatabase.getItemName( itemId );
@@ -4983,7 +4995,7 @@ public class Parser
 						names.add( s3 );
 					}
 				}
-				else if ( type == DataTypes.EFFECT_TYPE )
+				else if ( type.equals( DataTypes.EFFECT_TYPE ) )
 				{
 					int effectId = (int)value.contentLong;
 					String name = EffectDatabase.getEffectName( effectId );
@@ -4994,7 +5006,7 @@ public class Parser
 						names.add( s3 );
 					}
 				}
-				else if ( type == DataTypes.MONSTER_TYPE )
+				else if ( type.equals( DataTypes.MONSTER_TYPE ) )
 				{
 					int monsterId = (int)value.contentLong;
 					String name = MonsterDatabase.findMonsterById( monsterId ).getName();
@@ -5005,7 +5017,7 @@ public class Parser
 						names.add( s3 );
 					}
 				}
-				else if ( type == DataTypes.SKILL_TYPE )
+				else if ( type.equals( DataTypes.SKILL_TYPE ) )
 				{
 					int skillId = (int)value.contentLong;
 					String name = SkillDatabase.getSkillName( skillId );
