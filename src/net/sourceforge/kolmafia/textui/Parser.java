@@ -494,6 +494,11 @@ public class Parser
 
 	public Scope importFile( final String fileName, final Scope scope )
 	{
+		return this.importFile( fileName, scope, null );
+	}
+
+	public Scope importFile( final String fileName, final Scope scope, final Location location )
+	{
 		List<File> matches = KoLmafiaCLI.findScriptFile( fileName );
 		if ( matches.size() > 1 )
 		{
@@ -504,13 +509,27 @@ public class Parser
 					s.append( "; " );
 				s.append( f.getPath() );
 			}
-			this.error( "too many matches for " + fileName + ": " + s );
+			if ( location != null )
+			{
+				this.error( location, "too many matches for " + fileName + ": " + s );
+			}
+			else
+			{
+				this.error( "too many matches for " + fileName + ": " + s );
+			}
 
 			return scope;
 		}
 		if ( matches.size() == 0 )
 		{
-			this.error( fileName + " could not be found" );
+			if ( location != null )
+			{
+				this.error( location, fileName + " could not be found" );
+			}
+			else
+			{
+				this.error( fileName + " could not be found" );
+			}
 
 			return scope;
 		}
@@ -556,8 +575,6 @@ public class Parser
 
 	private Scope parseCommandOrDeclaration( final Scope result, final Type expectedType )
 	{
-		Position typeStart = this.here();
-
 		Type t = this.parseType( result, true );
 
 		// If there is no data type, it's a command of some sort
@@ -570,7 +587,7 @@ public class Parser
 			}
 			else
 			{
-				this.error( "command or declaration required" );
+				this.error( this.currentToken(), "command or declaration required" );
 			}
 		}
 		else if ( this.parseVariables( t, result ) )
@@ -587,7 +604,7 @@ public class Parser
 		else
 		{
 			//Found a type but no function or variable to tie it to
-			this.error( typeStart, "Type given but not used to declare anything" );
+			this.error( this.makeLocation( t.getLocation(), this.currentToken() ), "Type given but not used to declare anything" );
 		}
 
 		return result;
@@ -605,7 +622,7 @@ public class Parser
 		Directive importDirective;
 		while ( ( importDirective = this.parseImport() ) != null )
 		{
-			scope = this.importFile( importDirective.value, scope );
+			scope = this.importFile( importDirective.value, scope, this.makeLocation( importDirective.range ) );
 		}
 
 		return this.parseScope( scope, null, scope.getParentScope(), true, false, false );
@@ -632,7 +649,7 @@ public class Parser
 		while ( !this.atEndOfFile() )
 		{
 			// Infinite loop prevention
-			if ( !this.madeProgress( previousPosition, previousPosition = this.here() ) )
+			if ( !this.madeProgress( previousPosition, previousPosition = this.getCurrentPosition() ) )
 			{
 				if ( !wholeFile )
 				{
@@ -643,7 +660,7 @@ public class Parser
 				// couldn't parse, just read the current token and continue
 				this.readToken();
 
-				this.error( previousPosition, "Empty or unknown node" );
+				this.error( this.peekLastToken(), "Empty or unknown node" );
 				continue;
 			}
 
@@ -727,7 +744,7 @@ public class Parser
 			else
 			{
 				//Found a type but no function or variable to tie it to
-				this.error( "Type given but not used to declare anything" );
+				this.error( this.makeLocation( t.getLocation(), this.currentToken() ), "Type given but not used to declare anything" );
 			}
 		}
 
@@ -804,7 +821,7 @@ public class Parser
 		List<String> fieldNames = new ArrayList<String>();
 
 		Position previousPosition = null;
-		while ( this.madeProgress( previousPosition, previousPosition = this.here() ) )
+		while ( this.madeProgress( previousPosition, previousPosition = this.getCurrentPosition() ) )
 		{
 			boolean fieldError = false;
 			boolean fieldSyntaxError = false;
@@ -967,7 +984,7 @@ public class Parser
 		boolean vararg = false;
 
 		Position previousPosition = null;
-		while ( this.madeProgress( previousPosition, previousPosition = this.here() ) )
+		while ( this.madeProgress( previousPosition, previousPosition = this.getCurrentPosition() ) )
 		{
 			if ( this.atEndOfFile() )
 			{
@@ -1697,11 +1714,9 @@ public class Parser
 		boolean isArray = false;
 
 		Position previousPosition = null;
-		while ( this.madeProgress( previousPosition, previousPosition = this.here() ) )
+		while ( this.madeProgress( previousPosition, previousPosition = this.getCurrentPosition() ) )
 		{
 			LocatedValue lhs;
-
-			Position keyStart = this.here();
 
 			if ( this.atEndOfFile() )
 			{
@@ -1727,6 +1742,8 @@ public class Parser
 				{
 					// We know this is a map, but they placed
 					// an aggregate literal as a key
+					// FIXME find a way to send this after reading the key's value,
+					// but while keeping its priority (i.e. preventing other errors from firing)
 					if ( !aggregateError )
 					{
 						this.error( this.currentToken(), "Expected a key of type " + index.toString() + ", found an aggregate" );
@@ -1793,7 +1810,7 @@ public class Parser
 					lhs = this.autoCoerceValue( data, lhs, scope );
 					if ( !aggregateError && !Operator.validCoercion( dataType, lhs.value.getType(), "assign" ) )
 					{
-						this.error( keyStart, "Invalid array literal; cannot assign type " +
+						this.error( lhs.location, "Invalid array literal; cannot assign type " +
 							dataType.toString() +
 								" to type " +
 							lhs.value.getType().toString() );
@@ -1825,13 +1842,11 @@ public class Parser
 				// not really correct since, to get here, what we got so far must have matched
 				// the value's datatype, but we can't tell what they put after the :, so just assume
 				// it's a key:value pair anyway
-				this.error( keyStart, "cannot include keys when making an array literal" );
+				this.error( lhs.location, "cannot include keys when making an array literal" );
 				aggregateError = true;
 			}
 
 			LocatedValue rhs;
-
-			Position valueStart = this.here();
 
 			if ( "{".equals( this.currentToken().value ) )
 			{
@@ -1878,7 +1893,7 @@ public class Parser
 			{
 				if ( !Operator.validCoercion( index, lhs.value.getType(), "assign" ) )
 				{
-					this.error( valueStart, "Invalid map literal; cannot assign type " +
+					this.error( lhs.location, "Invalid map literal; cannot assign type " +
 							dataType.toString() +
 							" to key of type " +
 							lhs.value.getType().toString() );
@@ -1887,7 +1902,7 @@ public class Parser
 
 				if ( !Operator.validCoercion( data, rhs.value.getType(), "assign" ) )
 				{
-					this.error( valueStart, "Invalid map literal; cannot assign type " +
+					this.error( rhs.location, "Invalid map literal; cannot assign type " +
 							dataType.toString() +
 							" to value of type " +
 							rhs.value.getType().toString() );
@@ -1932,7 +1947,6 @@ public class Parser
 		boolean empty = false;
 		int size = 0;
 
-		Position typeStart = this.here();
 		Token indexToken = this.currentToken();
 
 		if ( this.readIntegerToken( this.currentToken().value ) )
@@ -2028,7 +2042,7 @@ public class Parser
 			}
 			else if ( empty )
 			{
-				this.error( typeStart, "\"Nothing\" can only be used as the only and/or last index of a bracket group." );
+				this.error( this.currentToken(), "\"Nothing\" can only be used as the only and/or last index of a bracket group." );
 			}
 
 			dataType = this.parseAggregateType( dataType, scope );
@@ -2312,7 +2326,7 @@ public class Parser
 
 				if ( finalElse && !elseError )
 				{
-					this.error( "Else without if" );
+					this.error( conditionalStartToken, "Else without if" );
 					elseError = true;
 				}
 
@@ -2724,6 +2738,8 @@ public class Parser
 
 			if ( "default".equalsIgnoreCase( this.currentToken().value ) )
 			{
+				Token defaultToken = this.currentToken();
+
 				this.readToken(); // default
 
 				if ( ":".equals( this.currentToken().value ) )
@@ -2747,7 +2763,7 @@ public class Parser
 				{
 					if ( !caseError )
 					{
-						this.error( "Only one default label allowed in a switch statement" );
+						this.error( defaultToken, "Only one default label allowed in a switch statement" );
 					}
 					switchError = caseError = true;
 				}
@@ -2781,7 +2797,7 @@ public class Parser
 				//Found a type but no function or variable to tie it to
 				if ( !caseError )
 				{
-					this.error( "Type given but not used to declare anything" );
+					this.error( this.makeLocation( t.getLocation(), this.currentToken() ), "Type given but not used to declare anything" );
 				}
 				switchError = caseError = true;
 			}
@@ -2849,7 +2865,7 @@ public class Parser
 		else
 		{
 			// this would not be an error if at least one catch was present
-			this.error( "\"try\" without \"finally\" is pointless" );
+			this.error( this.makeLocation( tryStartToken, this.peekPreviousToken() ), "\"try\" without \"finally\" is pointless" );
 			finalClause = new Scope( body );
 		}
 
@@ -3456,7 +3472,7 @@ public class Parser
 				{
 					if ( !javaForSyntaxError )
 					{
-						this.error( "Identifier expected" );
+						this.error( this.currentToken(), "Identifier expected" );
 					}
 					javaForError = javaForSyntaxError = true;
 				}
@@ -3553,7 +3569,7 @@ public class Parser
 					}
 					else if ( !javaForError )
 					{
-						this.error( "Variable '" + ((VariableReference) value.value).getName() + "' not incremented" );
+						this.error( value.location, "Variable '" + ((VariableReference) value.value).getName() + "' not incremented" );
 						javaForError = true;
 					}
 				}
@@ -3571,7 +3587,7 @@ public class Parser
 				{
 					if ( !javaForSyntaxError )
 					{
-						this.error( "Identifier expected" );
+						this.error( this.currentToken(), "Identifier expected" );
 					}
 					javaForError = javaForSyntaxError = true;
 				}
@@ -3716,7 +3732,7 @@ public class Parser
 			this.readToken(); //(
 
 			Position previousPosition = null;
-			while ( this.madeProgress( previousPosition, previousPosition = this.here() ) )
+			while ( this.madeProgress( previousPosition, previousPosition = this.getCurrentPosition() ) )
 			{
 				if ( this.atEndOfFile() )
 				{
@@ -4119,7 +4135,7 @@ public class Parser
 				oper.isInteger() ?
 				( oper + " requires an integer expression and an integer variable reference" ) :
 				( "Cannot store " + rhs.value.getType() + " in " + lhs.value + " of type " + lhs.value.getType() );
-			this.error( error );
+			this.error( this.makeLocation( lhs.location, rhs.location ), error );
 			assignmentError = true;
 		}
 
@@ -4132,7 +4148,7 @@ public class Parser
 		}
 
 		return new Assignment( (VariableReference) lhs.value, rhs.value, op )
-			.wrap( this.makeLocation( lhs.location, this.makeLocation( this.peekPreviousToken() ) ) );
+			.wrap( this.makeLocation( lhs.location, rhs.location ) );
 	}
 
 	private Value parseRemove( final BasicScope scope )
@@ -4352,7 +4368,7 @@ public class Parser
 		boolean expressionError = false, expressionSyntaxError = false;
 
 		Position previousPosition = null;
-		while ( this.madeProgress( previousPosition, previousPosition = this.here() ) )
+		while ( this.madeProgress( previousPosition, previousPosition = this.getCurrentPosition() ) )
 		{
 			oper = this.parseOperator( this.currentToken() );
 
@@ -4496,7 +4512,7 @@ public class Parser
 		if ( !expressionError )
 		{
 			// should NOT happen
-			this.error( "Internal error; got stuck while parsing expressions" );
+			this.error( this.currentToken(), "Internal error; got stuck while parsing expressions" );
 		}
 
 		return lhs;
@@ -4743,7 +4759,7 @@ public class Parser
 		this.currentToken = null;
 		this.currentLine.tokens.removeLast();
 
-		Position stringStartPosition = this.here();
+		Position stringStartPosition = this.getCurrentPosition();
 
 		char startCharacter = this.restOfLine().charAt( 0 );
 		char stopCharacter = startCharacter;
@@ -4787,7 +4803,7 @@ public class Parser
 			// Handle escape sequences
 			if ( ch == '\\' )
 			{
-				i = this.parseEscapeSequence( resultString, ++i );
+				i = this.parseEscapeSequence( resultString, i );
 				continue;
 			}
 
@@ -4873,6 +4889,7 @@ public class Parser
 
 	private int parseEscapeSequence( final StringBuilder resultString, int i )
 	{
+		final int backslashIndex = i++;
 		final String line = this.restOfLine();
 
 		if ( i == line.length() )
@@ -4909,7 +4926,12 @@ public class Parser
 			}
 			catch ( IndexOutOfBoundsException | NumberFormatException e )
 			{
-				this.error( "Hexadecimal character escape requires 2 digits" );
+				Location errorLocation = this.makeLocation(
+					this.makeInlineRange(
+						new Position( this.currentLine.lineNumber, backslashIndex ),
+						Math.min( backslashIndex + 4, line.length() ) ) );
+
+				this.error( errorLocation, "Hexadecimal character escape requires 2 digits" );
 
 				resultString.append( ch );
 			}
@@ -4924,7 +4946,12 @@ public class Parser
 			}
 			catch ( IndexOutOfBoundsException | NumberFormatException e )
 			{
-				this.error( "Unicode character escape requires 4 digits" );
+				Location errorLocation = this.makeLocation(
+					this.makeInlineRange(
+						new Position( this.currentLine.lineNumber, backslashIndex ),
+						Math.min( backslashIndex + 6, line.length() ) ) );
+
+				this.error( errorLocation, "Unicode character escape requires 4 digits" );
 
 				resultString.append( ch );
 			}
@@ -4942,7 +4969,12 @@ public class Parser
 				}
 				catch ( IndexOutOfBoundsException | NumberFormatException e )
 				{
-					this.error( "Octal character escape requires 3 digits" );
+					Location errorLocation = this.makeLocation(
+						this.makeInlineRange(
+							new Position( this.currentLine.lineNumber, backslashIndex ),
+							Math.min( backslashIndex + 4, line.length() ) ) );
+
+					this.error( errorLocation, "Octal character escape requires 3 digits" );
 				}
 			}
 			resultString.append( ch );
@@ -5156,7 +5188,7 @@ public class Parser
 		StringBuilder resultString = new StringBuilder();
 		final Value result;
 
-		Position currentElementStartPosition = this.here();
+		Position currentElementStartPosition = this.getCurrentPosition();
 
 		int level = 1;
 		for ( int i = 0; ; ++i )
@@ -5186,7 +5218,7 @@ public class Parser
 			char c = line.charAt( i );
 			if ( c == '\\' )
 			{
-				i = this.parseEscapeSequence( resultString, ++i );
+				i = this.parseEscapeSequence( resultString, i );
 			}
 			else if ( c == '[' )
 			{
@@ -5228,7 +5260,7 @@ public class Parser
 		int level = 1;
 		boolean slash = false;
 
-		Position currentElementStartPosition = this.here();
+		Position currentElementStartPosition = this.getCurrentPosition();
 
 		StringBuilder resultString = new StringBuilder();
 		for ( int i = 0; ; ++i )
@@ -5275,7 +5307,7 @@ public class Parser
 			// Handle escape sequences
 			if ( ch == '\\' )
 			{
-				i = this.parseEscapeSequence( resultString, ++i );
+				i = this.parseEscapeSequence( resultString, i );
 				continue;
 			}
 
@@ -5464,7 +5496,7 @@ public class Parser
 				{
 					if ( !variableReferenceError && !type.isBad() )
 					{
-						Location location = this.makeLocation( current.location, this.makeLocation( this.peekPreviousToken() ) );
+						Location location = this.makeLocation( current.location, this.peekPreviousToken() );
 						String message;
 						if ( indices.isEmpty() )
 						{
@@ -5581,7 +5613,7 @@ public class Parser
 				parseAggregate = false;
 			}
 
-			Location currentLocation = this.makeLocation( current.location, this.makeLocation( this.peekPreviousToken() ) );
+			Location currentLocation = this.makeLocation( current.location, this.peekPreviousToken() );
 			//TODO gather references to record fields
 			current = new CompositeReference( ((VariableReference) current.value).target, indices, this )
 				.wrap( currentLocation );
@@ -6266,7 +6298,7 @@ public class Parser
 		}
 	}
 
-	private Position here() // FIXME temporarily made short. Rename to getCurrentPosition()
+	private Position getCurrentPosition()
 	{
 		// 0-indexed
 		int lineNumber = Math.max( 0, this.currentLine.lineNumber - 1 );
@@ -6275,7 +6307,7 @@ public class Parser
 
 	private Range rangeToHere( final Position start )
 	{
-		return new Range( start != null ? start : this.here(), this.here() );
+		return new Range( start != null ? start : this.getCurrentPosition(), this.getCurrentPosition() );
 	}
 
 	private Range makeInlineRange( final Position start, final int offset )
@@ -6309,12 +6341,6 @@ public class Parser
 		return this.makeRange( start.range, end.range );
 	}
 
-	// temporary, we want to not need this
-	private Range make0WidthRange()
-	{
-		return this.rangeToHere( this.here() );
-	}
-
 	private Location makeLocation( final Position start )
 	{
 		return this.makeLocation( this.rangeToHere( start ) );
@@ -6335,6 +6361,11 @@ public class Parser
 		return this.makeLocation( this.makeRange( start, end ) );
 	}
 
+	private Location makeLocation( final Location start, final Token end )
+	{
+		return this.makeLocation( start, this.makeLocation( end ) );
+	}
+
 	private Location makeLocation( final Range range )
 	{
 		String uri = this.fileName != null ? this.fileName : this.istream.toString();
@@ -6344,7 +6375,7 @@ public class Parser
 	// temporary, we want to not need this
 	private Location make0WidthLocation()
 	{
-		return this.makeLocation( this.here() );
+		return this.makeLocation( this.getCurrentPosition() );
 	}
 
 	private Location make0WidthLocation( final Position position )
@@ -6570,7 +6601,7 @@ public class Parser
 
 	public final void error( final String msg1, final String msg2 )
 	{
-		this.error( this.here(), msg1, msg2 );
+		this.error( this.getCurrentPosition(), msg1, msg2 );
 	}
 
 	public final void error( final Position start, final String msg )
@@ -6630,7 +6661,7 @@ public class Parser
 
 	public final void warning( final String msg1, final String msg2 )
 	{
-		this.warning( this.here(), msg1, msg2 );
+		this.warning( this.getCurrentPosition(), msg1, msg2 );
 	}
 
 	public final void warning( final Position start, final String msg )
