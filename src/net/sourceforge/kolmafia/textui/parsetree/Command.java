@@ -35,10 +35,6 @@ package net.sourceforge.kolmafia.textui.parsetree;
 
 import org.eclipse.lsp4j.Location;
 
-/**
- * A type of {@link ParseTreeNode}.
- * Unlike {@link Symbol}, every {@link Command} is unique.
- */
 public abstract class Command
 	extends ParseTreeNode
 {

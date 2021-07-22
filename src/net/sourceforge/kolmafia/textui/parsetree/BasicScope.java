@@ -136,6 +136,31 @@ public abstract class BasicScope
 		return null;
 	}
 
+	public void addReference( final Type type, final Location location )
+	{
+		if ( this.types.contains( type ) )
+		{
+			this.types.addReference( type, location );
+		}
+		else if ( this.parentScope != null )
+		{
+			this.parentScope.addReference( type, location );
+		}
+	}
+
+	public List<Location> getReferences( final Type type )
+	{
+		if ( this.types.contains( type ) )
+		{
+			return this.types.getReferences( type );
+		}
+		if ( this.parentScope != null )
+		{
+			return this.parentScope.getReferences( type );
+		}
+		return null;
+	}
+
 	public List<BasicScope> getScopes()
 	{
 		return this.nestedScopes;
@@ -166,6 +191,31 @@ public abstract class BasicScope
 		if ( recurse && this.parentScope != null )
 		{
 			return this.parentScope.findVariable( name, true );
+		}
+		return null;
+	}
+
+	public void addReference( final Variable variable, final Location location )
+	{
+		if ( this.variables.contains( variable ) )
+		{
+			this.variables.addReference( variable, location );
+		}
+		else if ( this.parentScope != null )
+		{
+			this.parentScope.addReference( variable, location );
+		}
+	}
+
+	public List<Location> getReferences( final Variable variable )
+	{
+		if ( this.variables.contains( variable ) )
+		{
+			return this.variables.getReferences( variable );
+		}
+		if ( this.parentScope != null )
+		{
+			return this.parentScope.getReferences( variable );
 		}
 		return null;
 	}
@@ -460,6 +510,31 @@ public abstract class BasicScope
 		}
 
 		return bestMatch;
+	}
+
+	public void addReference( final Function function, final Location location )
+	{
+		if ( this.functions.contains( function ) )
+		{
+			this.functions.addReference( function, location );
+		}
+		else if ( this.parentScope != null )
+		{
+			this.parentScope.addReference( function, location );
+		}
+	}
+
+	public List<Location> getReferences( final Function function )
+	{
+		if ( this.functions.contains( function ) )
+		{
+			return this.functions.getReferences( function );
+		}
+		if ( this.parentScope != null )
+		{
+			return this.parentScope.getReferences( function );
+		}
+		return null;
 	}
 
 	@Override

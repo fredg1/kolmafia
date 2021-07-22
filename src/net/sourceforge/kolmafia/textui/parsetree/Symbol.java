@@ -33,16 +33,8 @@
 
 package net.sourceforge.kolmafia.textui.parsetree;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.eclipse.lsp4j.Location;
 
-/**
- * A type of {@link ParseTreeNode}.
- * Unlike {@link Command}, the "same" {@link Symbol} can appear multiple times,
- * split between Definition and Reference.
- */
 public abstract class Symbol
 	extends ParseTreeNode
 	implements Comparable<Symbol>
@@ -50,7 +42,6 @@ public abstract class Symbol
 	public final String name;
 
 	public final Location location;
-	public final List<Location> references;
 
 	public Symbol()
 	{
@@ -61,7 +52,6 @@ public abstract class Symbol
 	{
 		this.name = name;
 		this.location = location;
-		this.references = new ArrayList<>();
 	}
 
 	public String getName()
@@ -77,16 +67,6 @@ public abstract class Symbol
 	public Location getDefinitionLocation()
 	{
 		return this.location;
-	}
-
-	public List<Location> getReferenceLocations()
-	{
-		return this.references;
-	}
-
-	public void addReference( final Location location )
-	{
-		this.references.add( location );
 	}
 
 	public int compareTo( final Symbol o )
@@ -105,7 +85,8 @@ public abstract class Symbol
 
 	/** For error propagation only */
 	public static interface BadNode
-	{}
+	{
+	}
 
 	public boolean isBad()
 	{

@@ -33,8 +33,6 @@
 
 package net.sourceforge.kolmafia.textui.parsetree;
 
-import org.eclipse.lsp4j.Location;
-
 import net.sourceforge.kolmafia.textui.DataTypes;
 
 public class AggregateType
@@ -188,7 +186,7 @@ public class AggregateType
 		implements BadNode
 	{
 		/** More of a shortcut method than an actual class with a purpose... */
-		public BadAggregateType( final Location location )
+		public BadAggregateType()
 		{
 			super( new BadType( null, null ), new BadType( null, null ) );
 		}

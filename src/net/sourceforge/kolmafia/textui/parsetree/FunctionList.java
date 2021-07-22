@@ -33,13 +33,19 @@
 
 package net.sourceforge.kolmafia.textui.parsetree;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
+
+import org.eclipse.lsp4j.Location;
 
 public class FunctionList
 	implements Iterable<Function>
 {
 	private final TreeMap<String,Function> list = new TreeMap<String,Function>();
+	private final Map<Function, List<Location>> references = new TreeMap<>();
 
 	// Assumes there will not be more than 65535 functions in any scope.
 	// Assumes that \0 will never appear in a function name.
@@ -48,13 +54,15 @@ public class FunctionList
 	public boolean add( final Function f )
 	{
 		this.list.put( f.getName().toLowerCase() + '\0' + this.sequence, f );
+		this.references.put( f, new ArrayList<>() );
 		++this.sequence;
 		return true;
 	}
 
 	public boolean remove( final Function f )
 	{
-		return this.list.values().remove( f );
+		return this.list.values().remove( f ) &&
+		       this.references.remove( f ) != null;
 	}
 
 	public Function[] findFunctions( String name )
@@ -71,6 +79,38 @@ public class FunctionList
 	public Iterator<Function> iterator()
 	{
 		return list.values().iterator();
+	}
+
+	public boolean contains( final Function f )
+	{
+		return references.containsKey( f );
+	}
+
+	public FunctionList clone()
+	{
+		FunctionList result = new FunctionList();
+
+		for ( Function type : this.references.keySet() )
+		{
+			result.add( type );
+		}
+
+		return result;
+	}
+
+	public void addReference( final Function function, final Location location )
+	{
+		List<Location> references = this.references.get( function );
+
+		if ( references != null )
+		{
+			references.add( location );
+		}
+	}
+
+	public List<Location> getReferences( final Function function )
+	{
+		return this.references.get( function );
 	}
 }
 

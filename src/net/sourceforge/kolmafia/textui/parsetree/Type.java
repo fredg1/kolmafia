@@ -629,7 +629,6 @@ public class Type
 		{
 			super( target.name, target.type, location );
 			this.target = target;
-			this.addReference( location );
 		}
 
 		public Type getTarget()
@@ -641,18 +640,6 @@ public class Type
 		public Location getDefinitionLocation()
 		{
 			return this.target.getDefinitionLocation();
-		}
-
-		@Override
-		public List<Location> getReferenceLocations()
-		{
-			return this.target.getReferenceLocations();
-		}
-
-		@Override
-		public void addReference( final Location location )
-		{
-			this.target.addReference( location );
 		}
 
 		@Override
