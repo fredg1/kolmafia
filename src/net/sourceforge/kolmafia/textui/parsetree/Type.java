@@ -101,8 +101,13 @@ public class Type
 		return this.primitive;
 	}
 
-	public boolean equals( final Type type )
+	public boolean equals( Type type )
 	{
+		if ( type instanceof TypeReference )
+		{
+			type = ((TypeReference) type).getTarget();
+		}
+
 		return this.type == type.type;
 	}
 

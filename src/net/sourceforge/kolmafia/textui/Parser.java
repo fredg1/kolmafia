@@ -1190,7 +1190,7 @@ public class Parser
 			result = new BadVariable( variableName, t, this.makeLocation( variableToken ) );
 			variableError = true;
 		}
-		else if ( scope.findVariable( variableName ) != null )
+		else if ( allowInitialization && scope.findVariable( variableName ) != null )
 		{
 			this.error( variableToken, "Variable " + variableName + " is already defined" );
 			result = new BadVariable( variableName, t, this.makeLocation( variableToken ) );
@@ -4629,6 +4629,8 @@ public class Parser
 			{
 				if ( baseType != null )
 				{
+					// TODO find a way to spot these with lookaheads
+					// otherwise it means we mistakenly added a reference to that type
 					this.rewindBackTo( anchor );
 				}
 				if ( ( result = this.parseVariableReference( scope ) ) != null )
@@ -5583,11 +5585,10 @@ public class Parser
 						this.error( fieldToken, "Field name expected" );
 					}
 					variableReferenceError = variableReferenceSyntaxError = true;
-
-					field = null;
 				}
 
-				index = rtype.getFieldIndex( field ).wrap( this.makeLocation( fieldToken ) );
+				Value fieldIndex = rtype.getFieldIndex( field );
+				index = fieldIndex != null ? fieldIndex.wrap( this.makeLocation( fieldToken ) ) : null;
 				if ( index == null )
 				{
 					if ( !variableReferenceError )
@@ -5601,7 +5602,7 @@ public class Parser
 				}
 				else
 				{
-					type = rtype.getDataType( index );
+					type = rtype.getDataType( index.value );
 				}
 			}
 
@@ -6338,7 +6339,7 @@ public class Parser
 
 	private Range makeRange( final Token start, final Token end )
 	{
-		return this.makeRange( start.range, end.range );
+		return this.makeRange( start.range, end != null ? end.range : start.range );
 	}
 
 	private Location makeLocation( final Position start )

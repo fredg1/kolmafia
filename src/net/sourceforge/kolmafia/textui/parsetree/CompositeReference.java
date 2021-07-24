@@ -73,7 +73,12 @@ public class CompositeReference
 
 		for ( Value current : this.indices )
 		{
-			type = ( (CompositeType) type.asProxy() ).getDataType( current ).getBaseType();
+			type = type.asProxy();
+
+			if ( !type.isBad() )
+			{
+				type = ( (CompositeType) type ).getDataType( current ).getBaseType();
+			}
 		}
 		return type;
 	}
@@ -82,9 +87,15 @@ public class CompositeReference
 	public Type getRawType()
 	{
 		Type type = this.target.getType();
+
 		for ( Value current : this.indices )
 		{
-			type = ( (CompositeType) type.getBaseType().asProxy() ).getDataType( current );
+			type = type.getBaseType().asProxy();
+
+			if ( !type.isBad() )
+			{
+				type = ( (CompositeType) type ).getDataType( current );
+			}
 		}
 		return type;
 	}
