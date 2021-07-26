@@ -2931,22 +2931,24 @@ public class Parser
 
 		Scope result = new StaticScope( parentScope );
 
-		if ( !"{".equals( this.currentToken().value ) )	// body is a single call
+		if ( "{".equals( this.currentToken().value ) )
 		{
-			return this.parseCommandOrDeclaration( result, functionType );
+			this.readToken(); //read {
+
+			this.parseScope( result, functionType, parentScope, false, false, false );
+
+			if ( "}".equals( this.currentToken().value ) )
+			{
+				this.readToken(); //read }
+			}
+			else
+			{
+				this.unexpectedTokenError( "}", this.currentToken() );
+			}
 		}
-
-		this.readToken(); //read {
-
-		this.parseScope( result, functionType, parentScope, false, false, false );
-
-		if ( "}".equals( this.currentToken().value ) )
+		else	// body is a single call
 		{
-			this.readToken(); //read }
-		}
-		else
-		{
-			this.unexpectedTokenError( "}", this.currentToken() );
+			this.parseCommandOrDeclaration( result, functionType );
 		}
 
 		Location staticLocation = this.makeLocation( staticStartToken, this.peekPreviousToken() );
