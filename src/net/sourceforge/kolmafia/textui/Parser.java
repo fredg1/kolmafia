@@ -291,6 +291,11 @@ public class Parser
 		{
 			this.fileName = scriptFile.getPath();
 			this.shortFileName = this.fileName.substring( this.fileName.lastIndexOf( File.separator ) + 1 );
+
+			if ( this.imports.isEmpty() )
+			{
+				this.imports.put( scriptFile, scriptFile.lastModified() );
+			}
 		}
 		else
 		{
