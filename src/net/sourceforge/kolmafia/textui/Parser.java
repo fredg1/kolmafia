@@ -340,6 +340,7 @@ public class Parser
 	}
 
 	public Scope parse()
+		throws InterruptedException
 	{
 		Token firstToken = this.currentToken();
 		Scope scope = this.parseFile( null );
@@ -498,12 +499,19 @@ public class Parser
 	}
 
 	public Scope importFile( final String fileName, final Scope scope )
+		throws InterruptedException
 	{
 		return this.importFile( fileName, scope, null );
 	}
 
 	public Scope importFile( final String fileName, final Scope scope, final Location location )
+		throws InterruptedException
 	{
+		if ( Thread.interrupted() )
+		{
+			throw new InterruptedException();
+		}
+
 		List<File> matches = KoLmafiaCLI.findScriptFile( fileName );
 		if ( matches.size() > 1 )
 		{
@@ -579,6 +587,7 @@ public class Parser
 	}
 
 	private Scope parseCommandOrDeclaration( final Scope result, final Type expectedType )
+		throws InterruptedException
 	{
 		Type t = this.parseType( result, true );
 
@@ -616,6 +625,7 @@ public class Parser
 	}
 
 	private Scope parseFile( final Scope startScope )
+		throws InterruptedException
 	{
 		Scope scope = startScope != null ? startScope :
 		              new Scope( (VariableList) null, Parser.getExistingFunctionScope() );
@@ -638,6 +648,7 @@ public class Parser
 	                          final BasicScope parentScope,
 	                          final boolean allowBreak,
 	                          final boolean allowContinue )
+		throws InterruptedException
 	{
 		Scope result = new Scope( variables, parentScope );
 		return this.parseScope( result, expectedType, parentScope, false, allowBreak, allowContinue );
@@ -649,6 +660,7 @@ public class Parser
 	                          final boolean wholeFile,
 	                          final boolean allowBreak,
 	                          final boolean allowContinue )
+		throws InterruptedException
 	{
 		Position previousPosition = null;
 		while ( !this.atEndOfFile() )
@@ -757,6 +769,7 @@ public class Parser
 	}
 
 	private Type parseRecord( final BasicScope parentScope )
+		throws InterruptedException
 	{
 		if ( !"record".equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -958,6 +971,7 @@ public class Parser
 	}
 
 	private Function parseFunction( final Type functionType, final Scope parentScope )
+		throws InterruptedException
 	{
 		if ( !this.parseIdentifier( this.currentToken().value ) )
 		{
@@ -1154,6 +1168,7 @@ public class Parser
 	}
 
 	private boolean parseVariables( final Type t, final BasicScope parentScope )
+		throws InterruptedException
 	{
 		while ( true )
 		{
@@ -1174,6 +1189,7 @@ public class Parser
 	}
 
 	private Variable parseVariable( final Type t, final BasicScope scope, final boolean allowInitialization )
+		throws InterruptedException
 	{
 		if ( !this.parseIdentifier( this.currentToken().value ) )
 		{
@@ -1407,6 +1423,7 @@ public class Parser
 	}
 
 	private boolean parseTypedef( final Scope parentScope )
+		throws InterruptedException
 	{
 		if ( !"typedef".equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -1502,6 +1519,7 @@ public class Parser
 	                              final boolean noElse,
 	                              final boolean allowBreak,
 	                              final boolean allowContinue )
+		throws InterruptedException
 	{
 		Command result;
 
@@ -1635,6 +1653,7 @@ public class Parser
 	}
 
 	private Type parseType( final BasicScope scope, final boolean records )
+		throws InterruptedException
 	{
 		if ( !this.parseIdentifier( this.currentToken().value ) )
 		{
@@ -1699,6 +1718,7 @@ public class Parser
 	}
 
 	private LocatedValue parseAggregateLiteral( final BasicScope scope, final AggregateType aggr )
+		throws InterruptedException
 	{
 		Token aggregateLiteralStartToken = this.currentToken();
 
@@ -1945,6 +1965,7 @@ public class Parser
 	}
 
 	private Type parseAggregateType( Type dataType, final BasicScope scope )
+		throws InterruptedException
 	{
 		this.readToken(); // [ or ,
 
@@ -2111,6 +2132,7 @@ public class Parser
 	}
 
 	private FunctionReturn parseReturn( final Type expectedType, final BasicScope parentScope )
+		throws InterruptedException
 	{
 		if ( !"return".equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -2171,6 +2193,7 @@ public class Parser
 	                                       final boolean noElse,
 	                                       final boolean allowBreak,
 	                                       final boolean allowContinue )
+		throws InterruptedException
 	{
 		Token scopeStartToken = this.currentToken();
 		Scope result = new Scope( parentScope );
@@ -2203,6 +2226,7 @@ public class Parser
 	                                         final boolean noElse,
 	                                         final boolean allowBreak,
 	                                         final boolean allowContinue )
+		throws InterruptedException
 	{
 		Scope scope = this.parseBlock( functionType, variables, parentScope, noElse, allowBreak, allowContinue );
 		if ( scope != null )
@@ -2218,6 +2242,7 @@ public class Parser
 	                          final boolean noElse,
 	                          final boolean allowBreak,
 	                          final boolean allowContinue )
+		throws InterruptedException
 	{
 		if ( !"{".equals( this.currentToken().value ) )
 		{
@@ -2250,6 +2275,7 @@ public class Parser
 	                                      final boolean noElse,
 	                                      final boolean allowBreak,
 	                                      final boolean allowContinue )
+		throws InterruptedException
 	{
 		if ( !"if".equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -2398,6 +2424,7 @@ public class Parser
 	}
 
 	private BasicScript parseBasicScript()
+		throws InterruptedException
 	{
 		if ( !"cli_execute".equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -2461,6 +2488,7 @@ public class Parser
 	}
 
 	private Loop parseWhile( final Type functionType, final BasicScope parentScope )
+		throws InterruptedException
 	{
 		if ( !"while".equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -2518,6 +2546,7 @@ public class Parser
 	}
 
 	private Loop parseRepeat( final Type functionType, final BasicScope parentScope )
+		throws InterruptedException
 	{
 		if ( !"repeat".equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -2585,6 +2614,7 @@ public class Parser
 	}
 
 	private Switch parseSwitch( final Type functionType, final BasicScope parentScope, final boolean allowContinue )
+		throws InterruptedException
 	{
 		if ( !"switch".equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -2845,6 +2875,7 @@ public class Parser
 
 	private Try parseTry( final Type functionType, final BasicScope parentScope,
 	                      final boolean allowBreak, final boolean allowContinue )
+		throws InterruptedException
 	{
 		if ( !"try".equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -2880,6 +2911,7 @@ public class Parser
 
 	private Catch parseCatch( final Type functionType, final BasicScope parentScope,
 	                          final boolean allowBreak, final boolean allowContinue )
+		throws InterruptedException
 	{
 		if ( !"catch".equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -2894,6 +2926,7 @@ public class Parser
 	}
 
 	private LocatedValue parseCatchValue( final BasicScope parentScope )
+		throws InterruptedException
 	{
 		if ( !"catch".equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -2924,6 +2957,7 @@ public class Parser
 	}
 
 	private Scope parseStatic( final Type functionType, final BasicScope parentScope )
+		throws InterruptedException
 	{
 		if ( !"static".equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -2963,6 +2997,7 @@ public class Parser
 	}
 
 	private SortBy parseSort( final BasicScope parentScope )
+		throws InterruptedException
 	{
 		// sort aggregate by expr
 
@@ -3040,6 +3075,7 @@ public class Parser
 	}
 
 	private Loop parseForeach( final Type functionType, final BasicScope parentScope )
+		throws InterruptedException
 	{
 		// foreach key [, key ... ] in aggregate { scope }
 
@@ -3178,6 +3214,7 @@ public class Parser
 	}
 
 	private Loop parseFor( final Type functionType, final BasicScope parentScope )
+		throws InterruptedException
 	{
 		// for identifier from X [upto|downto|to|] Y [by Z]? {scope }
 
@@ -3329,6 +3366,7 @@ public class Parser
 	}
 
 	private Loop parseJavaFor( final Type functionType, final BasicScope parentScope )
+		throws InterruptedException
 	{
 		if ( !"for".equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -3626,6 +3664,7 @@ public class Parser
 	}
 
 	private Scope parseLoopScope( final Type functionType, final VariableList varList, final BasicScope parentScope )
+		throws InterruptedException
 	{
 		Scope result = new Scope( varList, parentScope );
 
@@ -3640,6 +3679,7 @@ public class Parser
 	}
 
 	private Scope parseLoopScope( final Scope result, final Type functionType, final BasicScope parentScope )
+		throws InterruptedException
 	{
 		if ( "{".equals( this.currentToken().value ) )
 		{
@@ -3683,6 +3723,7 @@ public class Parser
 	}
 
 	private LocatedValue parseNewRecord( final BasicScope scope )
+		throws InterruptedException
 	{
 		if ( !"new".equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -3847,11 +3888,13 @@ public class Parser
 	}
 
 	private LocatedValue parseCall( final BasicScope scope )
+		throws InterruptedException
 	{
 		return this.parseCall( scope, null );
 	}
 
 	private LocatedValue parseCall( final BasicScope scope, final LocatedValue firstParam )
+		throws InterruptedException
 	{
 		if ( !"(".equals( this.nextToken() ) )
 		{
@@ -3915,6 +3958,7 @@ public class Parser
 	}
 
 	private List<LocatedValue> parseParameters( final BasicScope scope, final LocatedValue firstParam )
+		throws InterruptedException
 	{
 		if ( !"(".equals( this.currentToken().value ) )
 		{
@@ -3984,6 +4028,7 @@ public class Parser
 	}
 
 	private LocatedValue parseInvoke( final BasicScope scope )
+		throws InterruptedException
 	{
 		if ( !"call".equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -4058,6 +4103,7 @@ public class Parser
 	}
 
 	private LocatedValue parseAssignment( final BasicScope scope, final LocatedValue lhs )
+		throws InterruptedException
 	{
 		Token operToken = this.currentToken();
 		String operStr = this.currentToken().value;
@@ -4159,6 +4205,7 @@ public class Parser
 	}
 
 	private Value parseRemove( final BasicScope scope )
+		throws InterruptedException
 	{
 		if ( !"remove".equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -4178,6 +4225,7 @@ public class Parser
 	}
 
 	private LocatedValue parsePreIncDec( final BasicScope scope )
+		throws InterruptedException
 	{
 		if ( this.nextToken() == null )
 		{
@@ -4226,6 +4274,7 @@ public class Parser
 	}
 
 	private LocatedValue parsePostIncDec( final LocatedValue lhs )
+		throws InterruptedException
 	{
 		if ( lhs == null || !( lhs.value instanceof VariableReference ) )
 		{
@@ -4259,11 +4308,13 @@ public class Parser
 	}
 
 	private LocatedValue parseExpression( final BasicScope scope )
+		throws InterruptedException
 	{
 		return this.parseExpression( scope, null );
 	}
 
 	private LocatedValue parseExpression( final BasicScope scope, final Operator previousOper )
+		throws InterruptedException
 	{
 		if ( ";".equals( this.currentToken().value ) )
 		{
@@ -4526,6 +4577,7 @@ public class Parser
 	}
 
 	private LocatedValue parseValue( final BasicScope scope )
+		throws InterruptedException
 	{
 		if ( ";".equals( this.currentToken().value ) )
 		{
@@ -4668,6 +4720,7 @@ public class Parser
 	}
 
 	private LocatedValue parseNumber()
+		throws InterruptedException
 	{
 		Token numberStartToken = this.currentToken();
 
@@ -4754,6 +4807,7 @@ public class Parser
 	}
 
 	private LocatedValue parseString( final BasicScope scope )
+		throws InterruptedException
 	{
 		if ( !"\"".equals( this.currentToken().value ) &&
 		     !"'".equals( this.currentToken().value ) &&
@@ -5077,6 +5131,7 @@ public class Parser
 	}
 
 	private LocatedValue parseTypedConstant( final BasicScope scope )
+		throws InterruptedException
 	{
 		if ( !"$".equals( this.currentToken().value ) )
 		{
@@ -5261,6 +5316,7 @@ public class Parser
 	}
 
 	private PluralValue parsePluralConstant( final BasicScope scope, final Type type )
+		throws InterruptedException
 	{
 		// Directly work with currentLine - ignore any "tokens" you meet until
 		// the string is closed
@@ -5436,6 +5492,7 @@ public class Parser
 	}
 
 	private LocatedValue parseVariableReference( final BasicScope scope )
+		throws InterruptedException
 	{
 		if ( !this.parseIdentifier( this.currentToken().value ) )
 		{
@@ -5475,6 +5532,7 @@ public class Parser
 	 * E.g. {@code var.function()}
 	 */
 	private LocatedValue parseVariableReference( final BasicScope scope, final LocatedValue var )
+		throws InterruptedException
 	{
 		if ( var == null || !( var.value instanceof VariableReference ) )
 		{
@@ -5648,6 +5706,7 @@ public class Parser
 	}
 
 	private Directive parseDirective( final String directive )
+		throws InterruptedException
 	{
 		if ( !directive.equalsIgnoreCase( this.currentToken().value ) )
 		{
@@ -5739,6 +5798,7 @@ public class Parser
 	}
 
 	private void parseScriptName()
+		throws InterruptedException
 	{
 		Directive scriptDirective = this.parseDirective( "script" );
 		if ( this.scriptName == null && scriptDirective != null )
@@ -5748,6 +5808,7 @@ public class Parser
 	}
 
 	private void parseNotify()
+		throws InterruptedException
 	{
 		Directive notifyDirective = this.parseDirective( "notify" );
 		if ( this.notifyRecipient == null && notifyDirective != null )
@@ -5757,6 +5818,7 @@ public class Parser
 	}
 
 	private void parseSince()
+		throws InterruptedException
 	{
 		Directive sinceDirective = this.parseDirective( "since" );
 		if ( sinceDirective != null )
@@ -5767,6 +5829,7 @@ public class Parser
 	}
 
 	private Directive parseImport()
+		throws InterruptedException
 	{
 		return this.parseDirective( "import" );
 	}
@@ -5776,7 +5839,13 @@ public class Parser
 	private static final char BOM = '\ufeff';
 
 	private Token currentToken()
+		throws InterruptedException
 	{
+		if ( Thread.interrupted() )
+		{
+			throw new InterruptedException();
+		}
+
 		// If we've already parsed a token, return it
 		if ( this.currentToken != null )
 		{
@@ -5866,6 +5935,7 @@ public class Parser
 	}
 
 	private String nextToken()
+		throws InterruptedException
 	{
 		int offset = this.currentToken().restOfLineStart;
 		Line line = this.currentLine;
@@ -5927,6 +5997,7 @@ public class Parser
 	 * so that we can resume parsing from there
 	 */
 	private void rewindBackTo( final Token destinationToken )
+		throws InterruptedException
 	{
 		this.currentToken();
 
@@ -5972,6 +6043,7 @@ public class Parser
 	}
 
 	private void readToken()
+		throws InterruptedException
 	{
 		// at "end of file"
 		if ( this.currentToken().getLine().content == null )
@@ -6068,6 +6140,7 @@ public class Parser
 	}
 
 	private boolean atEndOfFile()
+		throws InterruptedException
 	{
 		this.currentToken();
 
