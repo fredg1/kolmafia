@@ -347,11 +347,6 @@ public class Parser
 
 		scope.setScopeLocation( this.makeLocation( firstToken, this.peekPreviousToken() ) );
 
-		if ( this.currentLine.nextLine != null )
-		{
-			this.error( "Script parsing error; thought we reached the end of the file" );
-		}
-
 		return scope;
 	}
 
@@ -559,11 +554,6 @@ public class Parser
 		Parser parser = new Parser( scriptFile, null, this.imports );
 		Scope result = parser.parseFile( scope );
 
-		if ( parser.currentLine.nextLine != null )
-		{
-			parser.error( "Script parsing error; thought we reached the end of the file" );
-		}
-
 		for ( AshDiagnostic diagnostic : parser.diagnostics )
 		{
 			this.diagnostics.add( diagnostic );
@@ -640,7 +630,14 @@ public class Parser
 			scope = this.importFile( importDirective.value, scope, this.makeLocation( importDirective.range ) );
 		}
 
-		return this.parseScope( scope, null, scope.getParentScope(), true, false, false );
+		this.parseScope( scope, null, scope.getParentScope(), true, false, false );
+
+		if ( this.currentLine.nextLine != null )
+		{
+			this.error( "Script parsing error; thought we reached the end of the file" );
+		}
+
+		return scope;
 	}
 
 	private Scope parseScope( final Type expectedType,
