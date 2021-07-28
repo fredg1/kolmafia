@@ -40,6 +40,8 @@ import java.io.InputStreamReader;
 import java.io.LineNumberReader;
 import java.io.PrintStream;
 
+import java.net.URI;
+
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -256,6 +258,7 @@ public class Parser
 
 	private final String fileName;
 	private final String shortFileName;
+	private final URI fileURI;
 	private String scriptName;
 	private final InputStream istream;
 
@@ -267,7 +270,7 @@ public class Parser
 	private Function mainMethod = null;
 	private String notifyRecipient = null;
 
-	final List<AshDiagnostic> diagnostics = new ArrayList<>();
+	public final List<AshDiagnostic> diagnostics = new ArrayList<>();
 
 	public Parser()
 	{
@@ -291,6 +294,7 @@ public class Parser
 		{
 			this.fileName = scriptFile.getPath();
 			this.shortFileName = this.fileName.substring( this.fileName.lastIndexOf( File.separator ) + 1 );
+			this.fileURI = scriptFile.toURI();
 
 			if ( this.imports.isEmpty() )
 			{
@@ -301,6 +305,7 @@ public class Parser
 		{
 			this.fileName = null;
 			this.shortFileName = null;
+			this.fileURI = null;
 		}
 
 		if ( this.istream == null )
@@ -6451,7 +6456,7 @@ public class Parser
 
 	private Location makeLocation( final Range range )
 	{
-		String uri = this.fileName != null ? this.fileName : this.istream.toString();
+		String uri = this.fileURI != null ? this.fileURI.toString(): this.istream.toString();
 		return new Location( uri, range );
 	}
 
@@ -6468,7 +6473,7 @@ public class Parser
 
 	// **************** Parse errors *****************
 
-	class AshDiagnostic
+	public class AshDiagnostic
 	{
 		final String sourceUri;
 		final Range range;
