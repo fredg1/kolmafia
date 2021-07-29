@@ -2062,7 +2062,9 @@ public class Parser
 				this.error( indexToken, "Missing index token" );
 			}
 
-			return new AggregateType( dataType, new BadType( null, null ) );
+			return new TypeReference(
+				new AggregateType( dataType, new BadType( null, null ) ),
+				this.makeLocation( dataType.getLocation(), this.peekPreviousToken() ) );
 		}
 
 		if ( ",".equals( this.currentToken().value ) ||
@@ -2089,12 +2091,11 @@ public class Parser
 			this.unexpectedTokenError( empty ? "]" : ", or ]", this.currentToken() );
 		}
 
-		if ( indexType != null )
-		{
-			return new AggregateType( dataType, indexType );
-		}
-
-		return new AggregateType( dataType, size );
+		return new TypeReference(
+			indexType != null ?
+				new AggregateType( dataType, indexType ) :
+				new AggregateType( dataType, size ),
+			this.makeLocation( dataType.getLocation(), this.peekPreviousToken() ) );
 	}
 
 	private boolean parseIdentifier( final String identifier )
@@ -6475,7 +6476,7 @@ public class Parser
 
 	public class AshDiagnostic
 	{
-		final String sourceUri;
+		public final String sourceUri;
 		final Range range;
 		final DiagnosticSeverity severity;
 		final String message1;
