@@ -48,12 +48,7 @@ class FilesMonitor
 	{
 		synchronized ( this.parent.scripts )
 		{
-			Script script = this.parent.scripts.get( file );
-			if ( script == null )
-			{
-				script = new Script( this.parent, file );
-				this.parent.scripts.put( file, script );
-			}
+			final Script script = this.getScript( file );
 
 			Script.Handler handler = this.findHandler( file );
 
@@ -90,12 +85,29 @@ class FilesMonitor
 		}
 	}
 
+	/** Fetches or makes a Script for the given file. */
+	Script getScript( final File file )
+	{
+		synchronized ( this.parent.scripts )
+		{
+			Script script = this.parent.scripts.get( file );
+			if ( script == null )
+			{
+				script = new Script( this.parent, file );
+				this.parent.scripts.put( file, script );
+			}
+
+			return script;
+		}
+	}
+
 	Script.Handler findHandler( final File file )
 	{
 		synchronized ( this.parent.scripts )
 		{
 			for ( final Script script : this.parent.scripts.values() )
 			{
+				//FIXME more than one handler may import the same script
 				if ( script.handler != null &&
 				     script.handler.imports.containsKey( file ) )
 				{
