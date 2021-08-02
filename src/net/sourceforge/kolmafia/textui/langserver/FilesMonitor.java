@@ -35,6 +35,9 @@ package net.sourceforge.kolmafia.textui.langserver;
 
 import java.io.File;
 
+import java.util.LinkedList;
+import java.util.List;
+
 class FilesMonitor
 {
 	final AshLanguageServer parent;
@@ -50,9 +53,9 @@ class FilesMonitor
 		{
 			final Script script = this.getScript( file );
 
-			Script.Handler handler = this.findHandler( file );
+			final List<Script.Handler> handlers = this.findHandlers( file );
 
-			if ( handler != null &&
+			if ( handlers.size() > 0 &&
 			     ( ( script.text != null && script.version >= version ) ||
 			       ( script.text == null && text == null ) ) )
 			{
@@ -68,11 +71,11 @@ class FilesMonitor
 				script.version = version;
 			}
 
-			if ( handler == null )
+			if ( handlers.size() == 0 )
 			{
 				// make a new handler
-				handler = script.makeHandler();
-				handler.start();
+				handlers.add( script.makeHandler() );
+				handlers.get( 0 ).start();
 			}
 
 			//TODO if a handler exists, look at its imports.
@@ -81,7 +84,10 @@ class FilesMonitor
 			// for those (if there isn't another script using them).
 			// This'll be a pain...
 
-			handler.instructions.offer( new Script.Instruction.ParseFile() );
+			for ( final Script.Handler handler : handlers )
+			{
+				handler.instructions.offer( new Script.Instruction.ParseFile() );
+			}
 		}
 	}
 
@@ -101,22 +107,23 @@ class FilesMonitor
 		}
 	}
 
-	Script.Handler findHandler( final File file )
+	List<Script.Handler> findHandlers( final File file )
 	{
+		final List<Script.Handler> handlers = new LinkedList<>();
+
 		synchronized ( this.parent.scripts )
 		{
 			for ( final Script script : this.parent.scripts.values() )
 			{
-				//FIXME more than one handler may import the same script
 				if ( script.handler != null &&
 				     script.handler.imports.containsKey( file ) )
 				{
-					return script.handler;
+					handlers.add( script.handler );
 				}
 			}
 		}
 
-		return null;
+		return handlers;
 	}
 
 	static String sanitizeURI( final String uri )
