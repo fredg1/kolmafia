@@ -87,8 +87,6 @@ public abstract class AshLanguageServer
 		final Launcher<LanguageClient> launcher = LSPLauncher.createServerLauncher( server, System.in, System.out );
 		server.connect( launcher.getRemoteProxy() );
 		launcher.startListening();
-
-		//TODO search for any currently visible ASH script
 	}
 
 	/* The server */
@@ -126,6 +124,9 @@ public abstract class AshLanguageServer
 		// params.getTrace(); for when we implement trace
 		// params.getClientInfo(); do we need/care about that?
 		// params.getWorkspaceFolders(); look into this later
+
+		this.monitor.scan();
+
 		ServerCapabilities capabilities = new ServerCapabilities();
 		// soooo... what *can* we do, currently?
 
@@ -219,6 +220,15 @@ public abstract class AshLanguageServer
 	public CompletableFuture<Object> shutdown()
 	{
 		this.state = ServerState.SHUTDOWN;
+
+		for ( final Script script : this.scripts.values() )
+		{
+			if ( script.handler != null )
+			{
+				script.handler.close();
+			}
+		}
+
 		return CompletableFuture.completedFuture( null );
 	}
 

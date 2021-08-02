@@ -35,8 +35,13 @@ package net.sourceforge.kolmafia.textui.langserver;
 
 import java.io.File;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+
+import net.java.dev.spellcast.utilities.DataUtilities;
+
+import net.sourceforge.kolmafia.KoLConstants;
 
 class FilesMonitor
 {
@@ -124,6 +129,56 @@ class FilesMonitor
 		}
 
 		return handlers;
+	}
+
+	List<Script.Handler> findOrMakeHandler( final File file )
+	{
+		final List<Script.Handler> handlers;
+
+		synchronized ( this.parent.scripts )
+		{
+			final Script script = this.getScript( file );
+
+			handlers = this.findHandlers( file );
+
+			if ( handlers.size() == 0 )
+			{
+				// make a new handler
+				handlers.add( script.makeHandler() );
+				handlers.get( 0 ).start();
+				handlers.get( 0 ).instructions.offer( new Script.Instruction.ParseFile() );
+			}
+		}
+
+		return handlers;
+	}
+
+	void scan()
+	{
+		for ( final File directory :
+			Arrays.asList(
+				KoLConstants.SCRIPT_LOCATION,
+				KoLConstants.PLOTS_LOCATION,
+				KoLConstants.RELAY_LOCATION ) )
+		{
+			this.scan( directory );
+		}
+	}
+
+	void scan( final File directory )
+	{
+		for ( final File file :
+			Arrays.asList( DataUtilities.listFiles( directory ) ) )
+		{
+			if ( file.isDirectory() )
+			{
+				this.scan( file );
+			}
+			else if ( file.isFile() )
+			{
+				this.findOrMakeHandler( file );
+			}
+		}
 	}
 
 	static String sanitizeURI( final String uri )
