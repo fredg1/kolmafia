@@ -259,6 +259,7 @@ public class Parser
 	private final String fileName;
 	private final String shortFileName;
 	private final URI fileURI;
+	private final long modificationDate;
 	private String scriptName;
 	private final InputStream istream;
 
@@ -266,7 +267,7 @@ public class Parser
 	private int currentIndex;
 	private Token currentToken;
 
-	private final Map<File, Long> imports;
+	private final Map<File, Parser> imports;
 	private Function mainMethod = null;
 	private String notifyRecipient = null;
 
@@ -277,12 +278,12 @@ public class Parser
 		this( null, null, null );
 	}
 
-	public Parser( final File scriptFile, final Map<File, Long> imports )
+	public Parser( final File scriptFile, final Map<File, Parser> imports )
 	{
 		this( scriptFile, null, imports );
 	}
 
-	public Parser( final File scriptFile, final InputStream stream, final Map<File, Long> imports )
+	public Parser( final File scriptFile, final InputStream stream, final Map<File, Parser> imports )
 	{
 		this.imports = imports != null ? imports : new TreeMap<>();
 
@@ -295,10 +296,11 @@ public class Parser
 			this.fileName = scriptFile.getPath();
 			this.shortFileName = this.fileName.substring( this.fileName.lastIndexOf( File.separator ) + 1 );
 			this.fileURI = scriptFile.toURI();
+			this.modificationDate = scriptFile.lastModified();
 
 			if ( this.imports.isEmpty() )
 			{
-				this.imports.put( scriptFile, scriptFile.lastModified() );
+				this.imports.put( scriptFile, this );
 			}
 		}
 		else
@@ -306,6 +308,7 @@ public class Parser
 			this.fileName = null;
 			this.shortFileName = null;
 			this.fileURI = null;
+			this.modificationDate = 0L;
 		}
 
 		if ( this.istream == null )
@@ -377,9 +380,14 @@ public class Parser
 		return this.currentLine.lineNumber;
 	}
 
-	public Map<File, Long> getImports()
+	public Map<File, Parser> getImports()
 	{
 		return this.imports;
+	}
+
+	public long getModificationDate()
+	{
+		return this.modificationDate;
 	}
 
 	public Function getMainMethod()
@@ -554,9 +562,10 @@ public class Parser
 			return scope;
 		}
 
-		this.imports.put( scriptFile, scriptFile.lastModified() );
-
 		Parser parser = this.getParser( scriptFile );
+
+		this.imports.put( scriptFile, parser );
+
 		Scope result = parser.parseFile( scope );
 
 		for ( AshDiagnostic diagnostic : parser.diagnostics )

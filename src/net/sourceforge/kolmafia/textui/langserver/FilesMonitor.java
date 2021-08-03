@@ -117,6 +117,7 @@ class FilesMonitor
 			for ( final Script script : this.parent.scripts.values() )
 			{
 				if ( script.handler != null &&
+				     script.handler.imports != null &&
 				     script.handler.imports.containsKey( file ) )
 				{
 					handlers.add( script.handler );
