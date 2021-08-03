@@ -82,16 +82,12 @@ class FilesMonitor
 				handlers.add( script.makeHandler() );
 				handlers.get( 0 ).start();
 			}
-
-			//TODO if a handler exists, look at its imports.
-			// We need to check if that script *loses* any import
-			// after the new parsing, and make new individual handlers
-			// for those (if there isn't another script using them).
-			// This'll be a pain...
-
-			for ( final Script.Handler handler : handlers )
+			else
 			{
-				handler.instructions.offer( new Script.Instruction.ParseFile() );
+				for ( final Script.Handler handler : handlers )
+				{
+					handler.instructions.offer( new Script.Instruction.ParseFile.Refresh() );
+				}
 			}
 		}
 	}
@@ -146,7 +142,6 @@ class FilesMonitor
 				// make a new handler
 				handlers.add( script.makeHandler() );
 				handlers.get( 0 ).start();
-				handlers.get( 0 ).instructions.offer( new Script.Instruction.ParseFile() );
 			}
 		}
 

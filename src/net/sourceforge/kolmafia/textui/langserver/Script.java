@@ -96,15 +96,16 @@ class Script
 
 		Thread parserThread;
 
-		final BlockingQueue<Script.Instruction> instructions = new LinkedBlockingQueue<>();
+		final BlockingQueue<Script.Instruction> instructions = new LinkedBlockingQueue<>()
+		{{
+			this.add( new Script.Instruction.ParseFile() );
+		}};
 
 		Handler()
 		{
 			this.setName( Script.this.file.getName() + " - Main" );
 			this.setDaemon( true );
 		}
-
-		//TODO scan the user's scripts to see if there's an unopened script that imports this one
 
 		@Override
 		public void run()
@@ -139,12 +140,20 @@ class Script
 									this.scope = this.parser.parse();
 
 									this.instructions.offer( new Script.Instruction.SendDiagnostics() );
+
+									if ( instruction instanceof Script.Instruction.ParseFile.Refresh )
+									{
+										// In case some imports were removed, these scripts are now standalone
+										Script.this.parent.monitor.scan();
+									}
 								}
 								catch ( InterruptedException e )
 								{
 								}
-
-								this.parserThread = null;
+								finally
+								{
+									this.parserThread = null;
+								}
 							},
 							Script.this.file.getName() + " - Parser" );
 						this.parserThread.setDaemon( true );
@@ -201,6 +210,7 @@ class Script
 			}
 
 			Script.this.handler = null;
+			this.interrupt();
 		}
 
 		private class LSParser
@@ -244,6 +254,10 @@ class Script
 		static class ParseFile
 			implements Script.Instruction
 		{
+			static class Refresh
+				extends ParseFile
+			{
+			}
 		}
 
 		static class SendDiagnostics
