@@ -124,7 +124,6 @@ public abstract class AshLanguageServer
 	{
 		this.state = ServerState.INITIALIZED;
 
-		// TODO Auto-generated method stub
 		this.clientCapabilities = params.getCapabilities();
 		// params.getTrace(); for when we implement trace
 		// params.getClientInfo(); do we need/care about that?
@@ -134,96 +133,98 @@ public abstract class AshLanguageServer
 			this.monitor.scan();
 		} );
 
-		ServerCapabilities capabilities = new ServerCapabilities();
-		// soooo... what *can* we do, currently?
+		return CompletableFuture.supplyAsync( () -> {
+			ServerCapabilities capabilities = new ServerCapabilities();
+			// soooo... what *can* we do, currently?
 
-		// textDocumentSync
-		TextDocumentSyncOptions textDocumentSyncOptions = new TextDocumentSyncOptions();
-		textDocumentSyncOptions.setOpenClose( true );
-		textDocumentSyncOptions.setChange( TextDocumentSyncKind.Full );
-		textDocumentSyncOptions.setWillSave( false );
-		textDocumentSyncOptions.setWillSaveWaitUntil( false );
-		textDocumentSyncOptions.setSave( new SaveOptions( false ) );
+			// textDocumentSync
+			TextDocumentSyncOptions textDocumentSyncOptions = new TextDocumentSyncOptions();
+			textDocumentSyncOptions.setOpenClose( true );
+			textDocumentSyncOptions.setChange( TextDocumentSyncKind.Full );
+			textDocumentSyncOptions.setWillSave( false );
+			textDocumentSyncOptions.setWillSaveWaitUntil( false );
+			textDocumentSyncOptions.setSave( new SaveOptions( false ) );
 
-		capabilities.setTextDocumentSync( textDocumentSyncOptions );
+			capabilities.setTextDocumentSync( textDocumentSyncOptions );
 
-		// completionProvider
+			// completionProvider
 
-		// hoverProvider
+			// hoverProvider
 
-		// signatureHelpProvider
+			// signatureHelpProvider
 
-		// declarationProvider
-		// Only for functions
-		// TODO
+			// declarationProvider
+			// Only for functions
+			// TODO
 
-		// definitionProvider
-		// TODO
+			// definitionProvider
+			// TODO
 
-		// typeDefinitionProvider
-		// TODO
+			// typeDefinitionProvider
+			// TODO
 
-		// implementationProvider
-		// Doesn't exist in ASH
+			// implementationProvider
+			// Doesn't exist in ASH
 
-		// referencesProvider
-		//capabilities.setReferencesProvider( Boolean.TRUE );
+			// referencesProvider
+			//capabilities.setReferencesProvider( Boolean.TRUE );
 
-		// documentHighlightProvider
+			// documentHighlightProvider
 
-		// documentSymbolProvider
+			// documentSymbolProvider
 
-		// codeActionProvider
-		// for fixing misspelled literals/typed constants?
+			// codeActionProvider
+			// for fixing misspelled literals/typed constants?
 
-		// codeLensProvider
+			// codeLensProvider
 
-		// documentLinkProvider
-		// for imports statement? To point to the imported file?
-		// We may just settle with the file being the "definition" target...
+			// documentLinkProvider
+			// for imports statement? To point to the imported file?
+			// We may just settle with the file being the "definition" target...
 
-		// colorProvider
+			// colorProvider
 
-		// documentFormattingProvider
-		// maybe trim trailing whitespaces?
+			// documentFormattingProvider
+			// maybe trim trailing whitespaces?
 
-		// documentRangeFormattingProvider
+			// documentRangeFormattingProvider
 
-		// documentOnTypeFormattingProvider
+			// documentOnTypeFormattingProvider
 
-		// renameProvider
+			// renameProvider
 
-		// foldingRangeProvider
+			// foldingRangeProvider
 
-		// executeCommandProvider
+			// executeCommandProvider
 
-		// selectionRangeProvider
+			// selectionRangeProvider
 
-		// linkedEditingRangeProvider
+			// linkedEditingRangeProvider
 
-		// callHierarchyProvider
+			// callHierarchyProvider
 
-		// semanticTokensProvider
+			// semanticTokensProvider
 
-		// monikerProvider
-		// not even sure what that it? Looking into the docs,
-		// it seems like it's something that "should" be a normal feature,
-		// but then why was it added so recently? TODO look into this
-		// https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_moniker
+			// monikerProvider
+			// not even sure what that it? Looking into the docs,
+			// it seems like it's something that "should" be a normal feature,
+			// but then why was it added so recently? TODO look into this
+			// https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_moniker
 
-		// workspaceSymbolProvider
+			// workspaceSymbolProvider
 
-		// workspace
+			// workspace
 
-		// typeHierarchyProvider
-		// Neither part of LSP yet, nor a thing in ASH
+			// typeHierarchyProvider
+			// Neither part of LSP yet, nor a thing in ASH
 
-		// experimental
-		// no..?
+			// experimental
+			// no..?
 
-		ServerInfo info = new ServerInfo( StaticEntity.getVersion() );
+			ServerInfo info = new ServerInfo( StaticEntity.getVersion() );
 
-		return CompletableFuture.completedFuture( new InitializeResult( capabilities, info ) );
+			return new InitializeResult( capabilities, info );
+		}, this.executor );
 	}
 
 	@Override
