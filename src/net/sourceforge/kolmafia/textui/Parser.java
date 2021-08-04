@@ -6678,7 +6678,6 @@ public class Parser
 
 	public class AshDiagnostic
 	{
-		public final String sourceUri;
 		final Range range;
 		final DiagnosticSeverity severity;
 		final String message1;
@@ -6692,7 +6691,6 @@ public class Parser
 
 		private AshDiagnostic( final Location location, final DiagnosticSeverity severity, final String message1, final String message2 )
 		{
-			this.sourceUri = location.getUri();
 			this.range = location.getRange();
 			this.severity = severity;
 			this.message1 = message1;
@@ -6765,6 +6763,11 @@ public class Parser
 			}
 
 			return diagnostic;
+		}
+
+		public final boolean originatesFrom( final Parser parser )
+		{
+			return Parser.this == parser;
 		}
 	}
 
