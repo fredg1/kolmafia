@@ -88,7 +88,7 @@ public class AggregateType
 	}
 
 	@Override
-	public Type getDataType( final Object key )
+	public Type getDataType( final Value key )
 	{
 		return this.dataType;
 	}

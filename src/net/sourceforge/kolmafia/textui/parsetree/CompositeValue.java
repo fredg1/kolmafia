@@ -97,7 +97,7 @@ public abstract class CompositeValue
 		return Arrays.asList( this.keys() ).iterator();
 	}
 
-	public Value initialValue( final Object key )
+	public Value initialValue( final Value key )
 	{
 		return ( (CompositeType) this.type ).getDataType( key ).initialValue();
 	}

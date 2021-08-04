@@ -175,7 +175,7 @@ class FilesMonitor
 			{
 				this.scan( file );
 			}
-			else if ( file.isFile() )
+			else if ( file.isFile() && file.getName().endsWith( ".ash" ) )
 			{
 				this.findOrMakeHandler( file );
 			}

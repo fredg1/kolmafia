@@ -59,10 +59,7 @@ public abstract class CompositeType
 		return null;
 	}
 
-	public Type getDataType( final Object key )
-	{
-		return null;
-	}
+	public abstract Type getDataType( final Value key );
 
 	public Value getKey( final Value key )
 	{

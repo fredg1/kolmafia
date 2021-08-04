@@ -75,9 +75,13 @@ public class CompositeReference
 		{
 			type = type.asProxy();
 
-			if ( !type.isBad() )
+			if ( type instanceof CompositeType )
 			{
 				type = ( (CompositeType) type ).getDataType( current ).getBaseType();
+			}
+			else if ( !type.isBad() )
+			{
+				type = new Type.BadType( null, null );
 			}
 		}
 		return type;
@@ -92,9 +96,13 @@ public class CompositeReference
 		{
 			type = type.getBaseType().asProxy();
 
-			if ( !type.isBad() )
+			if ( type instanceof CompositeType )
 			{
 				type = ( (CompositeType) type ).getDataType( current );
+			}
+			else if ( !type.isBad() )
+			{
+				type = new Type.BadType( null, null );
 			}
 		}
 		return type;
