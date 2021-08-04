@@ -99,6 +99,7 @@ class Script
 
 		Thread parserThread;
 
+		private final Object parserSwapLock = new Object();
 		final Object parserThreadWaitingLock = new Object();
 
 		void refreshParsing()
@@ -108,7 +109,7 @@ class Script
 
 		void parseFile( final boolean initialParsing )
 		{
-			synchronized ( this.parserThread )
+			synchronized ( this.parserSwapLock )
 			{
 				if ( this.parserThread != null )
 				{
@@ -134,7 +135,7 @@ class Script
 			}
 			finally
 			{
-				synchronized ( this.parserThread )
+				synchronized ( this.parserSwapLock )
 				{
 					if ( this.parserThread == Thread.currentThread() )
 					{
@@ -191,7 +192,7 @@ class Script
 		{
 			Script.this.handler = null;
 
-			synchronized ( this.parserThread )
+			synchronized ( this.parserSwapLock )
 			{
 				if ( this.parserThread != null )
 				{
