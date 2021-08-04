@@ -42,8 +42,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.PublishDiagnosticsParams;
@@ -69,7 +67,13 @@ class Script
 
 	Handler makeHandler()
 	{
-		return this.handler = new Handler();
+		this.handler = new Handler();
+
+		this.parent.executor.execute( () -> {
+			this.handler.parseFile( true );
+		} );
+
+		return this.handler;
 	}
 
 	InputStream getStream()
@@ -83,12 +87,11 @@ class Script
 	}
 
 	/**
-	 * A thread tasked with taking care of a Script.
+	 * An object tasked with taking care of a Script.
 	 * <p>
-	 * All files imported by this script should also be handled by this thread
+	 * All files imported by this script should also be handled by this object
 	 */
 	class Handler
-		extends Thread
 	{
 		Parser parser;
 		Scope scope;
@@ -96,121 +99,132 @@ class Script
 
 		Thread parserThread;
 
-		final BlockingQueue<Script.Instruction> instructions = new LinkedBlockingQueue<>()
-		{{
-			this.add( new Script.Instruction.ParseFile() );
-		}};
+		final Object parserThreadWaitingLock = new Object();
 
-		Handler()
+		void refreshParsing()
 		{
-			this.setName( Script.this.file.getName() + " - Main" );
-			this.setDaemon( true );
+			this.parseFile( false );
 		}
 
-		@Override
-		public void run()
+		void parseFile( final boolean initialParsing )
 		{
-			while ( true )
+			synchronized ( this.parserThread )
 			{
-				if ( Script.this.handler != this )
+				if ( this.parserThread != null )
 				{
-					// We've been kicked out
-					return;
+					this.parserThread.interrupt();
 				}
+				this.parserThread = Thread.currentThread();
+				this.parserThread.setName( Script.this.file.getName() + " - Parser" );
+			}
 
-				try
+			this.imports = Collections.synchronizedMap( new HashMap<>() );
+			this.parser = new LSParser( Script.this.file, Script.this.getStream(), this.imports );
+
+			try
+			{
+				this.scope = this.parser.parse();
+
+				Script.this.parent.executor.execute( () -> {
+					this.sendDiagnostics();
+				} );
+			}
+			catch ( InterruptedException e )
+			{
+			}
+			finally
+			{
+				synchronized ( this.parserThread )
 				{
-					final Instruction instruction = this.instructions.take();
-
-					if ( instruction instanceof Script.Instruction.ParseFile )
+					if ( this.parserThread == Thread.currentThread() )
 					{
-						if ( this.parserThread != null )
+						this.parserThread = null;
+
+						synchronized ( this.parserThreadWaitingLock )
 						{
-							this.parserThread.interrupt();
+							this.parserThreadWaitingLock.notifyAll();
 						}
 
-						this.imports = Collections.synchronizedMap( new HashMap<>() );
-
-						this.parser = new LSParser( Script.this.file, Script.this.getStream(), this.imports );
-
-						this.parserThread = new Thread( () ->
-							{
-								try
-								{
-									this.scope = this.parser.parse();
-
-									this.instructions.offer( new Script.Instruction.SendDiagnostics() );
-
-									if ( instruction instanceof Script.Instruction.ParseFile.Refresh )
-									{
-										// In case some imports were removed, these scripts are now standalone
-										Script.this.parent.monitor.scan();
-									}
-								}
-								catch ( InterruptedException e )
-								{
-								}
-								finally
-								{
-									this.parserThread = null;
-								}
-							},
-							Script.this.file.getName() + " - Parser" );
-						this.parserThread.setDaemon( true );
-						this.parserThread.start();
-						continue;
-					}
-					if ( instruction instanceof Script.Instruction.SendDiagnostics )
-					{
-						if ( this.parserThread != null )
+						if ( !initialParsing )
 						{
-							// We're not done parsing
-							this.instructions.offer( instruction );
-							continue;
+							// In case some imports were removed, these scripts are now standalone
+							Script.this.parent.monitor.scan();
 						}
-
-						final Map<String, List<Diagnostic>> diagnosticsByUri = new HashMap<>();
-
-						for ( final AshDiagnostic diagnostic : this.parser.diagnostics )
-						{
-							final String uri = diagnostic.sourceUri;
-
-							List<Diagnostic> diagnostics = diagnosticsByUri.get( uri );
-							if ( diagnostics == null )
-							{
-								diagnostics = new ArrayList<>();
-								diagnosticsByUri.put( uri, diagnostics );
-							}
-
-							diagnostics.add( diagnostic.toLspDiagnostic() );
-						}
-
-						for ( final Map.Entry<String, List<Diagnostic>> entry : diagnosticsByUri.entrySet() )
-						{
-							Script.this.parent.client.publishDiagnostics(
-								new PublishDiagnosticsParams(
-									entry.getKey(),
-									entry.getValue() ) );
-						}
-
-						continue;
 					}
 				}
-				catch ( InterruptedException e )
+			}
+		}
+
+		void sendDiagnostics()
+		{
+			this.waitForParsing();
+
+			if ( Script.this.handler != this || Thread.interrupted() )
+			{
+				// We've been kicked out
+				return;
+			}
+
+			final Map<String, List<Diagnostic>> diagnosticsByUri = new HashMap<>();
+
+			for ( final AshDiagnostic diagnostic : this.parser.diagnostics )
+			{
+				final String uri = diagnostic.sourceUri;
+
+				List<Diagnostic> diagnostics = diagnosticsByUri.get( uri );
+				if ( diagnostics == null )
 				{
+					diagnostics = new ArrayList<>();
+					diagnosticsByUri.put( uri, diagnostics );
 				}
+
+				diagnostics.add( diagnostic.toLspDiagnostic() );
+			}
+
+			for ( final Map.Entry<String, List<Diagnostic>> entry : diagnosticsByUri.entrySet() )
+			{
+				Script.this.parent.client.publishDiagnostics(
+					new PublishDiagnosticsParams(
+						entry.getKey(),
+						entry.getValue() ) );
 			}
 		}
 
 		void close()
 		{
-			if ( this.parserThread != null )
-			{
-				this.parserThread.interrupt();
-			}
-
 			Script.this.handler = null;
-			this.interrupt();
+
+			synchronized ( this.parserThread )
+			{
+				if ( this.parserThread != null )
+				{
+					this.parserThread.interrupt();
+				}
+			}
+		}
+
+		private void waitForParsing()
+		{
+			synchronized ( this.parserThreadWaitingLock )
+			{
+				while ( this.parserThread != null )
+				{
+					if ( Script.this.handler != this )
+					{
+						// We've been kicked out
+						return;
+					}
+
+					try
+					{
+						this.parserThreadWaitingLock.wait();
+					}
+					catch ( InterruptedException e )
+					{
+						Thread.currentThread().interrupt();
+					}
+				}
+			}
 		}
 
 		private class LSParser
@@ -245,24 +259,6 @@ class Script
 
 				return new LSParser( scriptFile, stream, this.getImports() );
 			}
-		}
-	}
-
-	static interface Instruction
-		extends AshLanguageServer.Instruction
-	{
-		static class ParseFile
-			implements Script.Instruction
-		{
-			static class Refresh
-				extends ParseFile
-			{
-			}
-		}
-
-		static class SendDiagnostics
-			implements Script.Instruction
-		{
 		}
 	}
 }

@@ -41,6 +41,8 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 
 import org.eclipse.lsp4j.ClientCapabilities;
 import org.eclipse.lsp4j.DidChangeConfigurationParams;
@@ -72,6 +74,8 @@ import net.sourceforge.kolmafia.StaticEntity;
 
 /**
  * The thread in charge of listening for the client's messages.
+ * Its methods all quickly delegate to other threads, because we want to avoid
+ * blocking the reading of new messages.
  * <p>
  * Was made abstract, because the actual class to use is {@link StateCheckWrappers.AshLanguageServer}.
  */
@@ -103,6 +107,7 @@ public abstract class AshLanguageServer
 	LanguageClient client;
 	ClientCapabilities clientCapabilities;
 
+	final ExecutorService executor = Executors.newCachedThreadPool();
 	final FilesMonitor monitor = new FilesMonitor( this );
 
 	final Map<File, Script> scripts = Collections.synchronizedMap( new Hashtable<>( 20 ) );
@@ -125,7 +130,9 @@ public abstract class AshLanguageServer
 		// params.getClientInfo(); do we need/care about that?
 		// params.getWorkspaceFolders(); look into this later
 
-		this.monitor.scan();
+		this.executor.execute( () -> {
+			this.monitor.scan();
+		} );
 
 		ServerCapabilities capabilities = new ServerCapabilities();
 		// soooo... what *can* we do, currently?
@@ -167,10 +174,13 @@ public abstract class AshLanguageServer
 		// documentSymbolProvider
 
 		// codeActionProvider
+		// for fixing misspelled literals/typed constants?
 
 		// codeLensProvider
 
 		// documentLinkProvider
+		// for imports statement? To point to the imported file?
+		// We may just settle with the file being the "definition" target...
 
 		// colorProvider
 
@@ -221,15 +231,17 @@ public abstract class AshLanguageServer
 	{
 		this.state = ServerState.SHUTDOWN;
 
-		for ( final Script script : this.scripts.values() )
-		{
-			if ( script.handler != null )
+		return CompletableFuture.supplyAsync( () -> {
+			for ( final Script script : this.scripts.values() )
 			{
-				script.handler.close();
+				if ( script.handler != null )
+				{
+					script.handler.close();
+				}
 			}
-		}
 
-		return CompletableFuture.completedFuture( null );
+			return null;
+		}, this.executor );
 	}
 
 	@Override
@@ -256,40 +268,46 @@ public abstract class AshLanguageServer
 	@Override
 	public void didOpen( DidOpenTextDocumentParams params )
 	{
-		TextDocumentItem document = params.getTextDocument();
+		this.executor.execute( () -> {
+			TextDocumentItem document = params.getTextDocument();
 
-		File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
+			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
 
-		this.monitor.updateFile( file, document.getText(), document.getVersion() );
+			this.monitor.updateFile( file, document.getText(), document.getVersion() );
+		} );
 	}
 
 	@Override
 	public void didChange( DidChangeTextDocumentParams params )
 	{
-		VersionedTextDocumentIdentifier document = params.getTextDocument();
-		List<TextDocumentContentChangeEvent> changes = params.getContentChanges();
+		this.executor.execute( () -> {
+			VersionedTextDocumentIdentifier document = params.getTextDocument();
+			List<TextDocumentContentChangeEvent> changes = params.getContentChanges();
 
-		if ( changes.size() == 0 )
-		{
-			// Nothing to see here
-			return;
-		}
+			if ( changes.size() == 0 )
+			{
+				// Nothing to see here
+				return;
+			}
 
-		File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
+			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
 
-		// We don't support incremental changes, so we expect the client
-		// to put the whole file's content in a single TextDocumentContentChangeEvent
-		this.monitor.updateFile( file, changes.get( 0 ).getText(), document.getVersion() );
+			// We don't support incremental changes, so we expect the client
+			// to put the whole file's content in a single TextDocumentContentChangeEvent
+			this.monitor.updateFile( file, changes.get( 0 ).getText(), document.getVersion() );
+		} );
 	}
 
 	@Override
 	public void didClose( DidCloseTextDocumentParams params )
 	{
-		TextDocumentIdentifier document = params.getTextDocument();
+		this.executor.execute( () -> {
+			TextDocumentIdentifier document = params.getTextDocument();
 
-		File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
+			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
 
-		this.monitor.updateFile( file, null, -1 );
+			this.monitor.updateFile( file, null, -1 );
+		} );
 	}
 
 	@Override
@@ -314,10 +332,5 @@ public abstract class AshLanguageServer
 	{
 		// TODO Auto-generated method stub
 		
-	}
-
-	/** Type of message sent between the threads of this Language Server. */
-	static interface Instruction
-	{
 	}
 }
