@@ -31,7 +31,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-package net.sourceforge.kolmafia.textui.langserver;
+package net.sourceforge.kolmafia.textui.langserver.textdocumentservice;
 
 import java.util.Arrays;
 import java.util.Collections;
