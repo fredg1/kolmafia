@@ -406,6 +406,13 @@ public class Parser
 		return this.notifyRecipient;
 	}
 
+	public List<Token> getTokens( final Range range )
+	{
+		// Done this way simply as to not encumber this section,
+		// since that method is a bit bulky.
+		return this.getTokensInRange( range );
+	}
+
 	public static Scope getExistingFunctionScope()
 	{
 		return new Scope( RuntimeLibrary.functions.clone(), null, DataTypes.simpleTypes.clone() );
@@ -6349,7 +6356,7 @@ public class Parser
 		       previousPosition.getCharacter() < currentPosition.getCharacter();
 	}
 
-	final class Line
+	public final class Line
 	{
 		private final String content;
 		private final int lineNumber;
@@ -6585,6 +6592,49 @@ public class Parser
 				super( commentLength );
 			}
 		}
+	}
+
+	private List<Token> getTokensInRange( final Range range )
+	{
+		final List<Token> result = new LinkedList<>();
+
+		Line line = this.currentLine;
+
+		// Go back to the start
+		while ( line != null &&
+		        line.previousLine != null &&
+		        ( range == null ||
+		          range.getStart().getLine() < line.lineNumber ) )
+		{
+			line = line.previousLine;
+		}
+
+		while ( line != null &&
+		        line.content != null &&
+		        ( range == null ||
+		          range.getEnd().getLine() >= line.lineNumber ) )
+		{
+			for ( final Token token : line.tokens )
+			{
+				if ( range != null &&
+				     range.getStart().getCharacter() >= token.getEnd().getCharacter() )
+				{
+					continue;
+				}
+
+				if ( range != null &&
+				     range.getEnd().getCharacter() <= token.getStart().getCharacter() )
+				{
+					break;
+				}
+
+				result.add( token );
+			}
+
+			line = line.nextLine;
+		}
+
+		return result;
 	}
 
 	private Position getCurrentPosition()
