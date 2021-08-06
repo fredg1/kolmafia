@@ -109,6 +109,8 @@ class Script
 
 		void parseFile( final boolean initialParsing )
 		{
+			final String previousThreadName = Thread.currentThread().getName();
+
 			synchronized ( this.parserSwapLock )
 			{
 				if ( this.parserThread != null )
@@ -152,6 +154,8 @@ class Script
 							Script.this.parent.monitor.scan();
 						}
 					}
+
+					Thread.currentThread().setName( previousThreadName );
 				}
 			}
 		}
@@ -165,6 +169,11 @@ class Script
 				// We've been kicked out
 				return;
 			}
+
+			final String previousThreadName = Thread.currentThread().getName();
+			// Will technically send the diagnostics of every file it imports, but
+			// don't change the name accordingly; it would change too fast.
+			Thread.currentThread().setName( Script.this.file.getName() + " - Diagnostics" );
 
 			for ( final Map.Entry<File, Parser> entry : this.imports.entrySet() )
 			{
@@ -186,6 +195,8 @@ class Script
 						file.toURI().toString(),
 						diagnostics ) );
 			}
+
+			Thread.currentThread().setName( previousThreadName );
 		}
 
 		void close()
