@@ -198,7 +198,7 @@ public class AshRuntime
 		}
 
 		// Look at what the parser found
-		for ( Parser.AshDiagnostic diagnostic : parser.diagnostics )
+		for ( Parser.AshDiagnostic diagnostic : parser.getDiagnostics() )
 		{
 			if ( diagnostic.severity == Error )
 			{

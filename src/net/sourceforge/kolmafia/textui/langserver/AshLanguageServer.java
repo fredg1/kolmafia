@@ -105,8 +105,8 @@ public abstract class AshLanguageServer
 	protected abstract void shutdownCheck();
 	protected abstract void stateCheck();
 
-	LanguageClient client;
-	ClientCapabilities clientCapabilities;
+	public LanguageClient client;
+	public ClientCapabilities clientCapabilities;
 
 	public final AshTextDocumentService textDocumentService = new StateCheckWrappers.AshTextDocumentService( this );
 	public final AshWorkspaceService workspaceService = new StateCheckWrappers.AshWorkspaceService( this );
