@@ -38,30 +38,19 @@ import java.io.IOException;
 
 import java.util.Collections;
 import java.util.Hashtable;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 
 import org.eclipse.lsp4j.ClientCapabilities;
-import org.eclipse.lsp4j.DidChangeConfigurationParams;
-import org.eclipse.lsp4j.DidChangeTextDocumentParams;
-import org.eclipse.lsp4j.DidChangeWatchedFilesParams;
-import org.eclipse.lsp4j.DidCloseTextDocumentParams;
-import org.eclipse.lsp4j.DidOpenTextDocumentParams;
-import org.eclipse.lsp4j.DidSaveTextDocumentParams;
 import org.eclipse.lsp4j.InitializeParams;
 import org.eclipse.lsp4j.InitializeResult;
 import org.eclipse.lsp4j.SaveOptions;
 import org.eclipse.lsp4j.ServerCapabilities;
 import org.eclipse.lsp4j.ServerInfo;
-import org.eclipse.lsp4j.TextDocumentContentChangeEvent;
-import org.eclipse.lsp4j.TextDocumentIdentifier;
-import org.eclipse.lsp4j.TextDocumentItem;
 import org.eclipse.lsp4j.TextDocumentSyncKind;
 import org.eclipse.lsp4j.TextDocumentSyncOptions;
-import org.eclipse.lsp4j.VersionedTextDocumentIdentifier;
 import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.eclipse.lsp4j.launch.LSPLauncher;
 import org.eclipse.lsp4j.services.LanguageClient;
@@ -72,6 +61,9 @@ import org.eclipse.lsp4j.services.WorkspaceService;
 
 import net.sourceforge.kolmafia.StaticEntity;
 
+import net.sourceforge.kolmafia.textui.langserver.textdocumentservice.AshTextDocumentService;
+import net.sourceforge.kolmafia.textui.langserver.workspaceservice.AshWorkspaceService;
+
 /**
  * The thread in charge of listening for the client's messages.
  * Its methods all quickly delegate to other threads, because we want to avoid
@@ -80,7 +72,7 @@ import net.sourceforge.kolmafia.StaticEntity;
  * Was made abstract, because the actual class to use is {@link StateCheckWrappers.AshLanguageServer}.
  */
 public abstract class AshLanguageServer
-	implements LanguageClientAware, LanguageServer, TextDocumentService, WorkspaceService
+	implements LanguageClientAware, LanguageServer
 {
 	/** The Launcher */
 	public static void main( String[] args )
@@ -95,22 +87,37 @@ public abstract class AshLanguageServer
 
 	/* The server */
 
-	protected ServerState state = ServerState.STARTED;
+	private ServerState state = ServerState.STARTED;
 
-	protected enum ServerState
+	enum ServerState
 	{
 		STARTED,
 		INITIALIZED,
 		SHUTDOWN
 	}
 
+	public final ServerState getState()
+	{
+		return this.state;
+	}
+
+	protected abstract boolean notInitialized();
+	protected abstract boolean wasShutdown();
+	protected abstract boolean isActive();
+	protected abstract void initializeCheck();
+	protected abstract void shutdownCheck();
+	protected abstract void stateCheck();
+
 	LanguageClient client;
 	ClientCapabilities clientCapabilities;
 
-	final ExecutorService executor = Executors.newCachedThreadPool();
-	final FilesMonitor monitor = new FilesMonitor( this );
+	public final AshTextDocumentService textDocumentService = new StateCheckWrappers.AshTextDocumentService( this );
+	public final AshWorkspaceService workspaceService = new StateCheckWrappers.AshWorkspaceService( this );
 
-	final Map<File, Script> scripts = Collections.synchronizedMap( new Hashtable<>( 20 ) );
+	public final ExecutorService executor = Executors.newCachedThreadPool();
+	public final FilesMonitor monitor = new FilesMonitor( this );
+
+	public final Map<File, Script> scripts = Collections.synchronizedMap( new Hashtable<>( 20 ) );
 
 
 	@Override
@@ -254,84 +261,12 @@ public abstract class AshLanguageServer
 	@Override
 	public TextDocumentService getTextDocumentService()
 	{
-		return this;
+		return this.textDocumentService;
 	}
 
 	@Override
 	public WorkspaceService getWorkspaceService()
 	{
-		return this;
-	}
-
-
-	// TextDocumentService
-
-	@Override
-	public void didOpen( DidOpenTextDocumentParams params )
-	{
-		this.executor.execute( () -> {
-			TextDocumentItem document = params.getTextDocument();
-
-			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
-
-			this.monitor.updateFile( file, document.getText(), document.getVersion() );
-		} );
-	}
-
-	@Override
-	public void didChange( DidChangeTextDocumentParams params )
-	{
-		this.executor.execute( () -> {
-			VersionedTextDocumentIdentifier document = params.getTextDocument();
-			List<TextDocumentContentChangeEvent> changes = params.getContentChanges();
-
-			if ( changes.size() == 0 )
-			{
-				// Nothing to see here
-				return;
-			}
-
-			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
-
-			// We don't support incremental changes, so we expect the client
-			// to put the whole file's content in a single TextDocumentContentChangeEvent
-			this.monitor.updateFile( file, changes.get( 0 ).getText(), document.getVersion() );
-		} );
-	}
-
-	@Override
-	public void didClose( DidCloseTextDocumentParams params )
-	{
-		this.executor.execute( () -> {
-			TextDocumentIdentifier document = params.getTextDocument();
-
-			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
-
-			this.monitor.updateFile( file, null, -1 );
-		} );
-	}
-
-	@Override
-	public void didSave( DidSaveTextDocumentParams params )
-	{
-		// TODO Auto-generated method stub
-		
-	}
-
-
-	// WorkspaceService
-
-	@Override
-	public void didChangeConfiguration( DidChangeConfigurationParams params )
-	{
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void didChangeWatchedFiles( DidChangeWatchedFilesParams params )
-	{
-		// TODO Auto-generated method stub
-		
+		return this.workspaceService;
 	}
 }
