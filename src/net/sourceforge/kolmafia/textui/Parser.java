@@ -369,6 +369,11 @@ public class Parser
 		return this.shortFileName;
 	}
 
+	public URI getUri()
+	{
+		return this.fileURI;
+	}
+
 	public String getScriptName()
 	{
 		return ( this.scriptName != null ) ?
