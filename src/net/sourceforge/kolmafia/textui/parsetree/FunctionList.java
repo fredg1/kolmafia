@@ -44,7 +44,7 @@ import java.util.TreeMap;
 import org.eclipse.lsp4j.Location;
 
 public class FunctionList
-	implements Iterable<Function>
+	extends SymbolList<Function>
 {
 	private final SortedMap<String,Function> list = new TreeMap<String, Function>();
 	private final Map<Function, List<Location>> references = new TreeMap<>( FUNCTION_COMPARATOR );
