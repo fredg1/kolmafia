@@ -6609,7 +6609,7 @@ public class Parser
 		while ( line != null &&
 		        line.previousLine != null &&
 		        ( range == null ||
-		          range.getStart().getLine() < line.lineNumber ) )
+		          range.getStart().getLine() < line.lineNumber - 1 ) )
 		{
 			line = line.previousLine;
 		}
@@ -6617,18 +6617,22 @@ public class Parser
 		while ( line != null &&
 		        line.content != null &&
 		        ( range == null ||
-		          range.getEnd().getLine() >= line.lineNumber ) )
+		          range.getEnd().getLine() >= line.lineNumber - 1 ) )
 		{
 			for ( final Token token : line.tokens )
 			{
 				if ( range != null &&
-				     range.getStart().getCharacter() >= token.getEnd().getCharacter() )
+				     ( range.getStart().getLine() > token.getEnd().getLine() ||
+				       range.getStart().getLine() == token.getEnd().getLine() &&
+				       range.getStart().getCharacter() >= token.getEnd().getCharacter() ) )
 				{
 					continue;
 				}
 
 				if ( range != null &&
-				     range.getEnd().getCharacter() <= token.getStart().getCharacter() )
+				     ( range.getEnd().getLine() < token.getStart().getLine() ||
+				       range.getEnd().getLine() == token.getStart().getLine() &&
+				       range.getEnd().getCharacter() <= token.getStart().getCharacter() ) )
 				{
 					break;
 				}
