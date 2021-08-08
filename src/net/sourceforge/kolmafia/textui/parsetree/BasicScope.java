@@ -414,6 +414,10 @@ public abstract class BasicScope
 			// Must use new definition's variables
 
 			existing.setVariableReferences( f.getVariableReferences() );
+			//TODO use the new one's definition location,
+			// and set the old definition location as the
+			// "declaration" location.
+			this.addReference( existing, f.getDefinitionLocation() );
 			return existing;
 		}
 

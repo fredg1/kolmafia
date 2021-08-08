@@ -38,11 +38,16 @@ import java.io.File;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import org.eclipse.lsp4j.DefinitionParams;
 import org.eclipse.lsp4j.DidChangeTextDocumentParams;
 import org.eclipse.lsp4j.DidCloseTextDocumentParams;
 import org.eclipse.lsp4j.DidOpenTextDocumentParams;
 import org.eclipse.lsp4j.DidSaveTextDocumentParams;
+import org.eclipse.lsp4j.Location;
+import org.eclipse.lsp4j.LocationLink;
+import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
+import org.eclipse.lsp4j.ReferenceParams;
 import org.eclipse.lsp4j.SaveOptions;
 import org.eclipse.lsp4j.SemanticTokens;
 import org.eclipse.lsp4j.SemanticTokensParams;
@@ -53,7 +58,9 @@ import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.TextDocumentItem;
 import org.eclipse.lsp4j.TextDocumentSyncKind;
 import org.eclipse.lsp4j.TextDocumentSyncOptions;
+import org.eclipse.lsp4j.TypeDefinitionParams;
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 
 import net.sourceforge.kolmafia.textui.langserver.AshLanguageServer;
@@ -64,11 +71,13 @@ public abstract class AshTextDocumentService
 {
 	protected final AshLanguageServer parent;
 
+	private final SymbolManager symbolManager;
 	private final SemanticTokensHandler semanticHandler;
 
 	public AshTextDocumentService( final AshLanguageServer parent )
 	{
 		this.parent = parent;
+		this.symbolManager = new SymbolManager( parent );
 		this.semanticHandler = new SemanticTokensHandler( parent );
 	}
 
@@ -89,21 +98,7 @@ public abstract class AshTextDocumentService
 
 		// signatureHelpProvider
 
-		// declarationProvider
-		// Only for functions
-		// TODO
-
-		// definitionProvider
-		// TODO
-
-		// typeDefinitionProvider
-		// TODO
-
-		// implementationProvider
-		// Doesn't exist in ASH
-
-		// referencesProvider
-		//capabilities.setReferencesProvider( Boolean.TRUE );
+		this.symbolManager.setCapabilities( capabilities );
 
 		// documentHighlightProvider
 
@@ -199,6 +194,46 @@ public abstract class AshTextDocumentService
 	{
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> definition( DefinitionParams params )
+	{
+		return CompletableFuture.supplyAsync( () -> {
+			TextDocumentIdentifier document = params.getTextDocument();
+			Position position = params.getPosition();
+
+			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
+
+			return Either.forLeft( this.symbolManager.getDefinition( file, position ) );
+		}, this.parent.executor );
+	}
+
+	@Override
+	public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> typeDefinition( TypeDefinitionParams params )
+	{
+		return CompletableFuture.supplyAsync( () -> {
+			TextDocumentIdentifier document = params.getTextDocument();
+			Position position = params.getPosition();
+
+			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
+
+			return Either.forLeft( this.symbolManager.getTypeDefinition( file, position ) );
+		}, this.parent.executor );
+	}
+
+	@Override
+	public CompletableFuture<List<? extends Location>> references( ReferenceParams params )
+	{
+		return CompletableFuture.supplyAsync( () -> {
+			TextDocumentIdentifier document = params.getTextDocument();
+			Position position = params.getPosition();
+			//params.getContext().isIncludeDeclaration(); //for when we support declaration
+
+			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
+
+			return this.symbolManager.getReferences( file, position );
+		}, this.parent.executor );
 	}
 
 	@Override
