@@ -6621,6 +6621,8 @@ public class Parser
 		{
 			for ( final Token token : line.tokens )
 			{
+				// We know Tokens cannot span multiple lines
+
 				if ( range != null &&
 				     ( range.getStart().getLine() > token.getEnd().getLine() ||
 				       range.getStart().getLine() == token.getEnd().getLine() &&

@@ -41,6 +41,7 @@ import java.util.List;
 
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.ServerCapabilities;
 
 import net.sourceforge.kolmafia.textui.langserver.AshLanguageServer;
@@ -183,7 +184,7 @@ class SymbolManager
 		private final Position targetPosition;
 
 		private Symbol currentBest = null;
-		private Location currentBestLocation = null;
+		private Range currentBestRange = null;
 		private BasicScope currentBestScope = null;
 
 		SymbolRequest( final Handler handler, final File file, final Position position )
@@ -215,7 +216,7 @@ class SymbolManager
 						     isBetterThanCurrentBest( definitionLocation ) )
 						{
 							this.currentBest = symbol;
-							this.currentBestLocation = definitionLocation;
+							this.currentBestRange = definitionLocation.getRange();
 							this.currentBestScope = scope;
 							continue;
 						}
@@ -235,7 +236,7 @@ class SymbolManager
 							     isBetterThanCurrentBest( referenceLocation ) )
 							{
 								this.currentBest = symbol;
-								this.currentBestLocation = referenceLocation;
+								this.currentBestRange = referenceLocation.getRange();
 								this.currentBestScope = scope;
 								break;
 							}
@@ -252,9 +253,12 @@ class SymbolManager
 		{
 			return location != null &&
 			       this.targetUri.equals( location.getUri() ) &&
-			       this.targetPosition.getLine() == location.getRange().getStart().getLine() &&
-			       this.targetPosition.getCharacter() >= location.getRange().getStart().getCharacter() &&
-			       this.targetPosition.getCharacter() < location.getRange().getEnd().getCharacter();
+			       ( this.targetPosition.getLine() > location.getRange().getStart().getLine() ||
+			         this.targetPosition.getLine() == location.getRange().getStart().getLine() &&
+			         this.targetPosition.getCharacter() >= location.getRange().getStart().getCharacter() ) &&
+			       ( this.targetPosition.getLine() < location.getRange().getEnd().getLine() ||
+			         this.targetPosition.getLine() == location.getRange().getEnd().getLine() &&
+			         this.targetPosition.getCharacter() <= location.getRange().getEnd().getCharacter() );
 		}
 
 		private boolean isBetterThanCurrentBest( final Location location )
@@ -264,10 +268,46 @@ class SymbolManager
 				return true;
 			}
 
-			int width = location.getRange().getEnd().getCharacter() - location.getRange().getStart().getCharacter();
-			int currentBestWidth = currentBestLocation.getRange().getEnd().getCharacter() - currentBestLocation.getRange().getStart().getCharacter();
+			final Range range = location.getRange();
 
-			return width < currentBestWidth;
+			// Compare how many lines they both span
+			int height = range.getEnd().getLine() - range.getStart().getLine();
+			int currentBestHeight = currentBestRange.getEnd().getLine() - currentBestRange.getStart().getLine();
+			if ( height != currentBestHeight )
+			{
+				return height < currentBestHeight;
+			}
+
+			// If they are on a single line, we can easily compare their width
+			if ( height == 0 )
+			{
+				int width = range.getEnd().getCharacter() - range.getStart().getCharacter();
+				int currentBestWidth = currentBestRange.getEnd().getCharacter() - currentBestRange.getStart().getCharacter();
+
+				return width < currentBestWidth;
+			}
+
+			// Two multiline symbols... they are most likely nested inside each other.
+			// Check which starts last / ends first, that should be the smaller one.
+			if ( range.getStart().getLine() != currentBestRange.getStart().getLine() )
+			{
+				return range.getStart().getLine() > currentBestRange.getStart().getLine();
+			}
+			if ( range.getStart().getCharacter() != currentBestRange.getStart().getCharacter() )
+			{
+				return range.getStart().getCharacter() > currentBestRange.getStart().getCharacter();
+			}
+			if ( range.getEnd().getLine() != currentBestRange.getEnd().getLine() )
+			{
+				return range.getEnd().getLine() < currentBestRange.getEnd().getLine();
+			}
+			if ( range.getEnd().getCharacter() != currentBestRange.getEnd().getCharacter() )
+			{
+				return range.getEnd().getCharacter() < currentBestRange.getEnd().getCharacter();
+			}
+
+			// Only way to reach this is for the same symbol to be registered twice.
+			return false;
 		}
 	}
 }
