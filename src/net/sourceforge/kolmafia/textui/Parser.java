@@ -145,7 +145,7 @@ Scope
 		AggregateType
 			AggregateType
 				AggregateType
-					(...) (e.g. boolean [string][string][string] [...] )
+					(...) (e.g. boolean [string][string,string][][4][int] [...] )
 	Command (one of:)
 		Return
 			Expression
@@ -248,6 +248,7 @@ Scope
 				(...)
 		Expression
 */
+
 public class Parser
 {
 	public static final String APPROX = "\u2248";
@@ -633,7 +634,7 @@ public class Parser
 		}
 		else if ( this.parseVariables( t, result ) )
 		{
-			if ( ";".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( ";" ) )
 			{
 				this.readToken(); //read ;
 			}
@@ -717,7 +718,7 @@ public class Parser
 
 			if ( this.parseTypedef( result ) )
 			{
-				if ( ";".equals( this.currentToken().content ) )
+				if ( this.currentToken().equals( ";" ) )
 				{
 					this.readToken(); //read ;
 				}
@@ -745,7 +746,7 @@ public class Parser
 			}
 
 			// If this is a new record definition, enter it
-			if ( t.getType() == DataTypes.TYPE_RECORD && ";".equals( this.currentToken().content ) )
+			if ( t.getType() == DataTypes.TYPE_RECORD && this.currentToken().equals( ";" ) )
 			{
 				this.readToken(); // read ;
 				continue;
@@ -771,7 +772,7 @@ public class Parser
 
 			if ( this.parseVariables( t, result ) )
 			{
-				if ( ";".equals( this.currentToken().content ) )
+				if ( this.currentToken().equals( ";" ) )
 				{
 					this.readToken(); //read ;
 				}
@@ -783,7 +784,7 @@ public class Parser
 				continue;
 			}
 
-			if ( ( t.getBaseType() instanceof AggregateType ) && "{".equals( this.currentToken().content ) )
+			if ( ( t.getBaseType() instanceof AggregateType ) && this.currentToken().equals( "{" ) )
 			{
 				LocatedValue aggregate = this.parseAggregateLiteral( result, (AggregateType) t );
 
@@ -805,7 +806,7 @@ public class Parser
 	private Type parseRecord( final BasicScope parentScope )
 		throws InterruptedException
 	{
-		if ( !"record".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "record" ) )
 		{
 			return null;
 		}
@@ -815,7 +816,7 @@ public class Parser
 
 		this.readToken(); // read record
 
-		if ( ";".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( ";" ) )
 		{
 			this.error( this.currentToken(), "Record name expected" );
 
@@ -828,7 +829,7 @@ public class Parser
 		boolean recordError = false;
 		boolean recordSyntaxError = false;
 
-		if ( !"{".equals( this.currentToken().content ) )
+		if ( !this.currentToken().equals( "{" ) )
 		{
 			// Named record
 			recordName = this.currentToken().content;
@@ -860,7 +861,7 @@ public class Parser
 			this.readToken(); // read name
 		}
 
-		if ( "{".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( "{" ) )
 		{
 			this.readToken(); // read {
 		}
@@ -891,7 +892,7 @@ public class Parser
 				break;
 			}
 
-			if ( "}".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( "}" ) )
 			{
 				if ( fieldTypes.isEmpty() && !recordError )
 				{
@@ -915,63 +916,58 @@ public class Parser
 			}
 
 			// Get the field name
-			String fieldName = this.currentToken().content;
-			if ( ";".equals( fieldName ) )
+			Token fieldName = this.currentToken();
+			boolean fieldNameError = false;
+			if ( fieldName.equals( ";" ) )
 			{
 				if ( !fieldSyntaxError )
 				{
-					this.error( this.currentToken(), "Field name expected" );
+					this.error( fieldName, "Field name expected" );
 				}
-				recordError = recordSyntaxError = fieldError = fieldSyntaxError = true;
-
-				fieldName = null;
+				recordError = recordSyntaxError = fieldError = fieldSyntaxError = fieldNameError = true;
 				// don't read
 			}
-			else if ( !this.parseIdentifier( fieldName ) )
+			else if ( !this.parseIdentifier( fieldName.content ) )
 			{
 				if ( !fieldSyntaxError )
 				{
-					this.error( this.currentToken(), "Invalid field name '" + fieldName + "'" );
+					this.error( fieldName, "Invalid field name '" + fieldName + "'" );
 				}
-				recordError = recordSyntaxError = fieldError = fieldSyntaxError = true;
-
-				fieldName = null;
+				recordError = recordSyntaxError = fieldError = fieldSyntaxError = fieldNameError = true;
 				// don't read
 			}
-			else if ( Parser.isReservedWord( fieldName ) )
+			else if ( Parser.isReservedWord( fieldName.content ) )
 			{
 				if ( !fieldError )
 				{
-					this.error( this.currentToken(), "Reserved word '" + fieldName + "' cannot be used as a field name" );
+					this.error( fieldName, "Reserved word '" + fieldName + "' cannot be used as a field name" );
 				}
-				recordError = fieldError = true;
+				recordError = fieldError = fieldNameError = true;
 
-				fieldName = null;
-				this.currentToken().setType( SemanticTokenTypes.Property );
-				this.currentToken().addModifier( SemanticTokenModifiers.Declaration );
+				fieldName.setType( SemanticTokenTypes.Property );
+				fieldName.addModifier( SemanticTokenModifiers.Declaration );
 				this.readToken(); // read name
 			}
-			else if ( fieldNames.contains( fieldName ) )
+			else if ( fieldNames.contains( fieldName.content ) )
 			{
 				if ( !fieldError )
 				{
-					this.error( this.currentToken(), "Field name '" + fieldName + "' is already defined" );
+					this.error( fieldName, "Field name '" + fieldName + "' is already defined" );
 				}
-				recordError = fieldError = true;
+				recordError = fieldError = fieldNameError = true;
 
-				fieldName = null;
-				this.currentToken().setType( SemanticTokenTypes.Property );
-				this.currentToken().addModifier( SemanticTokenModifiers.Declaration );
+				fieldName.setType( SemanticTokenTypes.Property );
+				fieldName.addModifier( SemanticTokenModifiers.Declaration );
 				this.readToken(); // read name
 			}
 			else
 			{
-				this.currentToken().setType( SemanticTokenTypes.Property );
-				this.currentToken().addModifier( SemanticTokenModifiers.Declaration );
+				fieldName.setType( SemanticTokenTypes.Property );
+				fieldName.addModifier( SemanticTokenModifiers.Declaration );
 				this.readToken(); // read name
 			}
 
-			if ( ";".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( ";" ) )
 			{
 				this.readToken(); // read ;
 			}
@@ -984,10 +980,10 @@ public class Parser
 				recordError = recordSyntaxError = fieldError = fieldSyntaxError = true;
 			}
 
-			if ( fieldType != null && fieldName != null )
+			if ( fieldType != null && !fieldNameError )
 			{
 				fieldTypes.add( fieldType );
-				fieldNames.add( fieldName.toLowerCase() );
+				fieldNames.add( fieldName.content.toLowerCase() );
 			}
 		}
 
@@ -1026,17 +1022,16 @@ public class Parser
 			return null;
 		}
 
-		Token functionNameToken = this.currentToken();
-		functionNameToken.setType( SemanticTokenTypes.Function );
-		String functionName = this.currentToken().content;
+		Token functionName = this.currentToken();
+		functionName.setType( SemanticTokenTypes.Function );
 
 		boolean functionError = false;
 
 		this.readToken(); //read Function name
 
-		if ( Parser.isReservedWord( functionName ) )
+		if ( Parser.isReservedWord( functionName.content ) )
 		{
-			this.error( functionNameToken, "Reserved word '" + functionName + "' cannot be used as a function name" );
+			this.error( functionName, "Reserved word '" + functionName + "' cannot be used as a function name" );
 			functionError = true;
 		}
 
@@ -1056,7 +1051,7 @@ public class Parser
 				break;
 			}
 
-			if ( ")".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( ")" ) )
 			{
 				this.readToken(); //read )
 				break;
@@ -1076,7 +1071,7 @@ public class Parser
 				break;
 			}
 
-			if ( "...".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( "..." ) )
 			{
 				// Make a vararg type out of the previously parsed type.
 				paramType = new VarArgType( paramType );
@@ -1137,9 +1132,9 @@ public class Parser
 				vararg = true;
 			}
 
-			if ( !")".equals( this.currentToken().content ) )
+			if ( !this.currentToken().equals( ")" ) )
 			{
-				if ( ",".equals( this.currentToken().content ) )
+				if ( this.currentToken().equals( "," ) )
 				{
 					this.readToken(); //read comma
 				}
@@ -1157,9 +1152,9 @@ public class Parser
 		// Add the function to the parent scope before we parse the
 		// function scope to allow recursion.
 
-		Location functionLocation = this.makeLocation( functionNameToken, this.peekLastToken() );
+		Location functionLocation = this.makeLocation( functionName, this.peekLastToken() );
 
-		UserDefinedFunction f = new UserDefinedFunction( functionName, functionType, functionLocation, variableReferences );
+		UserDefinedFunction f = new UserDefinedFunction( functionName.content, functionType, functionLocation, variableReferences );
 
 		if ( !functionError && f.overridesLibraryFunction() )
 		{
@@ -1190,9 +1185,9 @@ public class Parser
 
 		UserDefinedFunction result = functionError ? f : parentScope.replaceFunction( existing, f );
 
-		if ( ";".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( ";" ) )
 		{
-			functionNameToken.addModifier( SemanticTokenModifiers.Declaration );
+			functionName.addModifier( SemanticTokenModifiers.Declaration );
 
 			// Return forward reference
 			this.readToken(); // ;
@@ -1200,7 +1195,7 @@ public class Parser
 		}
 		else
 		{
-			functionNameToken.addModifier( SemanticTokenModifiers.Definition );
+			functionName.addModifier( SemanticTokenModifiers.Definition );
 		}
 
 		Scope scope = this.parseBlockOrSingleCommand( functionType, paramList, parentScope, false, false, false );
@@ -1225,7 +1220,7 @@ public class Parser
 				return false;
 			}
 
-			if ( ",".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( "," ) )
 			{
 				this.readToken(); //read ,
 				continue;
@@ -1243,39 +1238,37 @@ public class Parser
 			return null;
 		}
 
-		String variableName = this.currentToken().content;
-
-		Token variableToken = this.currentToken();
-		variableToken.setType( SemanticTokenTypes.Variable );
+		Token variableName = this.currentToken();
+		variableName.setType( SemanticTokenTypes.Variable );
 		if ( allowInitialization )
 		{
-			variableToken.addModifier( SemanticTokenModifiers.Definition );
+			variableName.addModifier( SemanticTokenModifiers.Definition );
 		}
 		else
 		{
-			variableToken.addModifier( SemanticTokenModifiers.Declaration );
+			variableName.addModifier( SemanticTokenModifiers.Declaration );
 		}
+
 		boolean variableError = false;
-
-		this.readToken(); // If parsing of Identifier succeeded, go to next token.
-
 		Variable result;
 
-		if ( Parser.isReservedWord( variableName ) )
+		this.readToken(); // read name
+
+		if ( Parser.isReservedWord( variableName.content ) )
 		{
-			this.error( variableToken, "Reserved word '" + variableName + "' cannot be a variable name" );
-			result = new BadVariable( variableName, t, this.makeLocation( variableToken ) );
+			this.error( variableName, "Reserved word '" + variableName + "' cannot be a variable name" );
+			result = new BadVariable( variableName.content, t, this.makeLocation( variableName ) );
 			variableError = true;
 		}
-		else if ( allowInitialization && scope.findVariable( variableName ) != null )
+		else if ( allowInitialization && scope.findVariable( variableName.content ) != null )
 		{
-			this.error( variableToken, "Variable " + variableName + " is already defined" );
-			result = new BadVariable( variableName, t, this.makeLocation( variableToken ) );
+			this.error( variableName, "Variable " + variableName + " is already defined" );
+			result = new BadVariable( variableName.content, t, this.makeLocation( variableName ) );
 			variableError = true;
 		}
 		else
 		{
-			result = new Variable( variableName, t, this.makeLocation( variableToken ) );
+			result = new Variable( variableName.content, t, this.makeLocation( variableName ) );
 		}
 
 		// If we are parsing a parameter declaration, we are done.
@@ -1286,12 +1279,12 @@ public class Parser
 		Token postVariableToken = this.currentToken();
 
 		Type ltype = t.getBaseType();
-		if ( "=".equals( postVariableToken.content ) )
+		if ( postVariableToken.equals( "=" ) )
 		{
 			postVariableToken.setType( SemanticTokenTypes.Operator );
 			this.readToken(); // read =
 
-			if ( "{".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( "{" ) )
 			{
 				if ( !( ltype instanceof AggregateType ) )
 				{
@@ -1334,7 +1327,7 @@ public class Parser
 				}
 			}
 		}
-		else if ( "{".equals( postVariableToken.content ) )
+		else if ( postVariableToken.equals( "{" ) )
 		{
 			if ( ltype instanceof AggregateType )
 			{
@@ -1361,8 +1354,8 @@ public class Parser
 
 		if ( !variableError &&
 		     !allowInitialization &&
-		     ( "=".equals( postVariableToken.content ) ||
-		       "{".equals( postVariableToken.content ) ) )
+		     ( postVariableToken.equals( "=" ) ||
+		       postVariableToken.equals( "{" ) ) )
 		{
 			Location errorLocation = rhs != null ? rhs.location :
 				this.makeLocation( postVariableToken );
@@ -1482,7 +1475,7 @@ public class Parser
 	private boolean parseTypedef( final Scope parentScope )
 		throws InterruptedException
 	{
-		if ( !"typedef".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "typedef" ) )
 		{
 			return false;
 		}
@@ -1505,10 +1498,10 @@ public class Parser
 			t = new BadType( null, null );
 		}
 
-		String typeName = this.currentToken().content;
+		boolean typedefTypeError = false;
 		Token typeToken = this.currentToken();
 
-		if ( ";".equals( typeName ) )
+		if ( typeToken.equals( ";" ) )
 		{
 			if ( !typedefError )
 			{
@@ -1516,29 +1509,29 @@ public class Parser
 				typedefError = true;
 			}
 
-			typeName = null;
+			typedefTypeError = true;
 			// don't read
 		}
-		else if ( !this.parseIdentifier( typeName ) )
+		else if ( !this.parseIdentifier( typeToken.content ) )
 		{
 			if ( !typedefError )
 			{
-				this.error( typeToken, "Invalid type name '" + typeName + "'" );
+				this.error( typeToken, "Invalid type name '" + typeToken + "'" );
 				typedefError = true;
 			}
 
-			typeName = null;
+			typedefTypeError = true;
 			// don't read
 		}
-		else if ( Parser.isReservedWord( typeName ) )
+		else if ( Parser.isReservedWord( typeToken.content ) )
 		{
 			if ( !typedefError )
 			{
-				this.error( typeToken, "Reserved word '" + typeName + "' cannot be a type name" );
+				this.error( typeToken, "Reserved word '" + typeToken + "' cannot be a type name" );
 				typedefError = true;
 			}
 
-			typeName = null;
+			typedefTypeError = true;
 			typeToken.setType( SemanticTokenTypes.Type );
 			typeToken.addModifier( SemanticTokenModifiers.Definition );
 			this.readToken(); // read name
@@ -1550,7 +1543,7 @@ public class Parser
 			this.readToken(); // read name
 		}
 
-		Type existingType = parentScope.findType( typeName );
+		Type existingType = parentScope.findType( typeToken.content );
 		if ( existingType != null )
 		{
 			if ( existingType.getBaseType().equals( t ) ||
@@ -1562,14 +1555,14 @@ public class Parser
 
 			if ( !typedefError )
 			{
-				this.error( typeToken, "Type name '" + typeName + "' is already defined" );
+				this.error( typeToken, "Type name '" + typeToken + "' is already defined" );
 				typedefError = true;
 			}
 		}
-		else if ( typeName != null )
+		else if ( !typedefTypeError )
 		{
 			// Add the type to the type table
-			TypeDef type = new TypeDef( typeName, t, this.makeLocation( typedefToken, this.peekPreviousToken() ) );
+			TypeDef type = new TypeDef( typeToken.content, t, this.makeLocation( typedefToken, this.peekPreviousToken() ) );
 			parentScope.addType( type );
 		}
 
@@ -1585,7 +1578,7 @@ public class Parser
 	{
 		Command result;
 
-		if ( "break".equalsIgnoreCase( this.currentToken().content ) )
+		if ( this.currentToken().equalsIgnoreCase( "break" ) )
 		{
 			if ( allowBreak )
 			{
@@ -1602,7 +1595,7 @@ public class Parser
 			this.readToken(); //break
 		}
 
-		else if ( "continue".equalsIgnoreCase( this.currentToken().content ) )
+		else if ( this.currentToken().equalsIgnoreCase( "continue" ) )
 		{
 			if ( allowContinue )
 			{
@@ -1619,7 +1612,7 @@ public class Parser
 			this.readToken(); //continue
 		}
 
-		else if ( "exit".equalsIgnoreCase( this.currentToken().content ) )
+		else if ( this.currentToken().equalsIgnoreCase( "exit" ) )
 		{
 			result = new ScriptExit( this.makeLocation( this.currentToken() ) );
 			this.currentToken().setType( SemanticTokenTypes.Keyword );
@@ -1705,7 +1698,7 @@ public class Parser
 			result = value.value;
 		}
 
-		if ( ";".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( ";" ) )
 		{
 			this.readToken(); // ;
 		}
@@ -1789,7 +1782,7 @@ public class Parser
 			return null;
 		}
 
-		if ( "[".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( "[" ) )
 		{
 			return this.parseAggregateType( valType, scope );
 		}
@@ -1830,7 +1823,7 @@ public class Parser
 				break;
 			}
 
-			if ( "}".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( "}" ) )
 			{
 				this.readToken(); // read }
 				break;
@@ -1841,7 +1834,7 @@ public class Parser
 			// type of Value as the "key"
 			Type dataType = data.getBaseType();
 
-			if ( "{".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( "{" ) )
 			{
 				if ( !isArray && !arrayAllowed && !aggr.isBad() )
 				{
@@ -1892,21 +1885,21 @@ public class Parser
 				lhs = Value.BAD_VALUE.wrap( errorLocation );
 			}
 
-			String delim = this.currentToken().content;
+			Token delim = this.currentToken();
 
 			// If this could be an array and we haven't already
 			// decided it is one, if the delimiter is a comma,
 			// parse as an ArrayLiteral
 			if ( arrayAllowed )
 			{
-				if ( ",".equals( delim ) || "}".equals( delim ) )
+				if ( delim.equals( "," ) || delim.equals( "}" ) )
 				{
 					isArray = true;
 				}
 				arrayAllowed = false;
 			}
 
-			if ( !":".equals( delim ) )
+			if ( !delim.equals( ":" ) )
 			{
 				// If parsing an ArrayLiteral, accumulate only values
 				if ( isArray )
@@ -1926,12 +1919,12 @@ public class Parser
 				}
 				else if ( !aggregateError )
 				{
-					this.unexpectedTokenError( ":", this.currentToken() );
+					this.unexpectedTokenError( ":", delim );
 					aggregateError = true;
 				}
 
 				// Move on to the next value
-				if ( ",".equals( this.currentToken().content ) )
+				if ( delim.equals( "," ) )
 				{
 					this.readToken(); // read ,
 				}
@@ -1953,7 +1946,7 @@ public class Parser
 
 			LocatedValue rhs;
 
-			if ( "{".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( "{" ) )
 			{
 				if ( dataType instanceof AggregateType )
 				{
@@ -2019,7 +2012,7 @@ public class Parser
 			values.add( rhs.value );
 
 			// Move on to the next value
-			if ( ",".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( "," ) )
 			{
 				this.readToken(); // read ,
 			}
@@ -2063,10 +2056,9 @@ public class Parser
 		}
 		else if ( this.parseIdentifier( indexToken.content ) )
 		{
-			String name = indexToken.content;
 			this.readToken(); // type name
 
-			indexType = scope.findType( name );
+			indexType = scope.findType( indexToken.content );
 
 			if ( indexType != null )
 			{
@@ -2091,24 +2083,24 @@ public class Parser
 				{
 					if ( !dataType.isBad() )
 					{
-						this.error( indexToken, "Index type '" + name + "' is not a primitive type" );
+						this.error( indexToken, "Index type '" + indexToken + "' is not a primitive type" );
 					}
 
-					indexType = new BadType( name, this.makeLocation( indexToken ) );
+					indexType = new BadType( indexToken.content, this.makeLocation( indexToken ) );
 				}
 			}
 			else
 			{
 				if ( !dataType.isBad() )
 				{
-					this.error( indexToken, "Invalid type name '" + name + "'" );
+					this.error( indexToken, "Invalid type name '" + indexToken + "'" );
 				}
 
 				indexToken.setType( SemanticTokenTypes.Type );
-				indexType = new BadType( name, this.makeLocation( indexToken ) );
+				indexType = new BadType( indexToken.content, this.makeLocation( indexToken ) );
 			}
 		}
-		else if ( "]".equals( indexToken.content ) )
+		else if ( indexToken.equals( "]" ) )
 		{
 			/* Technical debt: while it was probably only intended to
 			   allow something in the likes of "string[]" , the way
@@ -2156,11 +2148,11 @@ public class Parser
 				this.makeLocation( dataType.getLocation(), this.peekPreviousToken() ) );
 		}
 
-		if ( ",".equals( this.currentToken().content ) ||
-		     ( "]".equals( this.currentToken().content ) &&
+		if ( this.currentToken().equals( "," ) ||
+		     ( this.currentToken().equals( "]" ) &&
 		       "[".equals( this.nextToken() ) ) )
 		{
-			if ( "]".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( "]" ) )
 			{
 				this.readToken(); // ]
 			}
@@ -2171,7 +2163,7 @@ public class Parser
 
 			dataType = this.parseAggregateType( dataType, scope );
 		}
-		else if ( "]".equals( this.currentToken().content ) )
+		else if ( this.currentToken().equals( "]" ) )
 		{
 			this.readToken(); // ]
 		}
@@ -2231,7 +2223,7 @@ public class Parser
 	private FunctionReturn parseReturn( final Type expectedType, final BasicScope parentScope )
 		throws InterruptedException
 	{
-		if ( !"return".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "return" ) )
 		{
 			return null;
 		}
@@ -2241,7 +2233,7 @@ public class Parser
 
 		this.readToken(); //return
 
-		if ( ";".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( ";" ) )
 		{
 			if ( expectedType == null || !expectedType.equals( DataTypes.TYPE_VOID ) )
 			{
@@ -2303,7 +2295,7 @@ public class Parser
 		}
 		else
 		{
-			if ( ";".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( ";" ) )
 			{
 				this.readToken(); // ;
 			}
@@ -2342,7 +2334,7 @@ public class Parser
 	                          final boolean allowContinue )
 		throws InterruptedException
 	{
-		if ( !"{".equals( this.currentToken().content ) )
+		if ( !this.currentToken().equals( "{" ) )
 		{
 			return null;
 		}
@@ -2353,7 +2345,7 @@ public class Parser
 
 		Scope scope = this.parseScope( functionType, variables, parentScope, allowBreak, allowContinue );
 
-		if ( "}".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( "}" ) )
 		{
 			this.readToken(); //read }
 		}
@@ -2375,7 +2367,7 @@ public class Parser
 	                                      final boolean allowContinue )
 		throws InterruptedException
 	{
-		if ( !"if".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "if" ) )
 		{
 			return null;
 		}
@@ -2387,7 +2379,7 @@ public class Parser
 
 		boolean ifError = false;
 
-		if ( "(".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( "(" ) )
 		{
 			this.readToken(); // (
 		}
@@ -2399,7 +2391,7 @@ public class Parser
 
 		LocatedValue condition = this.parseExpression( parentScope );
 
-		if ( ")".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( ")" ) )
 		{
 			this.readToken(); // )
 		}
@@ -2450,7 +2442,7 @@ public class Parser
 				result.addElseLoop( new ElseIf( conditionalLocation, scope, condition.value ) );
 			}
 
-			if ( !noElse && "else".equalsIgnoreCase( this.currentToken().content ) )
+			if ( !noElse && this.currentToken().equalsIgnoreCase( "else" ) )
 			{
 				conditionalStartToken = this.currentToken();
 				conditionalStartToken.setType( SemanticTokenTypes.Keyword );
@@ -2467,7 +2459,7 @@ public class Parser
 					this.currentToken().setType( SemanticTokenTypes.Keyword );
 					this.readToken(); //if
 
-					if ( "(".equals( this.currentToken().content ) )
+					if ( this.currentToken().equals( "(" ) )
 					{
 						this.readToken(); //(
 					}
@@ -2479,7 +2471,7 @@ public class Parser
 
 					condition = this.parseExpression( parentScope );
 
-					if ( ")".equals( this.currentToken().content ) )
+					if ( this.currentToken().equals( ")" ) )
 					{
 						this.readToken(); // )
 					}
@@ -2527,7 +2519,7 @@ public class Parser
 	private BasicScript parseBasicScript()
 		throws InterruptedException
 	{
-		if ( !"cli_execute".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "cli_execute" ) )
 		{
 			return null;
 		}
@@ -2547,7 +2539,7 @@ public class Parser
 
 		while ( true )
 		{
-			if ( "}".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( "}" ) )
 			{
 				this.readToken(); // }
 				break;
@@ -2593,7 +2585,7 @@ public class Parser
 	private Loop parseWhile( final Type functionType, final BasicScope parentScope )
 		throws InterruptedException
 	{
-		if ( !"while".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "while" ) )
 		{
 			return null;
 		}
@@ -2605,7 +2597,7 @@ public class Parser
 
 		boolean whileError = false;
 
-		if ( "(".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( "(" ) )
 		{
 			this.readToken(); // (
 		}
@@ -2617,7 +2609,7 @@ public class Parser
 
 		LocatedValue condition = this.parseExpression( parentScope );
 
-		if ( ")".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( ")" ) )
 		{
 			this.readToken(); // )
 		}
@@ -2652,7 +2644,7 @@ public class Parser
 	private Loop parseRepeat( final Type functionType, final BasicScope parentScope )
 		throws InterruptedException
 	{
-		if ( !"repeat".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "repeat" ) )
 		{
 			return null;
 		}
@@ -2666,7 +2658,7 @@ public class Parser
 
 		Scope scope = this.parseLoopScope( functionType, null, parentScope );
 
-		if ( "until".equalsIgnoreCase( this.currentToken().content ) )
+		if ( this.currentToken().equalsIgnoreCase( "until" ) )
 		{
 			this.currentToken().setType( SemanticTokenTypes.Keyword );
 			this.readToken(); // until
@@ -2677,7 +2669,7 @@ public class Parser
 			repeatError = true;
 		}
 
-		if ( "(".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( "(" ) )
 		{
 			this.readToken(); // (
 		}
@@ -2689,7 +2681,7 @@ public class Parser
 
 		LocatedValue condition = this.parseExpression( parentScope );
 
-		if ( ")".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( ")" ) )
 		{
 			this.readToken(); // )
 		}
@@ -2722,7 +2714,7 @@ public class Parser
 	private Switch parseSwitch( final Type functionType, final BasicScope parentScope, final boolean allowContinue )
 		throws InterruptedException
 	{
-		if ( !"switch".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "switch" ) )
 		{
 			return null;
 		}
@@ -2734,20 +2726,20 @@ public class Parser
 
 		boolean switchError = false;
 
-		if ( !"(".equals( this.currentToken().content ) && !"{".equals( this.currentToken().content ) )
+		if ( !this.currentToken().equals( "(" ) && !this.currentToken().equals( "{" ) )
 		{
 			this.unexpectedTokenError( "( or {", this.currentToken() );
 			switchError = true;
 		}
 
 		LocatedValue condition = DataTypes.TRUE_VALUE.wrap( this.make0WidthLocation() );
-		if ( "(".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( "(" ) )
 		{
 			this.readToken(); // (
 
 			condition = this.parseExpression( parentScope );
 
-			if ( ")".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( ")" ) )
 			{
 				this.readToken(); // )
 			}
@@ -2775,7 +2767,7 @@ public class Parser
 
 		Token switchScopeStartToken = this.currentToken();
 
-		if ( "{".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( "{" ) )
 		{
 			this.readToken(); // {
 		}
@@ -2800,7 +2792,7 @@ public class Parser
 		{
 			boolean caseError = false;
 
-			if ( "case".equalsIgnoreCase( this.currentToken().content ) )
+			if ( this.currentToken().equalsIgnoreCase( "case" ) )
 			{
 				this.currentToken().setType( SemanticTokenTypes.Keyword );
 				this.readToken(); // case
@@ -2820,7 +2812,7 @@ public class Parser
 					test = Value.BAD_VALUE.wrap( errorLocation );
 				}
 
-				if ( ":".equals( this.currentToken().content ) )
+				if ( this.currentToken().equals( ":" ) )
 				{
 					this.readToken(); // :
 				}
@@ -2879,14 +2871,14 @@ public class Parser
 				continue;
 			}
 
-			if ( "default".equalsIgnoreCase( this.currentToken().content ) )
+			if ( this.currentToken().equalsIgnoreCase( "default" ) )
 			{
 				Token defaultToken = this.currentToken();
 				defaultToken.setType( SemanticTokenTypes.Keyword );
 
 				this.readToken(); // default
 
-				if ( ":".equals( this.currentToken().content ) )
+				if ( this.currentToken().equals( ":" ) )
 				{
 					this.readToken(); // :
 				}
@@ -2946,7 +2938,7 @@ public class Parser
 				switchError = caseError = true;
 			}
 
-			if ( ";".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( ";" ) )
 			{
 				this.readToken(); //read ;
 			}
@@ -2963,7 +2955,7 @@ public class Parser
 			currentInteger = null;
 		}
 
-		if ( "}".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( "}" ) )
 		{
 			this.readToken(); // }
 		}
@@ -2986,7 +2978,7 @@ public class Parser
 	                      final boolean allowBreak, final boolean allowContinue )
 		throws InterruptedException
 	{
-		if ( !"try".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "try" ) )
 		{
 			return null;
 		}
@@ -3002,7 +2994,7 @@ public class Parser
 
 		Scope finalClause;
 
-		if ( "finally".equalsIgnoreCase( this.currentToken().content ) )
+		if ( this.currentToken().equalsIgnoreCase( "finally" ) )
 		{
 			this.currentToken().setType( SemanticTokenTypes.Keyword );
 			this.readToken(); // finally
@@ -3024,7 +3016,7 @@ public class Parser
 	                          final boolean allowBreak, final boolean allowContinue )
 		throws InterruptedException
 	{
-		if ( !"catch".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "catch" ) )
 		{
 			return null;
 		}
@@ -3040,7 +3032,7 @@ public class Parser
 	private LocatedValue parseCatchValue( final BasicScope parentScope )
 		throws InterruptedException
 	{
-		if ( !"catch".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "catch" ) )
 		{
 			return null;
 		}
@@ -3072,7 +3064,7 @@ public class Parser
 	private Scope parseStatic( final Type functionType, final BasicScope parentScope )
 		throws InterruptedException
 	{
-		if ( !"static".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "static" ) )
 		{
 			return null;
 		}
@@ -3084,13 +3076,13 @@ public class Parser
 
 		Scope result = new StaticScope( parentScope );
 
-		if ( "{".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( "{" ) )
 		{
 			this.readToken(); //read {
 
 			this.parseScope( result, functionType, parentScope, false, false, false );
 
-			if ( "}".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( "}" ) )
 			{
 				this.readToken(); //read }
 			}
@@ -3115,7 +3107,7 @@ public class Parser
 	{
 		// sort aggregate by expr
 
-		if ( !"sort".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "sort" ) )
 		{
 			return null;
 		}
@@ -3155,7 +3147,7 @@ public class Parser
 
 		type = (AggregateType) aggregate.value.getType().getBaseType();
 
-		if ( "by".equalsIgnoreCase( this.currentToken().content ) )
+		if ( this.currentToken().equalsIgnoreCase( "by" ) )
 		{
 			this.currentToken().setType( SemanticTokenTypes.Keyword );
 			this.readToken();	// by
@@ -3195,7 +3187,7 @@ public class Parser
 	{
 		// foreach key [, key ... ] in aggregate { scope }
 
-		if ( !"foreach".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "foreach" ) )
 		{
 			return null;
 		}
@@ -3210,19 +3202,17 @@ public class Parser
 
 		while ( true )
 		{
-			String name = this.currentToken().content;
+			Token name = this.currentToken();
 
-			Token nameToken = this.currentToken();
-
-			if ( !this.parseIdentifier( name ) ||
+			if ( !this.parseIdentifier( name.content ) ||
 			     // foreach in aggregate (i.e. no key)
-			     "in".equalsIgnoreCase( nameToken.content ) &&
+			     name.equalsIgnoreCase( "in" ) &&
 			     !"in".equalsIgnoreCase( this.nextToken() ) &&
 			     !",".equals( this.nextToken() ) )
 			{
-				this.error( nameToken, "Key variable name expected" );
+				this.error( name, "Key variable name expected" );
 
-				if ( ",".equals( this.currentToken().content ) )
+				if ( this.currentToken().equals( "," ) )
 				{
 					this.readToken(); // ,
 					continue;
@@ -3231,35 +3221,35 @@ public class Parser
 				this.readToken(); // unknown
 				break;
 			}
-			else if ( Parser.isReservedWord( name ) )
+			else if ( Parser.isReservedWord( name.content ) )
 			{
-				this.error( nameToken, "Reserved word '" + name + "' cannot be a key variable name" );
+				this.error( name, "Reserved word '" + name + "' cannot be a key variable name" );
 				names.add( null );
 				locations.add( null );
 			}
-			else if ( names.contains( name ) )
+			else if ( names.contains( name.content ) )
 			{
-				this.error( nameToken, "Key variable '" + name + "' is already defined" );
+				this.error( name, "Key variable '" + name + "' is already defined" );
 				names.add( null );
 				locations.add( null );
 			}
 			else
 			{
-				names.add( name );
-				locations.add( this.makeLocation( nameToken ) );
+				names.add( name.content );
+				locations.add( this.makeLocation( name ) );
 			}
 
-			nameToken.setType( SemanticTokenTypes.Variable );
-			nameToken.addModifier( SemanticTokenModifiers.Declaration );
+			name.setType( SemanticTokenTypes.Variable );
+			name.addModifier( SemanticTokenModifiers.Declaration );
 			this.readToken(); // name
 
-			if ( ",".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( "," ) )
 			{
 				this.readToken(); // ,
 				continue;
 			}
 
-			if ( "in".equalsIgnoreCase( this.currentToken().content ) )
+			if ( this.currentToken().equalsIgnoreCase( "in" ) )
 			{
 				this.currentToken().setType( SemanticTokenTypes.Keyword );
 				this.readToken(); // in
@@ -3343,7 +3333,7 @@ public class Parser
 	{
 		// for identifier from X [upto|downto|to|] Y [by Z]? {scope }
 
-		if ( !"for".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "for" ) )
 		{
 			return null;
 		}
@@ -3358,43 +3348,42 @@ public class Parser
 
 		this.readToken(); // for
 
-		String name = this.currentToken().content;
-		Token nameToken = this.currentToken();
-		nameToken.setType( SemanticTokenTypes.Variable );
-		nameToken.addModifier( SemanticTokenModifiers.Declaration );
+		Token name = this.currentToken();
+		name.setType( SemanticTokenTypes.Variable );
+		name.addModifier( SemanticTokenModifiers.Declaration );
 
 		boolean forError = false, forSyntaxError = false;
 
 		Variable indexvar;
 
-		if ( Parser.isReservedWord( name ) )
+		if ( Parser.isReservedWord( name.content ) )
 		{
 			if ( !forError )
 			{
-				this.error( nameToken, "Reserved word '" + name + "' cannot be an index variable name" );
+				this.error( name, "Reserved word '" + name + "' cannot be an index variable name" );
 				forError = true;
 			}
 
-			indexvar = new BadVariable( name, DataTypes.INT_TYPE, this.makeLocation( nameToken ) );
+			indexvar = new BadVariable( name.content, DataTypes.INT_TYPE, this.makeLocation( name ) );
 		}
-		else if ( parentScope.findVariable( name ) != null )
+		else if ( parentScope.findVariable( name.content ) != null )
 		{
 			if ( !forError )
 			{
-				this.error( nameToken, "Index variable '" + name + "' is already defined" );
+				this.error( name, "Index variable '" + name + "' is already defined" );
 				forError = true;
 			}
 
-			indexvar = new BadVariable( name, DataTypes.INT_TYPE, this.makeLocation( nameToken ) );
+			indexvar = new BadVariable( name.content, DataTypes.INT_TYPE, this.makeLocation( name ) );
 		}
 		else
 		{
-			indexvar = new Variable( name, DataTypes.INT_TYPE, this.makeLocation( nameToken ) );
+			indexvar = new Variable( name.content, DataTypes.INT_TYPE, this.makeLocation( name ) );
 		}
 
 		this.readToken(); // name
 
-		if ( "from".equalsIgnoreCase( this.currentToken().content ) )
+		if ( this.currentToken().equalsIgnoreCase( "from" ) )
 		{
 			this.currentToken().setType( SemanticTokenTypes.Keyword );
 			this.readToken(); // from
@@ -3425,19 +3414,19 @@ public class Parser
 
 		int direction = 0;
 
-		if ( "upto".equalsIgnoreCase( this.currentToken().content ) )
+		if ( this.currentToken().equalsIgnoreCase( "upto" ) )
 		{
 			direction = 1;
 			this.currentToken().setType( SemanticTokenTypes.Keyword );
 			this.readToken(); // upto
 		}
-		else if ( "downto".equalsIgnoreCase( this.currentToken().content ) )
+		else if ( this.currentToken().equalsIgnoreCase( "downto" ) )
 		{
 			direction = -1;
 			this.currentToken().setType( SemanticTokenTypes.Keyword );
 			this.readToken(); // downto
 		}
-		else if ( "to".equalsIgnoreCase( this.currentToken().content ) )
+		else if ( this.currentToken().equalsIgnoreCase( "to" ) )
 		{
 			direction = 0;
 			this.currentToken().setType( SemanticTokenTypes.Keyword );
@@ -3468,7 +3457,7 @@ public class Parser
 		}
 
 		LocatedValue increment = DataTypes.ONE_VALUE.wrap( last.location );
-		if ( "by".equalsIgnoreCase( this.currentToken().content ) )
+		if ( this.currentToken().equalsIgnoreCase( "by" ) )
 		{
 			this.currentToken().setType( SemanticTokenTypes.Keyword );
 			this.readToken(); // by
@@ -3501,7 +3490,7 @@ public class Parser
 	private Loop parseJavaFor( final Type functionType, final BasicScope parentScope )
 		throws InterruptedException
 	{
-		if ( !"for".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "for" ) )
 		{
 			return null;
 		}
@@ -3530,23 +3519,22 @@ public class Parser
 		// variable to variable list in the scope, and saving
 		// initialization expressions in initializers.
 
-		while ( !";".equals( this.currentToken().content ) )
+		while ( !this.currentToken().equals( ";" ) )
 		{
 			Type t = this.parseType( scope, true );
 
-			String name = this.currentToken().content;
-			Token nameToken = this.currentToken();
-			nameToken.setType( SemanticTokenTypes.Variable ); // we read it anyway
+			boolean variableNameError = false;
 
-			if ( !this.parseIdentifier( name ) || Parser.isReservedWord( name ) )
+			Token name = this.currentToken();
+			name.setType( SemanticTokenTypes.Variable ); // we read it anyway
+
+			if ( !this.parseIdentifier( name.content ) || Parser.isReservedWord( name.content ) )
 			{
 				if ( !javaForSyntaxError )
 				{
-					this.error( nameToken, "Identifier required" );
+					this.error( name, "Identifier required" );
 				}
-				javaForError = javaForSyntaxError = true;
-
-				name = null;
+				javaForError = javaForSyntaxError = variableNameError = true;
 			}
 
 			VariableReference lhs;
@@ -3554,24 +3542,24 @@ public class Parser
 			// If there is no data type, it is using an existing variable
 			if ( t == null )
 			{
-				Variable variable = parentScope.findVariable( name );
+				Variable variable = parentScope.findVariable( name.content );
 				if ( variable != null )
 				{
-					parentScope.addReference( variable, this.makeLocation( nameToken ) );
+					parentScope.addReference( variable, this.makeLocation( name ) );
 
 					lhs = new VariableReference( variable );
 
-					nameToken.addModifier( SemanticTokenModifiers.Modification );
+					name.addModifier( SemanticTokenModifiers.Modification );
 				}
 				else
 				{
 					if ( !javaForError )
 					{
-						this.error( nameToken, "Unknown variable '" + name + "'" );
+						this.error( name, "Unknown variable '" + name + "'" );
 						javaForError = true;
 					}
 
-					variable = new BadVariable( name, new BadType( null, null ), this.makeLocation( nameToken ) );
+					variable = new BadVariable( name.content, new BadType( null, null ), this.makeLocation( name ) );
 					lhs = new VariableReference( variable );
 				}
 
@@ -3580,25 +3568,29 @@ public class Parser
 			else
 			{
 				// Create variable and add it to the scope
-				Variable variable = scope.findVariable( name, true );
+				Variable variable = scope.findVariable( name.content, true );
 				if ( variable == null )
 				{
-					variable = new Variable( name, t, this.makeLocation( nameToken ) );
+					variable = new Variable( name.content, t, this.makeLocation( name ) );
 
-					scope.addVariable( variable );
+					if ( !variableNameError )
+					{
+						scope.addVariable( variable );
+					}
+
 					lhs = new VariableReference( variable );
 
-					nameToken.addModifier( SemanticTokenModifiers.Declaration );
+					name.addModifier( SemanticTokenModifiers.Declaration );
 				}
 				else
 				{
 					if ( !javaForError )
 					{
-						this.error( nameToken, "Variable '" + name + "' already defined" );
+						this.error( name, "Variable '" + name + "' already defined" );
 						javaForError = true;
 					}
 
-					parentScope.addReference( variable, this.makeLocation( nameToken ) );
+					parentScope.addReference( variable, this.makeLocation( name ) );
 
 					lhs = new VariableReference( variable );
 				}
@@ -3608,7 +3600,7 @@ public class Parser
 
 			LocatedValue rhs = null;
 
-			if ( "=".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( "=" ) )
 			{
 				this.currentToken().setType( SemanticTokenTypes.Operator );
 				this.readToken(); // =
@@ -3649,11 +3641,11 @@ public class Parser
 
 			initializers.add( initializer );
 
-			if ( ",".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( "," ) )
 			{
 				this.readToken(); // ,
 
-				if ( ";".equals( this.currentToken().content ) )
+				if ( this.currentToken().equals( ";" ) )
 				{
 					if ( !javaForSyntaxError )
 					{
@@ -3664,7 +3656,7 @@ public class Parser
 			}
 		}
 
-		if ( ";".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( ";" ) )
 		{
 			this.readToken(); // ;
 		}
@@ -3680,11 +3672,11 @@ public class Parser
 		// Parse condition in context of scope
 
 		LocatedValue condition =
-			( ";".equals( this.currentToken().content ) ) ?
+			( this.currentToken().equals( ";" ) ) ?
 			DataTypes.TRUE_VALUE.wrap( this.make0WidthLocation() ) :
 			this.parseExpression( scope );
 
-		if ( ";".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( ";" ) )
 		{
 			this.readToken(); // ;
 		}
@@ -3717,7 +3709,7 @@ public class Parser
 
 		List<Command> incrementers = new ArrayList<>();
 
-		while ( !this.atEndOfFile() && !")".equals( this.currentToken().content ) )
+		while ( !this.atEndOfFile() && !this.currentToken().equals( ")" ) )
 		{
 			LocatedValue value = this.parsePreIncDec( scope );
 			if ( value != null )
@@ -3764,11 +3756,11 @@ public class Parser
 				}
 			}
 
-			if ( ",".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( "," ) )
 			{
 				this.readToken(); // ,
 
-				if ( this.atEndOfFile() || ")".equals( this.currentToken().content ) )
+				if ( this.atEndOfFile() || this.currentToken().equals( ")" ) )
 				{
 					if ( !javaForSyntaxError )
 					{
@@ -3779,7 +3771,7 @@ public class Parser
 			}
 		}
 
-		if ( ")".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( ")" ) )
 		{
 			this.readToken(); // )
 		}
@@ -3821,7 +3813,7 @@ public class Parser
 	private Scope parseLoopScope( final Scope result, final Type functionType, final BasicScope parentScope )
 		throws InterruptedException
 	{
-		if ( "{".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( "{" ) )
 		{
 			// Scope is a block
 
@@ -3829,7 +3821,7 @@ public class Parser
 
 			this.parseScope( result, functionType, parentScope, false, true, true );
 
-			if ( "}".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( "}" ) )
 			{
 				this.readToken(); // }
 			}
@@ -3844,7 +3836,7 @@ public class Parser
 			Command command = this.parseCommand( functionType, result, false, true, true );
 			if ( command == null )
 			{
-				if ( ";".equals( this.currentToken().content ) )
+				if ( this.currentToken().equals( ";" ) )
 				{
 					this.readToken(); // ;
 				}
@@ -3865,7 +3857,7 @@ public class Parser
 	private LocatedValue parseNewRecord( final BasicScope scope )
 		throws InterruptedException
 	{
-		if ( !"new".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "new" ) )
 		{
 			return null;
 		}
@@ -3917,7 +3909,7 @@ public class Parser
 		Type [] types = target.getFieldTypes();
 		int param = 0;
 
-		if ( "(".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( "(" ) )
 		{
 			this.readToken(); //(
 
@@ -3931,7 +3923,7 @@ public class Parser
 					break;
 				}
 
-				if ( ")".equals( this.currentToken().content ) )
+				if ( this.currentToken().equals( ")" ) )
 				{
 					this.readToken(); // )
 					break;
@@ -3960,11 +3952,11 @@ public class Parser
 				Type expected = currentType.getBaseType();
 				LocatedValue val;
 
-				if ( ",".equals( this.currentToken().content ) )
+				if ( this.currentToken().equals( "," ) )
 				{
 					val = DataTypes.VOID_VALUE.wrap( this.make0WidthLocation() );
 				}
-				else if ( "{".equals( this.currentToken().content ) )
+				else if ( this.currentToken().equals( "{" ) )
 				{
 					if ( expected instanceof AggregateType )
 					{
@@ -4013,11 +4005,11 @@ public class Parser
 				params.add( val.value );
 				param++;
 
-				if ( ",".equals( this.currentToken().content ) )
+				if ( this.currentToken().equals( "," ) )
 				{
 					this.readToken(); // ,
 				}
-				else if ( !")".equals( this.currentToken().content ) &&
+				else if ( !this.currentToken().equals( ")" ) &&
 				          !newRecordSyntaxError )
 				{
 					this.warning( this.make0WidthLocation( this.currentToken().getStart() ), "Missing comma between record field initializers" );
@@ -4048,16 +4040,15 @@ public class Parser
 			return null;
 		}
 
-		String name = this.currentToken().content;
-		Token nameToken = this.currentToken();
-		nameToken.setType( SemanticTokenTypes.Function );
+		Token name = this.currentToken();
+		name.setType( SemanticTokenTypes.Function );
 
 		this.readToken(); //name
 
 		List<LocatedValue> params = this.parseParameters( scope, firstParam );
-		Function target = scope.findFunction( name, params.stream().map( param -> param.value ).collect( Collectors.toList() ) );
+		Function target = scope.findFunction( name.content, params.stream().map( param -> param.value ).collect( Collectors.toList() ) );
 
-		Location functionCallLocation = this.makeLocation( nameToken, this.peekPreviousToken() );
+		Location functionCallLocation = this.makeLocation( name, this.peekPreviousToken() );
 
 		if ( target != null )
 		{
@@ -4067,12 +4058,12 @@ public class Parser
 
 			if ( RuntimeLibrary.functions.contains( target ) )
 			{
-				nameToken.addModifier( SemanticTokenModifiers.DefaultLibrary );
+				name.addModifier( SemanticTokenModifiers.DefaultLibrary );
 			}
 		}
 		else
 		{
-			target = new BadFunction( name );
+			target = new BadFunction( name.content );
 
 			// Don't make an error if the function couldn't be found
 			// because the user messed up one of the parameters
@@ -4091,7 +4082,7 @@ public class Parser
 
 			if ( error )
 			{
-				this.error( nameToken, Parser.undefinedFunctionMessage( name, params.stream().map( param -> param.value ).collect( Collectors.toList() ) ) );
+				this.error( name, Parser.undefinedFunctionMessage( name.content, params.stream().map( param -> param.value ).collect( Collectors.toList() ) ) );
 			}
 		}
 
@@ -4108,7 +4099,7 @@ public class Parser
 	private List<LocatedValue> parseParameters( final BasicScope scope, final LocatedValue firstParam )
 		throws InterruptedException
 	{
-		if ( !"(".equals( this.currentToken().content ) )
+		if ( !this.currentToken().equals( "(" ) )
 		{
 			return null;
 		}
@@ -4129,7 +4120,7 @@ public class Parser
 				break;
 			}
 
-			if ( ")".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( ")" ) )
 			{
 				this.readToken(); // )
 				break;
@@ -4147,9 +4138,9 @@ public class Parser
 				break;
 			}
 
-			if ( !",".equals( this.currentToken().content ) )
+			if ( !this.currentToken().equals( "," ) )
 			{
-				if ( !")".equals( this.currentToken().content ) )
+				if ( !this.currentToken().equals( ")" ) )
 				{
 					this.unexpectedTokenError( ")", this.currentToken() );
 					break;
@@ -4165,7 +4156,7 @@ public class Parser
 				break;
 			}
 
-			if ( ")".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( ")" ) )
 			{
 				this.unexpectedTokenError( "parameter", this.currentToken() );
 				// we'll break out at the start of the next loop
@@ -4178,7 +4169,7 @@ public class Parser
 	private LocatedValue parseInvoke( final BasicScope scope )
 		throws InterruptedException
 	{
-		if ( !"call".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "call" ) )
 		{
 			return null;
 		}
@@ -4198,10 +4189,9 @@ public class Parser
 			type = DataTypes.VOID_TYPE;
 		}
 
-		String current = this.currentToken().content;
 		LocatedValue name = null;
 
-		if ( "(".equals( current ) )
+		if ( this.currentToken().equals( "(" ) )
 		{
 			name = this.parseExpression( scope );
 
@@ -4236,7 +4226,7 @@ public class Parser
 
 		List<LocatedValue> params;
 
-		if ( "(".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( "(" ) )
 		{
 			params = this.parseParameters( scope, null );
 		}
@@ -4255,22 +4245,21 @@ public class Parser
 		throws InterruptedException
 	{
 		Token operToken = this.currentToken();
-		String operStr = this.currentToken().content;
 		if ( lhs == null ||
 		     !( lhs.value instanceof VariableReference ) ||
-		     !"=".equals( operStr ) &&
-		     !"+=".equals( operStr ) &&
-		     !"-=".equals( operStr ) &&
-		     !"*=".equals( operStr ) &&
-		     !"/=".equals( operStr ) &&
-		     !"%=".equals( operStr ) &&
-		     !"**=".equals( operStr ) &&
-		     !"&=".equals( operStr ) &&
-		     !"^=".equals( operStr ) &&
-		     !"|=".equals( operStr ) &&
-		     !"<<=".equals( operStr ) &&
-		     !">>=".equals( operStr ) &&
-		     !">>>=".equals( operStr ) )
+		     !operToken.equals( "=" ) &&
+		     !operToken.equals( "+=" ) &&
+		     !operToken.equals( "-=" ) &&
+		     !operToken.equals( "*=" ) &&
+		     !operToken.equals( "/=" ) &&
+		     !operToken.equals( "%=" ) &&
+		     !operToken.equals( "**=" ) &&
+		     !operToken.equals( "&=" ) &&
+		     !operToken.equals( "^=" ) &&
+		     !operToken.equals( "|=" ) &&
+		     !operToken.equals( "<<=" ) &&
+		     !operToken.equals( ">>=" ) &&
+		     !operToken.equals( ">>>=" ) )
 		{
 			return null;
 		}
@@ -4279,19 +4268,19 @@ public class Parser
 		boolean isAggregate = ( ltype instanceof AggregateType );
 		boolean assignmentError = false;
 
-		if ( isAggregate && !"=".equals( operStr ) && !assignmentError )
+		if ( isAggregate && !operToken.equals( "=" ) && !assignmentError )
 		{
-			this.error( operToken, "Cannot use '" + operStr + "' on an aggregate" );
+			this.error( operToken, "Cannot use '" + operToken + "' on an aggregate" );
 			assignmentError = true;
 		}
 
-		Operator oper = new Operator( this.makeLocation( operToken ), operStr, this );
+		Operator oper = new Operator( this.makeLocation( operToken ), operToken.content, this );
 		operToken.setType( SemanticTokenTypes.Operator );
 		this.readToken(); // oper
 
 		LocatedValue rhs;
 
-		if ( "{".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( "{" ) )
 		{
 			if ( isAggregate )
 			{
@@ -4301,7 +4290,7 @@ public class Parser
 			{
 				rhs = this.parseAggregateLiteral( scope, new BadAggregateType() );
 
-				if ( !assignmentError && "=".equals( operStr ) ) // otherwise the coercion check can catch this instead
+				if ( !assignmentError && operToken.equals( "=" ) ) // otherwise the coercion check can catch this instead
 				{
 					Location errorLocation = rhs != null ? rhs.location :
 						this.makeLocation( this.peekPreviousToken() );
@@ -4344,10 +4333,10 @@ public class Parser
 
 		Operator op = null;
 
-		if ( !"=".equals( operStr ) )
+		if ( !operToken.equals( "=" ) )
 		{
-			op = new Operator( this.makeLocation( this.makeInlineRange( operToken.getStart(), operStr.length() - 1 ) ),
-			                   operStr.substring( 0, operStr.length() - 1 ), this );
+			op = new Operator( this.makeLocation( this.makeInlineRange( operToken.getStart(), operToken.length() - 1 ) ),
+			                   operToken.substring( 0, operToken.length() - 1 ), this );
 		}
 
 		return new Assignment( (VariableReference) lhs.value, rhs.value, op )
@@ -4357,7 +4346,7 @@ public class Parser
 	private Value parseRemove( final BasicScope scope )
 		throws InterruptedException
 	{
-		if ( !"remove".equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( "remove" ) )
 		{
 			return null;
 		}
@@ -4385,15 +4374,15 @@ public class Parser
 		// --[VariableReference]
 		// ++[VariableReference]
 
-		if ( !"++".equals( this.currentToken().content ) &&
-		     !"--".equals( this.currentToken().content ) )
+		if ( !this.currentToken().equals( "++" ) &&
+		     !this.currentToken().equals( "--" ) )
 		{
 			return null;
 		}
 
 		Token operToken = this.currentToken();
 		operToken.setType( SemanticTokenTypes.Operator );
-		String operStr = "++".equals( this.currentToken().content ) ? Parser.PRE_INCREMENT : Parser.PRE_DECREMENT;
+		String operStr = this.currentToken().equals( "++" ) ? Parser.PRE_INCREMENT : Parser.PRE_DECREMENT;
 
 		this.readToken(); // oper
 
@@ -4435,15 +4424,15 @@ public class Parser
 		// [VariableReference]++
 		// [VariableReference]--
 
-		if ( !"++".equals( this.currentToken().content ) &&
-		     !"--".equals( this.currentToken().content ) )
+		if ( !this.currentToken().equals( "++" ) &&
+		     !this.currentToken().equals( "--" ) )
 		{
 			return lhs;
 		}
 
 		Token operToken = this.currentToken();
 		operToken.setType( SemanticTokenTypes.Operator );
-		String operStr = "++".equals( this.currentToken().content ) ? Parser.POST_INCREMENT : Parser.POST_DECREMENT;
+		String operStr = this.currentToken().equals( "++" ) ? Parser.POST_INCREMENT : Parser.POST_DECREMENT;
 
 		this.readToken(); // oper
 
@@ -4468,7 +4457,7 @@ public class Parser
 	private LocatedValue parseExpression( final BasicScope scope, final Operator previousOper )
 		throws InterruptedException
 	{
-		if ( ";".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( ";" ) )
 		{
 			return null;
 		}
@@ -4478,7 +4467,7 @@ public class Parser
 		Operator oper = null;
 
 		Token operatorToken = this.currentToken();
-		if ( "!".equals( operatorToken.content ) )
+		if ( operatorToken.equals( "!" ) )
 		{
 			oper = new Operator( this.makeLocation( operatorToken ), operatorToken.content, this );
 			operatorToken.setType( SemanticTokenTypes.Operator );
@@ -4501,7 +4490,7 @@ public class Parser
 				this.error( lhs.location, "\"!\" operator requires a boolean value" );
 			}
 		}
-		else if ( "~".equals( operatorToken.content ) )
+		else if ( operatorToken.equals( "~" ) )
 		{
 			oper = new Operator( this.makeLocation( operatorToken ), operatorToken.content, this );
 			operatorToken.setType( SemanticTokenTypes.Operator );
@@ -4524,7 +4513,7 @@ public class Parser
 				this.error( lhs.location, "\"~\" operator requires an integer or boolean value" );
 			}
 		}
-		else if ( "-".equals( operatorToken.content ) )
+		else if ( operatorToken.equals( "-" ) )
 		{
 			// See if it's a negative numeric constant
 			if ( ( lhs = this.parseValue( scope ) ) == null )
@@ -4547,7 +4536,7 @@ public class Parser
 					.wrap( this.makeLocation( oper.getLocation(), lhs.location ) );
 			}
 		}
-		else if ( "remove".equalsIgnoreCase( operatorToken.content ) )
+		else if ( operatorToken.equalsIgnoreCase( "remove" ) )
 		{
 			oper = new Operator( this.makeLocation( operatorToken ), operatorToken.content, this );
 			operatorToken.setType( SemanticTokenTypes.Keyword ); // not reaaaally an operator...
@@ -4596,14 +4585,14 @@ public class Parser
 				return lhs;
 			}
 
-			if ( ":".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( ":" ) )
 			{
 				return lhs;
 			}
 
 			this.currentToken().setType( SemanticTokenTypes.Operator );
 
-			if ( "?".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( "?" ) )
 			{
 				this.readToken(); // ?
 
@@ -4630,7 +4619,7 @@ public class Parser
 					lhs = Value.BAD_VALUE.wrap( errorLocation );
 				}
 
-				if ( ":".equals( this.currentToken().content ) )
+				if ( this.currentToken().equals( ":" ) )
 				{
 					this.currentToken().setType( SemanticTokenTypes.Operator );
 					this.readToken(); // :
@@ -4738,7 +4727,7 @@ public class Parser
 	private LocatedValue parseValue( final BasicScope scope )
 		throws InterruptedException
 	{
-		if ( ";".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( ";" ) )
 		{
 			return null;
 		}
@@ -4748,13 +4737,13 @@ public class Parser
 		LocatedValue result = null;
 
 		// Parse parenthesized expressions
-		if ( "(".equals( valueStartToken.content ) )
+		if ( valueStartToken.equals( "(" ) )
 		{
 			this.readToken(); // (
 
 			LocatedValue expression = this.parseExpression( scope );
 
-			if ( ")".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( ")" ) )
 			{
 				this.readToken(); // )
 			}
@@ -4772,21 +4761,21 @@ public class Parser
 		// Parse constant values
 		// true and false are reserved words
 
-		else if ( "true".equalsIgnoreCase( valueStartToken.content ) )
+		else if ( valueStartToken.equalsIgnoreCase( "true" ) )
 		{
 			valueStartToken.setType( SemanticTokenTypes.Keyword );
 			this.readToken();
 			result = DataTypes.TRUE_VALUE.wrap( this.makeLocation( valueStartToken ) );
 		}
 
-		else if ( "false".equalsIgnoreCase( valueStartToken.content ) )
+		else if ( valueStartToken.equalsIgnoreCase( "false" ) )
 		{
 			valueStartToken.setType( SemanticTokenTypes.Keyword );
 			this.readToken();
 			result = DataTypes.FALSE_VALUE.wrap( this.makeLocation( valueStartToken ) );
 		}
 
-		else if ( "__FILE__".equals( valueStartToken.content ) )
+		else if ( valueStartToken.equals( "__FILE__" ) )
 		{
 			valueStartToken.setType( SemanticTokenTypes.Keyword );
 			this.readToken();
@@ -4834,7 +4823,7 @@ public class Parser
 			Type baseType = this.parseType( scope, false );
 			if ( baseType != null && baseType.getBaseType() instanceof AggregateType )
 			{
-				if ( "{".equals( this.currentToken().content ) )
+				if ( this.currentToken().equals( "{" ) )
 				{
 					result = this.parseAggregateLiteral( scope, (AggregateType) baseType.getBaseType() );
 				}
@@ -4860,7 +4849,7 @@ public class Parser
 			}
 		}
 
-		while ( result != null && ( ".".equals( this.currentToken().content ) || "[".equals( this.currentToken().content ) ) )
+		while ( result != null && ( this.currentToken().equals( "." ) || this.currentToken().equals( "[" ) ) )
 		{
 			Variable current = new Variable( result.value.getType() );
 			current.setExpression( result.value );
@@ -4890,7 +4879,7 @@ public class Parser
 
 		int sign = 1;
 
-		if ( "-".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( "-" ) )
 		{
 			String next = this.nextToken();
 
@@ -4905,21 +4894,21 @@ public class Parser
 			this.readToken(); // Read -
 		}
 
-		if ( ".".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( "." ) )
 		{
 			this.currentToken().setType( SemanticTokenTypes.Number );
 			this.readToken(); // Read .
-			String fraction = this.currentToken().content;
+			Token fraction = this.currentToken();
 
-			if ( this.readIntegerToken( fraction ) )
+			if ( this.readIntegerToken( fraction.content ) )
 			{
-				this.currentToken().setType( SemanticTokenTypes.Number );
+				fraction.setType( SemanticTokenTypes.Number );
 				this.readToken(); // integer
 				number = new Value( sign * StringUtilities.parseDouble( "0." + fraction ) );
 			}
 			else
 			{
-				this.unexpectedTokenError( "numeric value", this.currentToken() );
+				this.unexpectedTokenError( "numeric value", fraction );
 
 				number = new Value( 0 );
 			}
@@ -4927,18 +4916,18 @@ public class Parser
 			return number.wrap( this.makeLocation( numberStartToken, this.peekPreviousToken() ) );
 		}
 
-		String integer = this.currentToken().content;
-		if ( !this.readIntegerToken( integer ) )
+		Token integer = this.currentToken();
+		if ( !this.readIntegerToken( integer.content ) )
 		{
 			return null;
 		}
 
-		this.currentToken().setType( SemanticTokenTypes.Number );
+		integer.setType( SemanticTokenTypes.Number );
 		this.readToken(); // integer
 
 		String fraction = this.nextToken();
 
-		if ( ".".equals( this.currentToken().content ) &&
+		if ( this.currentToken().equals( "." ) &&
 		     this.readIntegerToken( fraction ) )
 		{
 			this.currentToken().setType( SemanticTokenTypes.Number );
@@ -4950,7 +4939,7 @@ public class Parser
 		}
 		else
 		{
-			number = new Value( sign * StringUtilities.parseLong( integer ) );
+			number = new Value( sign * StringUtilities.parseLong( integer.content ) );
 		}
 
 		return number.wrap( this.makeLocation( numberStartToken, this.peekPreviousToken() ) );
@@ -4977,9 +4966,9 @@ public class Parser
 	private LocatedValue parseString( final BasicScope scope )
 		throws InterruptedException
 	{
-		if ( !"\"".equals( this.currentToken().content ) &&
-		     !"'".equals( this.currentToken().content ) &&
-		     !"`".equals( this.currentToken().content ) )
+		if ( !this.currentToken().equals( "\"" ) &&
+		     !this.currentToken().equals( "'" ) &&
+		     !this.currentToken().equals( "`" ) )
 		{
 			return null;
 		}
@@ -5062,7 +5051,7 @@ public class Parser
 				}
 
 				// Skip comments before the next token, look at what it is, then discard said token
-				if ( "}".equals( this.currentToken().content ) )
+				if ( this.currentToken().equals( "}" ) )
 				{
 					this.currentToken = null;
 					this.currentLine.tokens.removeLast();
@@ -5312,7 +5301,7 @@ public class Parser
 	private LocatedValue parseTypedConstant( final BasicScope scope )
 		throws InterruptedException
 	{
-		if ( !"$".equals( this.currentToken().content ) )
+		if ( !this.currentToken().equals( "$" ) )
 		{
 			return null;
 		}
@@ -5322,7 +5311,7 @@ public class Parser
 		this.readToken(); // read $
 
 		Token typedConstantTypeToken = this.currentToken();
-		String name = this.currentToken().content;
+		String name = typedConstantTypeToken.content;
 		Type type = null;
 		boolean plurals = false;
 		boolean typedConstantError = false, typedConstantSyntaxError = false;
@@ -5397,7 +5386,7 @@ public class Parser
 			type = new BadType( name, this.makeLocation( typedConstantTypeToken ) );
 		}
 
-		if ( "[".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( "[" ) )
 		{
 			this.currentToken().setType( plurals ?
 				SemanticTokenTypes.Enum :
@@ -5699,8 +5688,7 @@ public class Parser
 		variableToken.setType( SemanticTokenTypes.Variable );
 		Location variableLocation = this.makeLocation( variableToken );
 
-		String name = this.currentToken().content;
-		Variable var = scope.findVariable( name, true );
+		Variable var = scope.findVariable( variableToken.content, true );
 
 		this.readToken(); // read name
 
@@ -5710,9 +5698,9 @@ public class Parser
 		}
 		else
 		{
-			this.error( variableLocation, "Unknown variable '" + name + "'" );
+			this.error( variableLocation, "Unknown variable '" + variableToken + "'" );
 
-			var = new BadVariable( name, new BadType( null, null ), variableLocation );
+			var = new BadVariable( variableToken.content, new BadType( null, null ), variableLocation );
 		}
 
 		return this.parseVariableReference( scope, new VariableReference( var ).wrap( variableLocation ) );
@@ -5740,18 +5728,18 @@ public class Parser
 		Type type = var.value.getType();
 		List<Value> indices = new ArrayList<Value>();
 
-		boolean parseAggregate = "[".equals( this.currentToken().content );
+		boolean parseAggregate = this.currentToken().equals( "[" );
 		boolean variableReferenceError = false, variableReferenceSyntaxError = false;
 
-		while ( "[".equals( this.currentToken().content ) ||
-		        ".".equals( this.currentToken().content ) ||
-		        parseAggregate && ",".equals( this.currentToken().content ) )
+		while ( this.currentToken().equals( "[" ) ||
+		        this.currentToken().equals( "." ) ||
+		        parseAggregate && this.currentToken().equals( "," ) )
 		{
 			LocatedValue index;
 
 			type = type.getBaseType();
 
-			if ( "[".equals( this.currentToken().content ) || ",".equals( this.currentToken().content ) )
+			if ( this.currentToken().equals( "[" ) || this.currentToken().equals( "," ) )
 			{
 				this.readToken(); // read [ or ,
 				parseAggregate = true;
@@ -5876,7 +5864,7 @@ public class Parser
 
 			indices.add( index.value );
 
-			if ( parseAggregate && "]".equals( this.currentToken().content ) )
+			if ( parseAggregate && this.currentToken().equals( "]" ) )
 			{
 				this.readToken(); // read ]
 				parseAggregate = false;
@@ -5996,7 +5984,7 @@ public class Parser
 			this.readToken();
 		}
 
-		if ( ";".equals( this.currentToken().content ) )
+		if ( this.currentToken().equals( ";" ) )
 		{
 			this.readToken(); //read ;
 		}
@@ -6045,6 +6033,14 @@ public class Parser
 
 	private static final char BOM = '\ufeff';
 
+	/**
+	 * Returns {@link #currentToken} if non-null.
+	 * Otherwise, move in front of the next non-comment
+	 * token that we can find, before assigning it to
+	 * {@link #currentToken} and returning it.
+	 * <p>
+	 * Never returns {@code null}.
+	 */
 	private Token currentToken()
 		throws InterruptedException
 	{
@@ -6141,6 +6137,16 @@ public class Parser
 		}
 	}
 
+	/**
+	 * Calls {@link #currentToken()} to make sure we are
+	 * currently in front of an unread token.
+	 * Then, returns a string version of the next
+	 * token that can be found after that.
+	 * @return the content of the next token
+	 *         to come after the token we are currently
+	 *         in front of, or {@code null} if we are
+	 *         at the end of the file.
+	 */
 	private String nextToken()
 		throws InterruptedException
 	{
@@ -6244,11 +6250,15 @@ public class Parser
 		return previousToken;
 	}
 
+	/** Finds the last token that was *discovered* */
 	private final Token peekLastToken()
 	{
 		return this.currentLine.peekLastToken();
 	}
 
+	/**
+	 * If we are not at the end of the file
+	 */
 	private void readToken()
 		throws InterruptedException
 	{
@@ -6573,7 +6583,7 @@ public class Parser
 				return Line.this;
 			}
 
-			boolean equals( final String s )
+			public boolean equals( final String s )
 			{
 				if ( this.content == null )
 				{
@@ -6581,6 +6591,46 @@ public class Parser
 				}
 
 				return this.content.equals( s );
+			}
+
+			public boolean equalsIgnoreCase( final String s )
+			{
+				if ( this.content == null )
+				{
+					return s == null;
+				}
+
+				return this.content.equalsIgnoreCase( s );
+			}
+
+			public int length()
+			{
+				if ( this.content == null )
+				{
+					return 0;
+				}
+
+				return this.content.length();
+			}
+
+			public String substring( final int beginIndex )
+			{
+				if ( this.content == null )
+				{
+					return null;
+				}
+
+				return this.content.substring( beginIndex );
+			}
+
+			public String substring( final int beginIndex, final int endIndex )
+			{
+				if ( this.content == null )
+				{
+					return null;
+				}
+
+				return this.content.substring( beginIndex, endIndex );
 			}
 
 			public String toString()
