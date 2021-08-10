@@ -322,6 +322,14 @@ public class Parser
 		{
 			final LineNumberReader commandStream = new LineNumberReader( new InputStreamReader( this.istream, StandardCharsets.UTF_8 ) );
 			this.currentLine = new Line( commandStream );
+
+			Line line = this.currentLine;
+			while ( line.content != null )
+			{
+				line = new Line( commandStream, line );
+			}
+
+			// Move up to the first non-empty line
 			while ( this.currentLine.content != null &&
 			        this.currentLine.content.length() == 0 )
 			{
@@ -4994,6 +5002,15 @@ public class Parser
 
 			if ( i == line.length() )
 			{
+				if ( i == 0 && this.currentIndex == this.currentLine.offset )
+				{
+					// Empty lines are OK.
+					this.currentLine = this.currentLine.nextLine;
+					this.currentIndex = this.currentLine.offset;
+					i = -1;
+					continue;
+				}
+
 				if ( i > 0 )
 				{
 					this.currentLine.makeToken( i )
@@ -6354,6 +6371,10 @@ public class Parser
 		return Parser.multiCharTokens.contains( s );
 	}
 
+	/**
+	 * Returns the content of {@link #currentLine}
+	 * starting at {@link #currentIndex}.
+	 */
 	private String restOfLine()
 	{
 		return this.currentLine.substring( this.currentIndex );
@@ -6383,17 +6404,21 @@ public class Parser
 		private final Deque<Token> tokens = new LinkedList<>();
 
 		private final Line previousLine;
-		private final Line nextLine;
+		/** Not made final to avoid a possible StackOverflowError. Do not modify. */
+		private Line nextLine = null;
 
 		private Line( final LineNumberReader commandStream )
 		{
-			this( commandStream, new LinkedList<>() );
+			this( commandStream, null );
 		}
 
-		private Line( final LineNumberReader commandStream, final Deque<Line> lines )
+		private Line( final LineNumberReader commandStream, final Line previousLine )
 		{
-			this.previousLine = lines.peekLast();
-			lines.addLast( this );
+			this.previousLine = previousLine;
+			if ( previousLine != null )
+			{
+				previousLine.nextLine = this;
+			}
 
 			int offset = 0;
 			String line;
@@ -6439,8 +6464,6 @@ public class Parser
 			{
 				this.lineNumber = commandStream.getLineNumber();
 				this.offset = offset;
-
-				this.nextLine = new Line( commandStream, lines );
 			}
 			else
 			{
@@ -6448,8 +6471,6 @@ public class Parser
 				// (or there was an IOException when reading)
 				this.lineNumber = this.previousLine != null ? this.previousLine.lineNumber : 0;
 				this.offset = this.previousLine != null ? this.previousLine.offset : 0;
-
-				this.nextLine = null;
 			}
 		}
 
