@@ -6257,7 +6257,10 @@ public class Parser
 	}
 
 	/**
-	 * If we are not at the end of the file
+	 * If we are not at the end of the file, null out
+	 * {@link #currentToken} (allowing a new one to be gathered
+	 * next time we call {@link #currentToken()}), and move
+	 * {@link #currentIndex} forward.
 	 */
 	private void readToken()
 		throws InterruptedException
