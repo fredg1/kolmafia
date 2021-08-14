@@ -35,6 +35,9 @@ package net.sourceforge.kolmafia.textui.langserver;
 
 import java.io.File;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -54,6 +57,11 @@ public class FilesMonitor
 
 	public void updateFile( final File file, final String text, final int version )
 	{
+		if ( file == null )
+		{
+			return;
+		}
+
 		synchronized ( this.parent.scripts )
 		{
 			final Script script = this.getScript( file );
@@ -182,32 +190,68 @@ public class FilesMonitor
 		}
 	}
 
-	public static String sanitizeURI( final String uri )
+	public static File URIToFile( String uri )
 	{
 		if ( uri == null )
 		{
 			return null;
 		}
 
-		if ( System.getProperty( "os.name" ).toLowerCase().contains( "win" ) )
+		try
 		{
-			if ( uri.startsWith( "file:///" ) || uri.startsWith( "file:\\\\\\" ) )
-			{
-				return uri.substring( 8 );
-			}
-			else if ( uri.startsWith( "file:/" ) || uri.startsWith( "file:\\" ) )
-			{
-				return uri.substring( 6 );
-			}
+			return new File( new URI( uri ) );
 		}
-		else
+		catch ( URISyntaxException e )
 		{
-			if ( uri.startsWith( "file://" ) || uri.startsWith( "file:\\\\" ) )
-			{
-				return uri.substring( 7 );
-			}
-		}
+			// A bad URI... oh boy...
 
-		return uri;
+			// The most likely guess is that the
+			// client just didn't encode the URI.
+			// Try feeding its path directly to File(String)
+
+			// First, remove the scheme
+			String scheme = "";
+			if ( uri.length() >= 5 )
+			{
+				scheme = uri.substring( 0, 5 );
+			}
+
+			if ( scheme.equalsIgnoreCase( "file:" ) )
+			{
+				uri = uri.substring( 5 );
+			}
+			else
+			{
+				// That's not even a file.
+				return null;
+			}
+
+			if ( System.getProperty( "os.name" ).toLowerCase().contains( "win" ) )
+			{
+				if ( uri.startsWith( "///" ) || uri.startsWith( "\\\\\\" ) )
+				{
+					uri = uri.substring( 3 );
+				}
+				else if ( uri.startsWith( "/" ) || uri.startsWith( "\\" ) )
+				{
+					uri = uri.substring( 1 );
+				}
+			}
+			else
+			{
+				if ( uri.startsWith( "//" ) || uri.startsWith( "\\\\" ) )
+				{
+					uri = uri.substring( 2 );
+				}
+			}
+
+			return new File( uri );
+		}
+		catch ( IllegalArgumentException e )
+		{
+			// We got a correct URI, but it doesn't point
+			// to a file. That's the caller's problem.
+			return null;
+		}
 	}
 }

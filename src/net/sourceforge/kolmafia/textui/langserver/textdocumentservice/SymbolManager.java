@@ -151,6 +151,11 @@ class SymbolManager
 	{
 		final List<T> result = new LinkedList<>();
 
+		if ( file == null )
+		{
+			return result;
+		}
+
 		for ( final Handler handler :
 			this.parent.monitor.findOrMakeHandler( file ) )
 		{

@@ -202,6 +202,11 @@ class SemanticTokensHandler
 
 	SemanticTokens getSemanticTokens( final File file, final Range range )
 	{
+		if ( file == null )
+		{
+			return new SemanticTokens( Collections.emptyList() );
+		}
+
 		final List<Token> tokens;
 		final Parser parser =
 			this.parent.monitor.findOrMakeHandler( file )
