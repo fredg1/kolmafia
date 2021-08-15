@@ -4413,42 +4413,45 @@ public class Parser
 				line = null;
 			}
 
-			if ( line != null )
-			{
-				// If the line starts with a Unicode BOM, remove it.
-				if ( line.length() > 0 &&
-				     line.charAt( 0 ) == Parser.BOM )
-				{
-					line = line.substring( 1 );
-					offset += 1;
-				}
-
-				// Remove whitespace at front and end
-				final String trimmed = line.trim();
-				final int ltrim = line.indexOf( trimmed );
-
-				if ( ltrim > 0 )
-				{
-					offset += ltrim;
-				}
-
-				line = trimmed;
-			}
-
-			this.content = line;
-
-			if ( line != null )
-			{
-				this.lineNumber = commandStream.getLineNumber();
-				this.offset = offset;
-			}
-			else
+			if ( line == null )
 			{
 				// We are the "end of file"
 				// (or there was an IOException when reading)
+				this.content = null;
 				this.lineNumber = this.previousLine != null ? this.previousLine.lineNumber : 0;
 				this.offset = this.previousLine != null ? this.previousLine.offset : 0;
+				return;
 			}
+
+			// If the line starts with a Unicode BOM, remove it.
+			if ( line.length() > 0 &&
+			     line.charAt( 0 ) == Parser.BOM )
+			{
+				line = line.substring( 1 );
+				offset += 1;
+			}
+
+			// Remove whitespace at front and end
+			final String trimmed = line.trim();
+
+			if ( !trimmed.isEmpty() )
+			{
+				// While the more "obvious" solution would be to
+				// use line.indexOf( trimmed ), since we know that
+				// the only difference between those two strings is
+				// leading/trailing whitespace, then the first
+				// character of `trimmed` must be the same character
+				// as the first non-whitespace character or `line`,
+				// avoiding us having to look at the whole rest of the line.
+				final int ltrim = line.indexOf( trimmed.charAt( 0 ) );
+				offset += ltrim;
+			}
+
+			line = trimmed;
+
+			this.content = line;
+			this.lineNumber = commandStream.getLineNumber();
+			this.offset = offset;
 		}
 
 		private String substring( final int beginIndex )
