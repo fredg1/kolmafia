@@ -5059,12 +5059,9 @@ public class Parser
 			if ( template && ch == '{' )
 			{
 				// Move the current token to the expression
-				this.currentToken = this.currentLine.makeToken( i );
-				this.currentToken().setType( SemanticTokenTypes.String );
-				this.readToken(); // read the string so far
-				// TODO replace with "escaped string" or something similiar, if/when they add it
-				this.currentToken().setType( SemanticTokenTypes.Operator );
-				this.readToken(); // read {
+				this.currentToken = this.currentLine.makeToken( ++i );
+				this.currentToken.setType( SemanticTokenTypes.String );
+				this.readToken(); // read the string so far, including the {
 
 				LocatedValue rhs = this.parseExpression( scope );
 
@@ -5077,17 +5074,17 @@ public class Parser
 					rhs = Value.BAD_VALUE.wrap( errorLocation );
 				}
 
+				// Set i to -1 so that it is set to zero by the loop as the currentLine has been shortened
+				i = -1;
+
 				// Skip comments before the next token, look at what it is, then discard said token
 				if ( this.currentToken().equals( "}" ) )
 				{
 					this.currentToken = null;
 					this.currentLine.tokens.removeLast();
 
-					this.currentLine.makeToken( 1 ) // }
-						// TODO replace with "escaped string" or something similiar, if/when they add it
-						.setType( SemanticTokenTypes.Operator );
-					// read manually to not skip whitespaces after the curly brace
-					this.currentIndex += 1;
+					// increment manually to not skip whitespace after the curly brace
+					++i; // }
 				}
 				else
 				{
@@ -5095,9 +5092,6 @@ public class Parser
 					this.currentToken = null;
 					this.currentLine.tokens.removeLast();
 				}
-
-				// Set i to -1 so that it is set to zero by the loop as the currentLine has been shortened
-				i = -1;
 
 				Value lhs = new Value( resultString.toString() );
 				if ( conc == null )
