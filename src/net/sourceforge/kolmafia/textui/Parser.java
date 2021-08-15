@@ -6476,6 +6476,11 @@ public class Parser
 
 		private String substring( final int beginIndex )
 		{
+			if ( this.content == null )
+			{
+				return null;
+			}
+
 			// substract "offset" from beginIndex, since
 			// we already removed it
 			return this.content.substring( beginIndex - this.offset );
