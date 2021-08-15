@@ -211,6 +211,11 @@ public class Parser
 
 	public Scope parse()
 	{
+		if ( this.istream == null )
+		{
+			throw new RuntimeException( "Parser was not properly initialized before parsing was attempted" );
+		}
+
 		Scope scope = this.parseScope( null, null, null, Parser.getExistingFunctionScope(), false, false );
 
 		if ( this.currentLine.nextLine != null )
@@ -240,6 +245,11 @@ public class Parser
 
 	public int getLineNumber()
 	{
+		if ( this.istream == null )
+		{
+			return 0;
+		}
+
 		return this.currentLine.lineNumber;
 	}
 
@@ -4718,7 +4728,7 @@ public class Parser
 
 	private String getLineAndFile()
 	{
-		return Parser.getLineAndFile( this.shortFileName, this.currentLine.lineNumber );
+		return Parser.getLineAndFile( this.shortFileName, this.getLineNumber() );
 	}
 
 	public static String getLineAndFile( final String fileName, final int lineNumber )
