@@ -5920,7 +5920,7 @@ public class Parser
 	private Directive parseDirective( final String directive )
 		throws InterruptedException
 	{
-		if ( !directive.equalsIgnoreCase( this.currentToken().content ) )
+		if ( !this.currentToken().equalsIgnoreCase( directive ) )
 		{
 			return null;
 		}

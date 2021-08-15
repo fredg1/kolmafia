@@ -49,7 +49,8 @@ public class EudoraCommand
 		PENPAL( 1, "Pen Pal", "My Own Pen Pal kit" ),
 		GAME( 2, "GameInformPowerDailyPro Magazine", "GameInformPowerDailyPro subscription card" ),
 		XI( 3, "Xi Receiver Unit" , "Xi Receiver Unit" ),
-		NEWYOU( 4, "New-You Club", "New-You Club Membership Form" );
+		NEWYOU( 4, "New-You Club", "New-You Club Membership Form" ),
+		CANDLE( 5, "Our Daily Candles", "Our Daily Candles™ order form" );
 
 		private final int id;
 		private final String name;
@@ -67,11 +68,12 @@ public class EudoraCommand
 			return Correspondent.NONE;
 		}
 
-		public static Correspondent find( final String query )
+		public static Correspondent find( String query )
 		{
+			query = query.toLowerCase();
 			for ( Correspondent correspondent : Correspondent.values() )
 			{
-				String name = correspondent.getName();
+				String name = correspondent.getName().toLowerCase();
 				if ( name.contains( query ) || name.replaceAll( "[- ]", "" ).contains( query ) )
 				{
 					return correspondent;
@@ -118,7 +120,7 @@ public class EudoraCommand
 
 	public EudoraCommand()
 	{
-		this.usage = " penpal|game|xi|newyou - switch to the specified correspondent";
+		this.usage = " penpal|game|xi|newyou|candle - switch to the specified correspondent";
 	}
 
 	public static boolean switchTo( final Correspondent correspondent )
@@ -141,7 +143,7 @@ public class EudoraCommand
 		}
 		else
 		{
-			KoLmafia.updateDisplay( MafiaState.ERROR, "Cannot switch to" + correspondent.getName() );
+			KoLmafia.updateDisplay( MafiaState.ERROR, "Cannot switch to " + correspondent.getName() );
 			return false;
 		}
 	}
