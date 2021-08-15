@@ -360,6 +360,11 @@ public class Parser
 	public Scope parse()
 		throws InterruptedException
 	{
+		if ( this.istream == null )
+		{
+			throw new RuntimeException( "Parser was not properly initialized before parsing was attempted" );
+		}
+
 		Token firstToken = this.currentToken();
 		Scope scope = this.parseFile( null );
 
@@ -392,6 +397,11 @@ public class Parser
 
 	public int getLineNumber()
 	{
+		if ( this.istream == null )
+		{
+			return 0;
+		}
+
 		return this.currentLine.lineNumber;
 	}
 
@@ -5176,7 +5186,7 @@ public class Parser
 			{
 				Location errorLocation = this.makeLocation(
 					this.makeInlineRange(
-						new Position( this.currentLine.lineNumber, backslashIndex ),
+						new Position( this.getLineNumber(), backslashIndex ),
 						Math.min( backslashIndex + 4, line.length() ) ) );
 
 				this.error( errorLocation, "Hexadecimal character escape requires 2 digits" );
@@ -5196,7 +5206,7 @@ public class Parser
 			{
 				Location errorLocation = this.makeLocation(
 					this.makeInlineRange(
-						new Position( this.currentLine.lineNumber, backslashIndex ),
+						new Position( this.getLineNumber(), backslashIndex ),
 						Math.min( backslashIndex + 6, line.length() ) ) );
 
 				this.error( errorLocation, "Unicode character escape requires 4 digits" );
@@ -5219,7 +5229,7 @@ public class Parser
 				{
 					Location errorLocation = this.makeLocation(
 						this.makeInlineRange(
-							new Position( this.currentLine.lineNumber, backslashIndex ),
+							new Position( this.getLineNumber(), backslashIndex ),
 							Math.min( backslashIndex + 4, line.length() ) ) );
 
 					this.error( errorLocation, "Octal character escape requires 3 digits" );
@@ -5627,7 +5637,7 @@ public class Parser
 			{
 				Position currentElementEndPosition =
 					new Position(
-						this.currentLine.lineNumber,
+						this.getLineNumber(),
 						this.currentIndex + i - 1 );
 				Location currentElementLocation = this.makeLocation( new Range( currentElementStartPosition, currentElementEndPosition ) );
 				currentElementStartPosition = currentElementEndPosition;
@@ -6733,7 +6743,7 @@ public class Parser
 	private Position getCurrentPosition()
 	{
 		// 0-indexed
-		int lineNumber = Math.max( 0, this.currentLine.lineNumber - 1 );
+		int lineNumber = Math.max( 0, this.getLineNumber() - 1 );
 		return new Position( lineNumber, this.currentIndex );
 	}
 
