@@ -3345,9 +3345,8 @@ public class Parser
 			if ( template && ch == '{' )
 			{
 				// Move the current token to the expression
-				this.currentToken = this.currentLine.makeToken( i );
-				this.readToken(); // read the string so far
-				this.readToken(); // read {
+				this.currentToken = this.currentLine.makeToken( ++i );
+				this.readToken(); // read the string so far, including the {
 
 				Value rhs = this.parseExpression( scope );
 
@@ -3360,12 +3359,11 @@ public class Parser
 				this.currentToken = null;
 				this.currentLine.tokens.removeLast();
 
-				this.currentLine.makeToken( 1 ); // }
-				// read manually to not skip whitespace after the curly brace
-				this.currentIndex += 1;
-
 				// Set i to -1 so that it is set to zero by the loop as the currentLine has been shortened
 				i = -1;
+
+				// increment manually to not skip whitespace after the curly brace
+				++i; // }
 
 				Value lhs = new Value( resultString.toString() );
 				if ( conc == null )
