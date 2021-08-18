@@ -1685,8 +1685,7 @@ public class Parser
 
 		while ( !this.atEndOfFile() && !this.currentToken().equals( "}" ) )
 		{
-			this.currentToken = null;
-			this.currentLine.tokens.removeLast();
+			this.clearCurrentToken();
 
 			final String line = this.restOfLine();
 
@@ -3301,8 +3300,7 @@ public class Parser
 			return null;
 		}
 
-		this.currentToken = null;
-		this.currentLine.tokens.removeLast();
+		this.clearCurrentToken();
 
 		// Directly work with currentLine - ignore any "tokens" you meet until
 		// the string is closed
@@ -3350,6 +3348,11 @@ public class Parser
 
 				Value rhs = this.parseExpression( scope );
 
+				if ( rhs == null )
+				{
+					throw this.parseException( "Expression expected" );
+				}
+
 				// Skip comments before the next token, look at what it is, then
 				// discard said token.
 				if ( !this.currentToken().equals( "}" ) )
@@ -3357,8 +3360,7 @@ public class Parser
 					throw this.parseException( "}", this.currentToken() );
 				}
 
-				this.currentToken = null;
-				this.currentLine.tokens.removeLast();
+				this.clearCurrentToken();
 
 				// Set i to -1 so that it is set to zero by the loop, as the
 				// currentLine has been shortened.
@@ -3384,8 +3386,7 @@ public class Parser
 
 			if ( ch == stopCharacter )
 			{
-				//+ 1 to get rid of stop character token
-				this.currentToken = this.currentLine.makeToken( i + 1 );
+				this.currentToken = this.currentLine.makeToken( i + 1 ); //+ 1 to get rid of stop character token
 				this.readToken();
 
 				Value result = new Value( resultString.toString() );
@@ -3440,7 +3441,7 @@ public class Parser
 				resultString.append( (char) hex08 );
 				i += 2;
 			}
-			catch ( NumberFormatException e )
+			catch ( IndexOutOfBoundsException | NumberFormatException e )
 			{
 				throw this.parseException( "Hexadecimal character escape requires 2 digits" );
 			}
@@ -3453,7 +3454,7 @@ public class Parser
 				resultString.append( (char) hex16 );
 				i += 4;
 			}
-			catch ( NumberFormatException e )
+			catch ( IndexOutOfBoundsException | NumberFormatException e )
 			{
 				throw this.parseException( "Unicode character escape requires 4 digits" );
 			}
@@ -3469,7 +3470,7 @@ public class Parser
 					i += 2;
 					break;
 				}
-				catch ( NumberFormatException e )
+				catch ( IndexOutOfBoundsException | NumberFormatException e )
 				{
 					throw this.parseException( "Octal character escape requires 3 digits" );
 				}
@@ -3652,6 +3653,11 @@ public class Parser
 			char c = line.charAt( i );
 			if ( c == '\\' )
 			{
+				if ( ++i == line.length() )
+				{
+					throw this.parseException( "No closing ] found" );
+				}
+
 				resultString.append( line.charAt( ++i ) );
 			}
 			else if ( c == '[' )
@@ -3666,8 +3672,12 @@ public class Parser
 					resultString.append( c );
 					continue;
 				}
-				this.currentLine.makeToken( i );
-				this.currentIndex += i;
+
+				if ( i > 0 )
+				{
+					this.currentLine.makeToken( i );
+					this.currentIndex += i;
+				}
 				this.readToken(); // read ]
 				String input = resultString.toString().trim();
 				return parseLiteral( type, input );
@@ -3699,6 +3709,12 @@ public class Parser
 				{
 					this.currentLine.makeToken( i );
 					this.currentIndex += i;
+				}
+
+				if ( slash )
+				{
+					slash = false;
+					resultString.append( '/' );
 				}
 
 				this.currentLine = this.currentLine.nextLine;
@@ -3776,8 +3792,11 @@ public class Parser
 
 			if ( ch == ']' )
 			{
-				this.currentLine.makeToken( i );
-				this.currentIndex += i;
+				if ( i > 0 )
+				{
+					this.currentLine.makeToken( i );
+					this.currentIndex += i;
+				}
 				this.readToken(); // read ]
 				if ( list.size() == 0 )
 				{
@@ -3968,10 +3987,10 @@ public class Parser
 			throw this.parseException( "<", this.currentToken() );
 		}
 
-		// atEndOfFile() calls currentToken() (which we still want, to trim whitespace and skip comments).
-		// Remove the token that was generated.
-		this.currentToken = null;
-		this.currentLine.tokens.removeLast();
+		// We called atEndOfFile(), which calls currentToken() to trim whitespace
+		// and skip comments. Remove the resulting token.
+
+		this.clearCurrentToken();
 
 		String resultString = null;
 		int endIndex = -1;
@@ -4265,6 +4284,22 @@ public class Parser
 
 		this.currentIndex = this.currentToken.restOfLineStart;
 		this.currentToken = null;
+	}
+
+	/**
+	 * If we have an unread token saved in {@link #currentToken}, null the field,
+	 * and delete it from its {@link Line#tokens}, effectively forgetting that we saw it.
+	 * <p>
+	 * This method is made for parsing methods that manipulate lines character-by-character,
+	 * and need to create Tokens of custom lengths.
+	 */
+	private void clearCurrentToken()
+	{
+		if ( this.currentToken != null )
+		{
+			this.currentToken = null;
+			this.currentLine.tokens.removeLast();
+		}
 	}
 
 	private int tokenLength( final String s )
