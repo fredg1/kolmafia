@@ -1045,14 +1045,13 @@ public class Parser
 
 		boolean functionError = false;
 
-		this.readToken(); //read Function name
-
 		if ( Parser.isReservedWord( functionName.content ) )
 		{
 			this.error( functionName, "Reserved word '" + functionName + "' cannot be used as a function name" );
 			functionError = true;
 		}
 
+		this.readToken(); //read Function name
 		this.readToken(); //read (
 
 		VariableList paramList = new VariableList();
@@ -1270,8 +1269,6 @@ public class Parser
 		boolean variableError = false;
 		Variable result;
 
-		this.readToken(); // read name
-
 		if ( Parser.isReservedWord( variableName.content ) )
 		{
 			this.error( variableName, "Reserved word '" + variableName + "' cannot be a variable name" );
@@ -1289,6 +1286,7 @@ public class Parser
 			result = new Variable( variableName.content, t, this.makeLocation( variableName ) );
 		}
 
+		this.readToken(); // read name
 		// If we are parsing a parameter declaration, we are done.
 		// Otherwise, we must initialize the variable.
 
@@ -2058,15 +2056,23 @@ public class Parser
 	private Type parseAggregateType( Type dataType, final BasicScope scope )
 		throws InterruptedException
 	{
+		Token separatorToken = this.currentToken();
+
 		this.readToken(); // [ or ,
 
 		Type indexType = null;
-		boolean empty = false;
 		int size = 0;
 
 		Token indexToken = this.currentToken();
 
-		if ( this.readIntegerToken( indexToken.content ) )
+		if ( indexToken.equals( "]" ) )
+		{
+			if ( !separatorToken.equals( "[" ) )
+			{
+				this.error( indexToken, "Missing index token" );
+			}
+		}
+		else if ( this.readIntegerToken( indexToken.content ) )
 		{
 			size = StringUtilities.parseInt( indexToken.content );
 			indexToken.setType( SemanticTokenTypes.Number );
@@ -2074,8 +2080,6 @@ public class Parser
 		}
 		else if ( this.parseIdentifier( indexToken.content ) )
 		{
-			this.readToken(); // type name
-
 			indexType = scope.findType( indexToken.content );
 
 			if ( indexType != null )
@@ -2117,42 +2121,8 @@ public class Parser
 				indexToken.setType( SemanticTokenTypes.Type );
 				indexType = new BadType( indexToken.content, this.makeLocation( indexToken ) );
 			}
-		}
-		else if ( indexToken.equals( "]" ) )
-		{
-			/* Technical debt: while it was probably only intended to
-			   allow something in the likes of "string[]" , the way
-			   it was implemented allowed syntaxes such as "int[int,int,]"
-			   (note the trailing comma) while not allowing "int[,,]".
 
-			   This means:
-			   int [][][]
-			   int [0][0][0]
-			   int [][0][0]
-			   int [][][0]
-			   int [0][][0]
-			   int [][0][]
-			   int [0][0][]
-			   int [0][][]
-			   int [0,0,0]
-			   int [0,0][0]
-			   int [0][0,0]
-			   int [0,][0]
-			   int [0][0,]
-			   int [][0,]
-			   int [0,][]
-			   int [0,0,]
-			   are ALL perfectly valid equivalents
-			   (any "0" can be swapped with "int"), but
-			   int [,][]
-			   int [,][0]
-			   int [][,]
-			   int [0][,]
-			   are illegal and need to generate an error.
-
-			   This means we can't just "assume nothing means 0".
-			   We need a dedicated state preventing a comma from following.*/
-			empty = true;
+			this.readToken(); // type name
 		}
 		else
 		{
@@ -2174,10 +2144,6 @@ public class Parser
 			{
 				this.readToken(); // ]
 			}
-			else if ( empty )
-			{
-				this.error( this.currentToken(), "\"Nothing\" can only be used as the only and/or last index of a bracket group." );
-			}
 
 			dataType = this.parseAggregateType( dataType, scope );
 		}
@@ -2187,7 +2153,7 @@ public class Parser
 		}
 		else
 		{
-			this.unexpectedTokenError( empty ? "]" : ", or ]", this.currentToken() );
+			this.unexpectedTokenError( ", or ]", this.currentToken() );
 		}
 
 		return new TypeReference(
@@ -2222,6 +2188,11 @@ public class Parser
 
 	private boolean parseScopedIdentifier( final String identifier )
 	{
+		if ( identifier == null )
+		{
+			return false;
+		}
+
 		if ( !Character.isLetter( identifier.charAt( 0 ) ) && identifier.charAt( 0 ) != '_' )
 		{
 			return false;
@@ -2471,9 +2442,9 @@ public class Parser
 					elseError = true;
 				}
 
-				if ( "if".equalsIgnoreCase( this.nextToken() ) )
+				this.readToken(); //else
+				if ( this.currentToken().equalsIgnoreCase( "if" ) )
 				{
-					this.readToken(); //else
 					this.currentToken().setType( SemanticTokenTypes.Keyword );
 					this.readToken(); //if
 
@@ -2518,7 +2489,6 @@ public class Parser
 				else
 				//else without condition
 				{
-					this.readToken(); //else
 					condition = DataTypes.TRUE_VALUE.wrap( this.make0WidthLocation() );
 					finalElse = true;
 				}
@@ -2569,8 +2539,7 @@ public class Parser
 				break;
 			}
 
-			this.currentToken = null;
-			this.currentLine.tokens.removeLast();
+			this.clearCurrentToken();
 
 			final String line = this.restOfLine();
 
@@ -3131,8 +3100,8 @@ public class Parser
 		}
 
 		if ( this.nextToken() == null ||
-		     "(".equals( this.nextToken() ) ||
-		     "=".equals( this.nextToken() ) )
+		     this.nextToken().equals( "(" ) ||
+		     this.nextToken().equals( "=" ) )
 		{	// it's a call to a function named sort(), or an assigment to
 			// a variable named sort, not the sort statement.
 			return null;
@@ -3899,8 +3868,6 @@ public class Parser
 		nameToken.setType( SemanticTokenTypes.Struct );
 		boolean newRecordError = false, newRecordSyntaxError = false;
 
-		this.readToken(); //name
-
 		if ( type != null )
 		{
 			scope.addReference( type, this.makeLocation( nameToken ) );
@@ -3921,6 +3888,8 @@ public class Parser
 		}
 
 		RecordType target = (RecordType) type;
+
+		this.readToken(); //name
 
 		List<Value> params = new ArrayList<>();
 		String [] names = target.getFieldNames();
@@ -4452,13 +4421,13 @@ public class Parser
 		operToken.setType( SemanticTokenTypes.Operator );
 		String operStr = this.currentToken().equals( "++" ) ? Parser.POST_INCREMENT : Parser.POST_DECREMENT;
 
-		this.readToken(); // oper
-
 		int ltype = lhs.value.getType().getType();
 		if ( ltype != DataTypes.TYPE_INT && ltype != DataTypes.TYPE_FLOAT && !lhs.value.getType().isBad() )
 		{
 			this.error( lhs.location, operStr + " requires a numeric variable reference" );
 		}
+
+		this.readToken(); // oper
 
 		Operator oper = new Operator( this.makeLocation( operToken ), operStr, this );
 
@@ -4991,11 +4960,10 @@ public class Parser
 			return null;
 		}
 
+		this.clearCurrentToken();
+
 		// Directly work with currentLine - ignore any "tokens" you meet until
 		// the string is closed
-
-		this.currentToken = null;
-		this.currentLine.tokens.removeLast();
 
 		Position stringStartPosition = this.getCurrentPosition();
 
@@ -5012,7 +4980,7 @@ public class Parser
 
 			if ( i == line.length() )
 			{
-				if ( i == 0 && this.currentIndex == this.currentLine.offset )
+				if ( i == 0 && this.currentIndex == this.currentLine.offset && this.currentLine.content != null )
 				{
 					// Empty lines are OK.
 					this.currentLine = this.currentLine.nextLine;
@@ -5074,24 +5042,23 @@ public class Parser
 					rhs = Value.BAD_VALUE.wrap( errorLocation );
 				}
 
-				// Set i to -1 so that it is set to zero by the loop as the currentLine has been shortened
+				// Set i to -1 so that it is set to zero by the loop, as the
+				// currentLine has been shortened.
 				i = -1;
 
-				// Skip comments before the next token, look at what it is, then discard said token
+				// Skip comments before the next token, look at what it is, then
+				// discard said token.
 				if ( this.currentToken().equals( "}" ) )
 				{
-					this.currentToken = null;
-					this.currentLine.tokens.removeLast();
-
-					// increment manually to not skip whitespace after the curly brace
+					// Increment manually to not skip whitespace after the curly brace.
 					++i; // }
 				}
 				else
 				{
 					this.unexpectedTokenError( "}", this.currentToken() );
-					this.currentToken = null;
-					this.currentLine.tokens.removeLast();
 				}
+
+				this.clearCurrentToken();
 
 				Value lhs = new Value( resultString.toString() );
 				if ( conc == null )
@@ -5543,8 +5510,6 @@ public class Parser
 					this.currentIndex += i;
 				}
 
-				this.currentLine = this.currentLine.nextLine;
-
 				if ( this.currentLine.content == null )
 				{
 					Location currentElementLocation = this.makeLocation( currentElementStartPosition );
@@ -5565,6 +5530,7 @@ public class Parser
 					return new PluralValue( type, list );
 				}
 
+				this.currentLine = this.currentLine.nextLine;
 				this.currentIndex = this.currentLine.offset;
 				i = -1;
 				continue;
@@ -5711,8 +5677,6 @@ public class Parser
 
 		Variable var = scope.findVariable( variableToken.content, true );
 
-		this.readToken(); // read name
-
 		if ( var != null )
 		{
 			scope.addReference( var, variableLocation );
@@ -5723,6 +5687,8 @@ public class Parser
 
 			var = new BadVariable( variableToken.content, new BadType( null, null ), variableLocation );
 		}
+
+		this.readToken(); // read name
 
 		return this.parseVariableReference( scope, new VariableReference( var ).wrap( variableLocation ) );
 	}
@@ -5938,10 +5904,10 @@ public class Parser
 			return null;
 		}
 
-		// atEndOfFile() calls currentToken() (which we still want, to trim whitespaces and skip comments).
-		// Remove the token that was generated.
-		this.currentToken = null;
-		this.currentLine.tokens.removeLast();
+		// We called atEndOfFile(), which calls currentToken() to trim whitespace
+		// and skip comments. Remove the resulting token.
+
+		this.clearCurrentToken();
 
 		String resultString = null;
 		int endIndex = -1;
@@ -6296,6 +6262,22 @@ public class Parser
 		this.currentToken = null;
 	}
 
+	/**
+	 * If we have an unread token saved in {@link #currentToken}, null the field,
+	 * and delete it from its {@link Line#tokens}, effectively forgetting that we saw it.
+	 * <p>
+	 * This method is made for parsing methods that manipulate lines character-by-character,
+	 * and need to create Tokens of custom lengths.
+	 */
+	private void clearCurrentToken()
+	{
+		if ( this.currentToken != null )
+		{
+			this.currentToken = null;
+			this.currentLine.tokens.removeLast();
+		}
+	}
+
 	private int tokenLength( final String s )
 	{
 		int result;
@@ -6485,7 +6467,7 @@ public class Parser
 		{
 			if ( this.content == null )
 			{
-				return null;
+				return "";
 			}
 
 			// substract "offset" from beginIndex, since
