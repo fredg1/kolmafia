@@ -430,13 +430,6 @@ public class Parser
 		return this.notifyRecipient;
 	}
 
-	public List<Token> getTokens( final Range range )
-	{
-		// Done this way simply as to not encumber this section,
-		// since that method is a bit bulky.
-		return this.getTokensInRange( range );
-	}
-
 	public static Scope getExistingFunctionScope()
 	{
 		return new Scope( RuntimeLibrary.functions.clone(), null, DataTypes.simpleTypes.clone() );
@@ -1299,31 +1292,37 @@ public class Parser
 		{
 			postVariableToken.setType( SemanticTokenTypes.Operator );
 			this.readToken(); // read =
+		}
 
-			if ( this.currentToken().equals( "{" ) )
+		if ( this.currentToken().equals( "{" ) )
+		{
+			// We allow two ways of initializing aggregates:
+			// <aggregate type> <name> = {};
+			// <aggregate type> <name> {};
+			//
+			// Which is why we already read the "=" if it was there.
+
+			if ( ltype instanceof AggregateType )
 			{
-				if ( !( ltype instanceof AggregateType ) )
-				{
-					rhs = this.parseAggregateLiteral( scope, new BadAggregateType() );
-
-					if ( !variableError && allowInitialization && !ltype.isBad() )
-					{
-						Location errorLocation = rhs != null ? rhs.location :
-							this.makeLocation( this.peekLastToken() );
-
-						this.error( errorLocation, "Cannot initialize " + variableName + " of type " + t + " with an aggregate literal" );
-						variableError = true;
-					}
-				}
-				else
-				{
-					rhs = this.parseAggregateLiteral( scope, (AggregateType) ltype );
-				}
+				rhs = this.parseAggregateLiteral( scope, (AggregateType) ltype );
 			}
 			else
 			{
-				rhs = this.parseExpression( scope );
+				rhs = this.parseAggregateLiteral( scope, new BadAggregateType() );
+
+				if ( !variableError && allowInitialization && !ltype.isBad() )
+				{
+					Location errorLocation = rhs != null ? rhs.location :
+						this.makeLocation( this.peekLastToken() );
+
+					this.error( errorLocation, "Cannot initialize " + variableName + " of type " + t + " with an aggregate literal" );
+					variableError = true;
+				}
 			}
+		}
+		else if ( postVariableToken.equals( "=" ) )
+		{
+			rhs = this.parseExpression( scope );
 
 			if ( rhs == null )
 			{
@@ -1339,26 +1338,6 @@ public class Parser
 				if ( !variableError && allowInitialization && !Operator.validCoercion( ltype, rhs.value.getType(), "assign" ) )
 				{
 					this.error( rhs.location, "Cannot store " + rhs.value.getType() + " in " + variableName + " of type " + ltype );
-					variableError = true;
-				}
-			}
-		}
-		else if ( postVariableToken.equals( "{" ) )
-		{
-			if ( ltype instanceof AggregateType )
-			{
-				rhs = this.parseAggregateLiteral( scope, (AggregateType) ltype );
-			}
-			else
-			{
-				rhs = this.parseAggregateLiteral( scope, new BadAggregateType() );
-
-				if ( !variableError && allowInitialization && !ltype.isBad() )
-				{
-					Location errorLocation = rhs != null ? rhs.location :
-						this.makeLocation( this.peekLastToken() );
-
-					this.error( errorLocation, "Cannot initialize " + variableName + " of type " + t + " with an aggregate literal" );
 					variableError = true;
 				}
 			}
@@ -1806,6 +1785,12 @@ public class Parser
 		return valType;
 	}
 
+	/**
+	 * Parses the content of an aggregate literal, e.g., `{1:true, 2:false, 3:false}`.
+	 *
+	 * <p>The presence of the opening bracket "{" is ALWAYS assumed when entering this method,
+	 * and as such, MUST be checked before calling it. This method will never return null.
+	 */
 	private LocatedValue parseAggregateLiteral( final BasicScope scope, final AggregateType aggr )
 		throws InterruptedException
 	{
@@ -1830,8 +1815,6 @@ public class Parser
 		Position previousPosition = null;
 		while ( this.madeProgress( previousPosition, previousPosition = this.getCurrentPosition() ) )
 		{
-			LocatedValue lhs;
-
 			if ( this.atEndOfFile() )
 			{
 				this.unexpectedTokenError( "}", this.currentToken() );
@@ -1844,6 +1827,8 @@ public class Parser
 				this.readToken(); // read }
 				break;
 			}
+
+			LocatedValue lhs;
 
 			// If we know we are reading an ArrayLiteral or haven't
 			// yet ensured we are reading a MapLiteral, allow any
@@ -1956,7 +1941,7 @@ public class Parser
 				// not really correct since, to get here, what we got so far must have matched
 				// the value's datatype, but we can't tell what they put after the :, so just assume
 				// it's a key:value pair anyway
-				this.error( lhs.location, "cannot include keys when making an array literal" );
+				this.error( lhs.location, "Cannot include keys when making an array literal" );
 				aggregateError = true;
 			}
 
@@ -2222,9 +2207,14 @@ public class Parser
 
 		this.readToken(); //return
 
+		if ( expectedType == null )
+		{
+			this.error( returnStartToken, "Cannot return when outside of a function" );
+		}
+
 		if ( this.currentToken().equals( ";" ) )
 		{
-			if ( expectedType == null || !expectedType.equals( DataTypes.TYPE_VOID ) )
+			if ( expectedType != null && !expectedType.equals( DataTypes.TYPE_VOID ) )
 			{
 				this.error( this.makeLocation( returnStartToken, this.currentToken() ), "Return needs " + expectedType + " value" );
 			}
@@ -2527,15 +2517,15 @@ public class Parser
 
 		while ( true )
 		{
-			if ( this.currentToken().equals( "}" ) )
-			{
-				this.readToken(); // }
-				break;
-			}
-
 			if ( this.atEndOfFile() )
 			{
 				this.unexpectedTokenError( "}", this.currentToken() );
+				break;
+			}
+
+			if ( this.currentToken().equals( "}" ) )
+			{
+				this.readToken(); // }
 				break;
 			}
 
@@ -3192,7 +3182,7 @@ public class Parser
 			Token name = this.currentToken();
 
 			if ( !this.parseIdentifier( name.content ) ||
-			     // foreach in aggregate (i.e. no key)
+			     // "foreach in aggregate" (i.e. no key)
 			     name.equalsIgnoreCase( "in" ) &&
 			     !"in".equalsIgnoreCase( this.nextToken() ) &&
 			     !",".equals( this.nextToken() ) )
@@ -5077,8 +5067,7 @@ public class Parser
 
 			if ( ch == stopCharacter )
 			{
-				// +1 to include + get rid of stop character token
-				this.currentToken = this.currentLine.makeToken( i + 1 );
+				this.currentToken = this.currentLine.makeToken( i + 1 ); //+ 1 to get rid of stop character token
 				this.currentToken().setType( SemanticTokenTypes.String );
 				this.readToken();
 
@@ -5463,9 +5452,13 @@ public class Parser
 					resultString.append( c );
 					continue;
 				}
-				this.currentLine.makeToken( i )
-					.setType( SemanticTokenTypes.String );
-				this.currentIndex += i;
+
+				if ( i > 0 )
+				{
+					this.currentLine.makeToken( i )
+						.setType( SemanticTokenTypes.String );
+					this.currentIndex += i;
+				}
 
 				Location currentElementLocation = this.makeLocation( currentElementStartPosition );
 
@@ -5508,6 +5501,12 @@ public class Parser
 					this.currentLine.makeToken( i )
 						.setType( SemanticTokenTypes.String );
 					this.currentIndex += i;
+				}
+
+				if ( slash )
+				{
+					slash = false;
+					resultString.append( '/' );
 				}
 
 				if ( this.currentLine.content == null )
@@ -6667,7 +6666,7 @@ public class Parser
 		}
 	}
 
-	private List<Token> getTokensInRange( final Range range )
+	public List<Token> getTokens( final Range range )
 	{
 		final List<Token> result = new LinkedList<>();
 
@@ -6714,6 +6713,12 @@ public class Parser
 		}
 
 		return result;
+	}
+
+	public List<String> getTokensContent( final Range range )
+	{
+		return this.getTokens( range )
+			.stream().map( token -> token.content ).collect( Collectors.toList() );
 	}
 
 	private Position getCurrentPosition()
@@ -6772,7 +6777,7 @@ public class Parser
 
 	private Location makeLocation( final Range range )
 	{
-		String uri = this.fileURI != null ? this.fileURI.toString(): this.istream.toString();
+		String uri = this.fileURI != null ? this.fileURI.toString() : this.istream.toString();
 		return new Location( uri, range );
 	}
 
