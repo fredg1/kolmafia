@@ -3505,6 +3505,8 @@ public class Parser
 			Token name = this.currentToken();
 			name.setType( SemanticTokenTypes.Variable ); // we read it anyway
 
+			Variable variable;
+
 			if ( !this.parseIdentifier( name.content ) || Parser.isReservedWord( name.content ) )
 			{
 				if ( !javaForSyntaxError )
@@ -3514,17 +3516,13 @@ public class Parser
 				javaForError = javaForSyntaxError = variableNameError = true;
 			}
 
-			VariableReference lhs;
-
 			// If there is no data type, it is using an existing variable
 			if ( t == null )
 			{
-				Variable variable = parentScope.findVariable( name.content );
+				variable = parentScope.findVariable( name.content );
 				if ( variable != null )
 				{
 					parentScope.addReference( variable, this.makeLocation( name ) );
-
-					lhs = new VariableReference( variable );
 
 					name.addModifier( SemanticTokenModifiers.Modification );
 				}
@@ -3537,7 +3535,6 @@ public class Parser
 					}
 
 					variable = new BadVariable( name.content, new BadType( null, null ), this.makeLocation( name ) );
-					lhs = new VariableReference( variable );
 				}
 
 				t = variable.getType();
@@ -3545,7 +3542,7 @@ public class Parser
 			else
 			{
 				// Create variable and add it to the scope
-				Variable variable = scope.findVariable( name.content, true );
+				variable = scope.findVariable( name.content, true );
 				if ( variable == null )
 				{
 					variable = new Variable( name.content, t, this.makeLocation( name ) );
@@ -3554,8 +3551,6 @@ public class Parser
 					{
 						scope.addVariable( variable );
 					}
-
-					lhs = new VariableReference( variable );
 
 					name.addModifier( SemanticTokenModifiers.Declaration );
 				}
@@ -3568,13 +3563,12 @@ public class Parser
 					}
 
 					parentScope.addReference( variable, this.makeLocation( name ) );
-
-					lhs = new VariableReference( variable );
 				}
 			}
 
 			this.readToken(); // name
 
+			VariableReference lhs = new VariableReference( variable );
 			LocatedValue rhs = null;
 
 			if ( this.currentToken().equals( "=" ) )
