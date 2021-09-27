@@ -88,7 +88,7 @@ public class AggregateType
 	}
 
 	@Override
-	public Type getDataType( final Value key )
+	public Type getDataType( final Object key )
 	{
 		return this.dataType;
 	}
@@ -97,6 +97,12 @@ public class AggregateType
 	public Type getIndexType()
 	{
 		return this.indexType;
+	}
+
+	@Override
+	public Value getKey( final Value key )
+	{
+		return key;
 	}
 
 	public int getSize()

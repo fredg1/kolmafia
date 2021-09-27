@@ -1234,6 +1234,32 @@ public class Parser
 				return false;
 			}
 
+			parentScope.addVariable( v );
+			VariableReference lhs = new VariableReference( v );
+			LocatedValue rhs;
+
+			if ( this.currentToken().equals( "=" ) )
+			{
+				this.currentToken().setType( SemanticTokenTypes.Operator );
+				this.readToken(); //read =
+
+				rhs = this.parseInitialization( lhs, parentScope );
+			}
+			else if ( this.currentToken().equals( "{" ) )
+			{
+				// We allow two ways of initializing aggregates:
+				// <aggregate type> <name> = {};
+				// <aggregate type> <name> {};
+
+				rhs = this.parseInitialization( lhs, parentScope );
+			}
+			else
+			{
+				rhs = null;
+			}
+
+			parentScope.addCommand( new Assignment( lhs, rhs == null ? null : rhs.value ), this );
+
 			if ( this.currentToken().equals( "," ) )
 			{
 				this.readToken(); //read ,
@@ -1289,95 +1315,65 @@ public class Parser
 		}
 
 		this.readToken(); // read name
-		// If we are parsing a parameter declaration, we are done.
-		// Otherwise, we must initialize the variable.
 
-		LocatedValue rhs;
+		return result;
+	}
 
-		Token postVariableToken = this.currentToken();
+	/**
+	 * Parses the right-hand-side of a variable definition. It is assumed that the caller expects
+	 * an expression to be found, so this method never returns null.
+	 */
+	private LocatedValue parseInitialization( final VariableReference lhs, final BasicScope scope )
+		throws InterruptedException
+	{
+		final ErrorManager initializationErrors = new ErrorManager();
 
+		LocatedValue result;
+
+		Type t = lhs.target.getType();
 		Type ltype = t.getBaseType();
-		if ( postVariableToken.equals( "=" ) )
-		{
-			postVariableToken.setType( SemanticTokenTypes.Operator );
-			this.readToken(); // read =
-		}
-
 		if ( this.currentToken().equals( "{" ) )
 		{
-			// We allow two ways of initializing aggregates:
-			// <aggregate type> <name> = {};
-			// <aggregate type> <name> {};
-			//
-			// Which is why we already read the "=" if it was there.
-
 			if ( ltype instanceof AggregateType )
 			{
-				rhs = this.parseAggregateLiteral( scope, (AggregateType) ltype );
+				result = this.parseAggregateLiteral( scope, (AggregateType) ltype );
 			}
 			else
 			{
-				rhs = this.parseAggregateLiteral( scope, new BadAggregateType() );
+				result = this.parseAggregateLiteral( scope, new BadAggregateType() );
 
-				if ( allowInitialization && !ltype.isBad() )
+				if ( !ltype.isBad() )
 				{
-					Location errorLocation = rhs != null ? rhs.location :
+					Location errorLocation = result != null ? result.location :
 						this.makeLocation( this.peekLastToken() );
 
-					variableErrors.submitError( () -> {
-						this.error( errorLocation, "Cannot initialize " + variableName + " of type " + t + " with an aggregate literal" );
-					} );
-				}
-			}
-		}
-		else if ( postVariableToken.equals( "=" ) )
-		{
-			rhs = this.parseExpression( scope );
-
-			if ( rhs == null )
-			{
-				if ( allowInitialization )
-				{
-					variableErrors.submitSyntaxError( () -> {
-						this.error( this.currentToken(), "Expression expected" );
-					} );
-				}
-			}
-			else
-			{
-				rhs = this.autoCoerceValue( t, rhs, scope );
-				if ( allowInitialization && !Operator.validCoercion( ltype, rhs.value.getType(), "assign" ) )
-				{
-					final LocatedValue finalRhs = rhs; // Needed for the functional interface.
-					variableErrors.submitError( () -> {
-						this.error( finalRhs.location, "Cannot store " + finalRhs.value.getType() + " in " + variableName + " of type " + ltype );
+					initializationErrors.submitError( () -> {
+						this.error( errorLocation, "Cannot initialize " + lhs + " of type " + t + " with an aggregate literal" );
 					} );
 				}
 			}
 		}
 		else
 		{
-			rhs = null;
-		}
+			result = this.parseExpression( scope );
 
-		if ( !allowInitialization &&
-		     ( postVariableToken.equals( "=" ) ||
-		       postVariableToken.equals( "{" ) ) )
-		{
-			Location errorLocation = rhs != null ? rhs.location :
-				this.makeLocation( postVariableToken );
-
-			// this is a function's parameter declaration
-			variableErrors.submitError( () -> {
-				this.error( errorLocation, "Cannot initialize parameter " + variableName );
-			} );
-		}
-
-		if ( allowInitialization && !result.isBad() )
-		{
-			scope.addVariable( result );
-			VariableReference lhs = new VariableReference( result );
-			scope.addCommand( new Assignment( lhs, rhs == null ? null : rhs.value ), this );
+			if ( result != null )
+			{
+				result = this.autoCoerceValue( t, result, scope );
+				if ( !Operator.validCoercion( ltype, result.value.getType(), "assign" ) )
+				{
+					final LocatedValue finalResult = result; // Needed for the functional interface.
+					initializationErrors.submitError( () -> {
+						this.error( finalResult.location, "Cannot store " + finalResult.value.getType() + " in " + lhs + " of type " + ltype );
+					} );
+				}
+			}
+			else
+			{
+				initializationErrors.submitSyntaxError( () -> {
+					this.error( this.currentToken(), "Expression expected" );
+				} );
+			}
 		}
 
 		return result;
@@ -1731,7 +1727,7 @@ public class Parser
 			{
 				final Type finalType = valType; // Needed for the functional interface.
 				typeErrors.submitError( () -> {
-					this.error( finalType.getLocation(), "Record creation is not allowed here" );
+					this.error( finalType.getLocation(), "Existing type expected for function parameter" );
 				} );
 			}
 		}
@@ -1960,12 +1956,24 @@ public class Parser
 
 			if ( isArray )
 			{
-				// not really correct since, to get here, what we got so far must have matched
-				// the value's datatype, but we can't tell what they put after the :, so just assume
-				// it's a key:value pair anyway
+				// In order to reach this point without an error, we must have had a correct
+				// array literal so far, meaning the index type is an integer, and what we saw before
+				// the colon must have matched the aggregate's data type. Therefore, the next
+				// question is: is the data type also an integer?
+
 				final LocatedValue finalLhs = lhs; // Needed for the functional interface.
 				aggregateErrors.submitError( () -> {
-					this.error( finalLhs.location, "Cannot include keys when making an array literal" );
+					if ( data.equals( DataTypes.INT_TYPE ) )
+					{
+						// If so, this is an int[int] aggregate. They could have done something like
+						// {0, 1, 2, 3:3, 4:4, 5:5}
+						this.error( finalLhs.location, "Cannot include keys when making an array literal" );
+					}
+					else
+					{
+						// If not, we can't tell why there's a colon here.
+						this.unexpectedTokenError( ", or }", delim );
+					}
 				} );
 			}
 

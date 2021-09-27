@@ -38,6 +38,7 @@ import java.util.List;
 import org.eclipse.lsp4j.Location;
 
 import net.sourceforge.kolmafia.textui.DataTypes;
+import net.sourceforge.kolmafia.textui.ScriptException;
 
 public class RecordType
 	extends CompositeType
@@ -97,9 +98,19 @@ public class RecordType
 	}
 
 	@Override
-	public Type getDataType( final Value key )
+	public Type getDataType()
 	{
-		int index = this.indexOf( key );
+		return null;
+	}
+
+	@Override
+	public Type getDataType( final Object key )
+	{
+		if ( !( key instanceof Value ) )
+		{
+			throw new ScriptException( "Internal error: key is not a Value" );
+		}
+		int index = this.indexOf( (Value) key );
 		if ( index < 0 || index >= this.fieldTypes.length )
 		{
 			return new BadType( null, null );
@@ -195,12 +206,6 @@ public class RecordType
 	public Type simpleType()
 	{
 		return this;
-	}
-
-	@Override
-	public String toString()
-	{
-		return this.name;
 	}
 
 	@Override
