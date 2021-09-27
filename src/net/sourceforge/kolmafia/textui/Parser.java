@@ -759,18 +759,10 @@ public class Parser
 
 			if ( this.currentToken().equals( "..." ) )
 			{
-				// We can only have a single vararg parameter
-				if ( vararg )
-				{
-					throw this.parseException( "Only one vararg parameter is allowed" );
-				}
 				// Make an vararg type out of the previously parsed type.
 				paramType = new VarArgType( paramType );
 
 				this.readToken(); //read ...
-
-				// Only one vararg is allowed
-				vararg = true;
 			}
 
 			Variable param = this.parseVariable( paramType, null );
@@ -779,7 +771,20 @@ public class Parser
 				throw this.parseException( "identifier", this.currentToken() );
 			}
 
-			if ( !paramList.add( param ) )
+			if ( vararg )
+			{
+				if ( paramType instanceof VarArgType )
+				{
+					// We can only have a single vararg parameter
+					throw this.parseException( "Only one vararg parameter is allowed" );
+				}
+				else
+				{
+					// The single vararg parameter must be the last one
+					throw this.parseException( "The vararg parameter must be the last one" );
+				}
+			}
+			else if ( !paramList.add( param ) )
 			{
 				throw this.parseException( "Parameter " + param.getName() + " is already defined" );
 			}
@@ -789,14 +794,14 @@ public class Parser
 				throw this.parseException( "Cannot initialize parameter " + param.getName() );
 			}
 
+			if ( paramType instanceof VarArgType )
+			{
+				// Only one vararg is allowed
+				vararg = true;
+			}
+
 			if ( !this.currentToken().equals( ")" ) )
 			{
-				// The single vararg parameter must be the last one
-				if ( vararg )
-				{
-					throw this.parseException( "The vararg parameter must be the last one" );
-				}
-
 				if ( this.currentToken().equals( "," ) )
 				{
 					this.readToken(); //read comma
@@ -1243,30 +1248,23 @@ public class Parser
 			return null;
 		}
 
-		Type valType = scope.findType( this.currentToken().content );
-		if ( valType == null )
+		Type valType;
+
+		if ( ( valType = this.parseRecord( scope ) ) != null )
 		{
-			if ( records && this.currentToken().equalsIgnoreCase( "record" ) )
+			if ( !records )
 			{
-				valType = this.parseRecord( scope );
-
-				if ( valType == null )
-				{
-					return null;
-				}
-
-				if ( this.currentToken().equals( "[" ) )
-				{
-					return this.parseAggregateType( valType, scope );
-				}
-
-				return valType;
+				throw this.parseException( "Existing type expected for function parameter" );
 			}
-
+		}
+		else if ( ( valType = scope.findType( this.currentToken().content ) ) != null )
+		{
+			this.readToken();
+		}
+		else
+		{
 			return null;
 		}
-
-		this.readToken();
 
 		if ( this.currentToken().equals( "[" ) )
 		{
@@ -1345,17 +1343,24 @@ public class Parser
 				arrayAllowed = false;
 			}
 
-			// If parsing an ArrayLiteral, accumulate only values
-			if ( isArray )
+			if ( !delim.equals( ":" ) )
 			{
-				// The value must have the correct data type
-				lhs = this.autoCoerceValue( data, lhs, scope );
-				if ( !Operator.validCoercion( dataType, lhs.getType(), "assign" ) )
+				// If parsing an ArrayLiteral, accumulate only values
+				if ( isArray )
 				{
-					throw this.parseException( "Invalid array literal" );
-				}
+					// The value must have the correct data type
+					lhs = this.autoCoerceValue( data, lhs, scope );
+					if ( !Operator.validCoercion( dataType, lhs.getType(), "assign" ) )
+					{
+						throw this.parseException( "Invalid array literal" );
+					}
 
-				values.add( lhs );
+					values.add( lhs );
+				}
+				else
+				{
+					throw this.parseException( ":", delim );
+				}
 
 				// Move on to the next value
 				if ( delim.equals( "," ) )
@@ -1371,12 +1376,27 @@ public class Parser
 			}
 
 			// We are parsing a MapLiteral
-			if ( !delim.equals( ":" ) )
-			{
-				throw this.parseException( ":", this.currentToken() );
-			}
-
 			this.readToken(); // read :
+
+			if ( isArray )
+			{
+				// In order to reach this point without an error, we must have had a correct
+				// array literal so far, meaning the index type is an integer, and what we saw before
+				// the colon must have matched the aggregate's data type. Therefore, the next
+				// question is: is the data type also an integer?
+
+				if ( data.equals( DataTypes.INT_TYPE ) )
+				{
+					// If so, this is an int[int] aggregate. They could have done something like
+					// {0, 1, 2, 3:3, 4:4, 5:5}
+					throw this.parseException( "Cannot include keys when making an array literal" );
+				}
+				else
+				{
+					// If not, we can't tell why there's a colon here.
+					throw this.parseException( ", or }", delim );
+				}
+			}
 
 			Value rhs;
 			if ( this.currentToken().equals( "{" ) && dataType instanceof AggregateType )
