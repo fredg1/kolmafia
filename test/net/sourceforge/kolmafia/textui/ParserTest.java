@@ -486,7 +486,7 @@ public class ParserTest
 			{
 				"Primitive assignment to aggregate",
 				"int[4] x = 1;",
-				"Cannot store int in a variable of type int [4]",
+				"Cannot store int in x of type int [4]",
 				null,
 			},
 			{
@@ -1285,7 +1285,7 @@ public class ParserTest
 			{
 				"invalid coercion",
 				"int x = 'hello';",
-				"Cannot store string in a variable of type int",
+				"Cannot store string in x of type int",
 				null,
 			},
 			{
@@ -1327,7 +1327,7 @@ public class ParserTest
 			{
 				"Invalid assignment coercion - assignment",
 				"boolean x; x += 'foo'",
-				"Cannot store string in a variable of type boolean",
+				"Cannot store string in x of type boolean",
 				null,
 			},
 			{
