@@ -6877,6 +6877,112 @@ public class Parser
 
 	// **************** Parse errors *****************
 
+	/**
+	 * Class which takes care of handling error propagation.
+	 * <p>
+	 * Use {@link #submitError(InterruptibleRunnable)}/
+	 * {@link #submitSyntaxError(InterruptibleRunnable)} with a runnable that makes an error.
+	 * If this is the worst type of error seen so far by the instance, or a
+	 * {@link #makeChild() child} thereof, or a child thereof, etc..., the runnable will be ran.
+	 */
+	private class ErrorManager
+	{
+		private boolean error = false;
+		private boolean syntaxError = false;
+
+		/**
+		 * The most basic kind of error.
+		 * 
+		 * The user did something forbidden, but we can still tell what they are doing, like a
+		 * duplicate variable name, or an unknown function.
+		 */
+		final void submitError( final InterruptibleRunnable errorRunnable )
+			throws InterruptedException
+		{
+			if ( this.sawError() )
+			{
+				return;
+			}
+
+			errorRunnable.run();
+			this.didSeeError();
+		}
+
+		/** A syntax error. The user put something unexpected in our way. */
+		final void submitSyntaxError( final InterruptibleRunnable errorRunnable )
+			throws InterruptedException
+		{
+			if ( this.sawSyntaxError() )
+			{
+				return;
+			}
+
+			errorRunnable.run();
+			this.didSeeSyntaxError();
+		}
+
+		final boolean sawError()
+		{
+			return this.error;
+		}
+
+		final boolean sawSyntaxError()
+		{
+			return this.syntaxError;
+		}
+
+		protected void didSeeError()
+		{
+			this.error = true;
+		}
+
+		protected void didSeeSyntaxError()
+		{
+			this.error = true;
+			this.syntaxError = true;
+		}
+
+		/**
+		 * Creates a child of the current instance. The result is effectively a new instance,
+		 * meaning that it allows new errors to be produced, but will notify its parent if it sees
+		 * one, acting as if the parent also saw the error, preventing the parent from allowing
+		 * any more error of that kind.
+		 */
+		final ErrorManager makeChild()
+		{
+			return new ErrorManagerChild();
+		}
+
+		private final class ErrorManagerChild
+			extends ErrorManager
+		{
+			@Override
+			protected void didSeeError()
+			{
+				super.didSeeError();
+				ErrorManager.this.didSeeError();
+			}
+
+			@Override
+			protected void didSeeSyntaxError()
+			{
+				super.didSeeSyntaxError();
+				ErrorManager.this.didSeeSyntaxError();
+			}
+		}
+	}
+
+	/**
+	 * Simple functional interface allowing methods like {@link Parser#currentToken()}
+	 * to be included in it without causing problems.
+	 */
+	@FunctionalInterface
+	private interface InterruptibleRunnable
+	{
+		abstract void run()
+			throws InterruptedException;
+	}
+
 	public class AshDiagnostic
 	{
 		final Range range;
