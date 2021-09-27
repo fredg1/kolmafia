@@ -1271,7 +1271,7 @@ public class ParserTest
 			{
 				"brace assignment of primitive",
 				"int x = {1}",
-				"Cannot initialize a variable of type int with an aggregate literal",
+				"Cannot initialize x of type int with an aggregate literal",
 				null,
 			},
 			{
