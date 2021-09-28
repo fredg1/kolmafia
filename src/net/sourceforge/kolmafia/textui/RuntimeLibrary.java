@@ -3266,7 +3266,7 @@ public abstract class RuntimeLibrary
 	{
 		String name = null;
 
-		if ( value.getType() == DataTypes.INT_TYPE )
+		if ( value.getType().equals( DataTypes.INT_TYPE ) )
 		{
 			int num = (int) value.intValue();
 
