@@ -47,7 +47,7 @@ public class Catch
 {
 	private final Command node;
 
-	public Catch( final Command node  )
+	public Catch( final Command node )
 	{
 		super( DataTypes.STRING_TYPE );
 		this.node = node;

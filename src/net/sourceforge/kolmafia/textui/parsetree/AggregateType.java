@@ -43,55 +43,42 @@ public class AggregateType
 	protected final boolean caseInsensitive;
 	protected int size;
 
+	private AggregateType( final String name, final Type dataType, final Type indexType, final int size, final boolean caseInsensitive )
+	{
+		super( name, DataTypes.TYPE_AGGREGATE );
+		this.dataType = dataType;
+		this.indexType = indexType;
+		this.size = size;
+		this.caseInsensitive = caseInsensitive && indexType.equals( DataTypes.STRING_TYPE );
+	}
+
 	public AggregateType( final AggregateType original )
 	{
-		super( "aggregate", DataTypes.TYPE_AGGREGATE );
-		this.dataType = original.dataType;
-		this.indexType = original.indexType;
-		this.caseInsensitive = original.caseInsensitive;
-		this.size = original.size;
+		this( "aggregate", original.dataType, original.indexType, original.size, original.caseInsensitive );
 	}
 
 	// Map
 	public AggregateType( final Type dataType, final Type indexType )
 	{
-		super( "aggregate", DataTypes.TYPE_AGGREGATE );
-		this.dataType = dataType;
-		this.indexType = indexType;
-		this.size = -1;
-		this.caseInsensitive = false;
+		this( "aggregate", dataType, indexType, -1, false );
 	}
 
 	// Map with case-insensitive string keys
 	public AggregateType( final Type dataType, final Type indexType, boolean caseInsensitive )
 	{
-		super( "aggregate", DataTypes.TYPE_AGGREGATE );
-		this.dataType = dataType;
-		this.indexType = indexType;
-		this.size = -1;
-		this.caseInsensitive = caseInsensitive && indexType.equals( DataTypes.STRING_TYPE );
+		this( "aggregate", dataType, indexType, -1, caseInsensitive );
 	}
 
 	// Array
 	public AggregateType( final Type dataType, final int size )
 	{
-		super( "aggregate", DataTypes.TYPE_AGGREGATE );
-		this.primitive = false;
-		this.dataType = dataType;
-		this.indexType = DataTypes.INT_TYPE;
-		this.size = size;
-		this.caseInsensitive = false;
+		this( "aggregate", dataType, DataTypes.INT_TYPE, size, false );
 	}
 
 	// VarArg
 	public AggregateType( final String name, final Type dataType, final int size )
 	{
-		super( name, DataTypes.TYPE_AGGREGATE );
-		this.primitive = false;
-		this.dataType = dataType;
-		this.indexType = DataTypes.INT_TYPE;
-		this.size = size;
-		this.caseInsensitive = false;
+		this( name, dataType, DataTypes.INT_TYPE, size, false );
 	}
 
 	@Override
@@ -129,8 +116,13 @@ public class AggregateType
 	}
 
 	@Override
-	public boolean equals( final Type o )
+	public boolean equals( Type o )
 	{
+		if ( o instanceof TypeReference )
+		{
+			o = ((TypeReference) o).getTarget();
+		}
+
 		return o instanceof AggregateType &&
 			this.dataType.equals( ( (AggregateType) o ).dataType ) &&
 			this.indexType.equals( ( (AggregateType) o ).indexType );
@@ -192,5 +184,22 @@ public class AggregateType
 			return -1;
 		}
 		return this.size * values;
+	}
+
+	@Override
+	public boolean isBad()
+	{
+		return this.getIndexType().isBad() || this.getDataType().isBad();
+	}
+
+	public static class BadAggregateType
+		extends AggregateType
+		implements BadNode
+	{
+		/** More of a shortcut method than an actual class with a purpose... */
+		public BadAggregateType()
+		{
+			super( new BadType( null, null ), new BadType( null, null ) );
+		}
 	}
 }

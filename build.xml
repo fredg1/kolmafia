@@ -179,7 +179,7 @@ All code copyright the respective sourcecode rightsholders.  Please see copyrigh
 	</target>
 
 	<target name="compile" depends="init,version,compile-deps">
-        <antcall target="set.version" />
+		<antcall target="set.version" />
 
 		<javac
 			compiler="modern"
@@ -201,7 +201,7 @@ All code copyright the respective sourcecode rightsholders.  Please see copyrigh
 			</classpath>
 		</javac>
 
-        <antcall target="unset.properties" />
+		<antcall target="unset.properties" />
 
 		<fail if="compile.failed" message="Failed to compile KoLmafia source code" />
 

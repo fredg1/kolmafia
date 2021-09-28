@@ -52,7 +52,7 @@ public class FunctionInvocation
 
 	public FunctionInvocation( final BasicScope scope, final Type type, final Value name, final List<Value> params, final Parser parser )
 	{
-		super( null, params, parser);
+		super( null, params, parser );
 		this.scope = scope;
 		this.type = type;
 		this.name = name;

@@ -66,7 +66,7 @@ public class SwitchScope
 		else if ( this.barrier == BasicScope.BARRIER_SEEN )
 		{
 			this.barrier = BasicScope.BARRIER_PAST;
-			p.warning( "Unreachable code" );
+			p.warning( "WARNING: Unreachable code" );
 		}
 
 		if ( !this.breakable )

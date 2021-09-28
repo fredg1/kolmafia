@@ -35,6 +35,8 @@ package net.sourceforge.kolmafia.textui.parsetree;
 
 import java.io.PrintStream;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.KoLmafiaCLI;
 
 import net.sourceforge.kolmafia.textui.DataTypes;
@@ -47,8 +49,9 @@ public class BasicScript
 {
 	private final ByteArrayStream data;
 
-	public BasicScript( final ByteArrayStream data )
+	public BasicScript( final Location location, final ByteArrayStream data )
 	{
+		super( location );
 		this.data = data;
 	}
 

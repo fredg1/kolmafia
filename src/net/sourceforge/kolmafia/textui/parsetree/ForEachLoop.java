@@ -40,6 +40,8 @@ import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.List;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.KoLmafia;
 
 import net.sourceforge.kolmafia.textui.DataTypes;
@@ -57,11 +59,11 @@ public class ForEachLoop
 	String fileName;
 	int lineNumber;
 
-	public ForEachLoop( final Scope scope,
-			    final List<VariableReference> variableReferences,
-			    final Value aggregate, final Parser parser )
+	public ForEachLoop( final Location location, final Scope scope,
+	                    final List<VariableReference> variableReferences,
+	                    final Value aggregate, final Parser parser )
 	{
-		super( scope );
+		super( location, scope );
 		this.variableReferences = variableReferences;
 		this.aggregate = aggregate;
 		this.fileName = parser.getShortFileName();
@@ -116,7 +118,7 @@ public class ForEachLoop
 	}
 
 	private Value executeSlice( final AshRuntime interpreter, final AggregateValue slice,
-				    final ListIterator<VariableReference> it, final VariableReference variable )
+	                            final ListIterator<VariableReference> it, final VariableReference variable )
 	{
 		// Get the next key variable
 		VariableReference nextVariable = it.hasNext() ? it.next() : null;

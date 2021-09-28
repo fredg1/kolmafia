@@ -35,6 +35,8 @@ package net.sourceforge.kolmafia.textui.parsetree;
 
 import java.util.List;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.textui.DataTypes;
 import net.sourceforge.kolmafia.textui.ScriptException;
 
@@ -47,7 +49,12 @@ public class RecordType
 
 	public RecordType( final String name, final String[] fieldNames, final Type[] fieldTypes )
 	{
-		super( name, DataTypes.TYPE_RECORD );
+		this( name, fieldNames, fieldTypes, null );
+	}
+
+	public RecordType( final String name, final String[] fieldNames, final Type[] fieldTypes, final Location location )
+	{
+		super( name, DataTypes.TYPE_RECORD, location );
 
 		this.fieldNames = fieldNames;
 		this.fieldTypes = fieldTypes;
@@ -106,7 +113,7 @@ public class RecordType
 		int index = this.indexOf( (Value) key );
 		if ( index < 0 || index >= this.fieldTypes.length )
 		{
-			return null;
+			return new BadType( null, null );
 		}
 		return this.fieldTypes[ index ];
 	}
@@ -185,8 +192,13 @@ public class RecordType
 	}
 
 	@Override
-	public boolean equals( final Type o )
+	public boolean equals( Type o )
 	{
+		if ( o instanceof TypeReference )
+		{
+			o = ((TypeReference) o).getTarget();
+		}
+
 		return o instanceof RecordType && this.name.equals( o.name );
 	}
 
@@ -226,5 +238,18 @@ public class RecordType
 			values += value;
 		}
 		return values;
+	}
+
+	public static class BadRecordType
+		extends RecordType
+		implements BadNode
+	{
+		public BadRecordType( final String name, final Location location )
+		{
+			super( name, new String[] {}, new Type[] {}, location );
+		}
+
+		// Don't override isBad(). The fields don't affect whether or not
+		// the record itself is recognized.
 	}
 }

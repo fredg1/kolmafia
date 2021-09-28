@@ -35,6 +35,8 @@ package net.sourceforge.kolmafia.textui.parsetree;
 
 import java.io.PrintStream;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.KoLmafia;
 
 import net.sourceforge.kolmafia.textui.DataTypes;
@@ -44,9 +46,9 @@ import net.sourceforge.kolmafia.textui.ScriptRuntime;
 public class Else
 	extends Conditional
 {
-	public Else( final Scope scope, final Value condition )
+	public Else( final Location location, final Scope scope, final Value condition )
 	{
-		super( scope, condition );
+		super( location, scope, condition );
 	}
 
 	@Override

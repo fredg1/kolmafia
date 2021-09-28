@@ -35,6 +35,8 @@ package net.sourceforge.kolmafia.textui.parsetree;
 
 import java.io.PrintStream;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.textui.DataTypes;
 import net.sourceforge.kolmafia.textui.AshRuntime;
 import net.sourceforge.kolmafia.textui.ScriptRuntime;
@@ -44,8 +46,9 @@ public abstract class ScriptState
 {
 	private final ScriptRuntime.State state;
 
-	public ScriptState( final ScriptRuntime.State state )
+	public ScriptState( final Location location, final ScriptRuntime.State state )
 	{
+		super( location );
 		this.state = state;
 	}
 
@@ -79,5 +82,26 @@ public abstract class ScriptState
 	public boolean assertBarrier()
 	{
 		return true;
+	}
+
+	public static final class BadScriptState
+		extends ScriptState
+	{
+		public BadScriptState( final Location location )
+		{
+			super( location, ScriptRuntime.State.NORMAL );
+		}
+
+		@Override
+		public Value execute( final AshRuntime interpreter )
+		{
+			return null;
+		}
+
+		@Override
+		public boolean assertBarrier()
+		{
+			return false;
+		}
 	}
 }

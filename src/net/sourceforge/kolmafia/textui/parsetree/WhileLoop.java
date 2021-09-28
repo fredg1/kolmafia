@@ -35,6 +35,8 @@ package net.sourceforge.kolmafia.textui.parsetree;
 
 import java.io.PrintStream;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.KoLmafia;
 
 import net.sourceforge.kolmafia.textui.DataTypes;
@@ -46,9 +48,9 @@ public class WhileLoop
 {
 	private final Value condition;
 
-	public WhileLoop( final Scope scope, final Value condition )
+	public WhileLoop( final Location location, final Scope scope, final Value condition )
 	{
-		super( scope );
+		super( location, scope );
 		this.condition = condition;
 	}
 

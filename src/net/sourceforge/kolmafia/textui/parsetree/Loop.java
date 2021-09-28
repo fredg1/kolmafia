@@ -33,6 +33,8 @@
 
 package net.sourceforge.kolmafia.textui.parsetree;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.KoLmafia;
 
 import net.sourceforge.kolmafia.textui.DataTypes;
@@ -44,8 +46,9 @@ public abstract class Loop
 {
 	private final Scope scope;
 
-	public Loop( final Scope scope )
+	public Loop( final Location location, final Scope scope )
 	{
+		super( location );
 		this.scope = scope;
 	}
 

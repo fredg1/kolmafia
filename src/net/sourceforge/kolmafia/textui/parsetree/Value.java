@@ -38,6 +38,8 @@ import java.io.PrintStream;
 import java.util.Comparator;
 import java.util.List;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.KoLConstants;
 import net.sourceforge.kolmafia.RequestLogger;
 import net.sourceforge.kolmafia.VYKEACompanionData;
@@ -57,6 +59,8 @@ public class Value
 	extends Command
 	implements Comparable<Value>
 {
+	public static final Value BAD_VALUE = new Value( new Type.BadType( null, null ) );
+
 	public Type type;
 
 	public long contentLong = 0;
@@ -592,6 +596,32 @@ public class Value
 		else
 		{
 			return this.toString();
+		}
+	}
+
+	public final LocatedValue wrap( final Location location )
+	{
+		return new LocatedValue( location );
+	}
+
+	/**
+	 * {@link Value}s are used in various ways outside of {@link Parser}.
+	 * From constants to instances made at runtime (i.e. dynamically), we
+	 * can't force {@link Value} to hold a {@link Location} without imposing
+	 * an useless burden on the rest of KoLmafia, and tons of null checks.
+	 * <p>
+	 * So instead, we use this class to pass around locations throughout
+	 * {@link Parser}.
+	 */
+	public final class LocatedValue
+	{
+		public final Value value;
+		public final Location location;
+
+		private LocatedValue( final Location location )
+		{
+			this.value = Value.this;
+			this.location = location;
 		}
 	}
 }

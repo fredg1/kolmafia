@@ -30,8 +30,8 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
- 
- package net.sourceforge.kolmafia.textui.parsetree;
+
+package net.sourceforge.kolmafia.textui.parsetree;
 
 import java.io.PrintStream;
 
@@ -41,6 +41,8 @@ import java.util.List;
 import java.util.Map;
 
 import java.util.regex.Pattern;
+
+import org.eclipse.lsp4j.Location;
 
 import net.sourceforge.kolmafia.CoinmasterRegistry;
 import net.sourceforge.kolmafia.EdServantData;
@@ -74,7 +76,12 @@ public class Type
 
 	public Type( final String name, final int type )
 	{
-		super( name );
+		this( name, type, null );
+	}
+
+	public Type( final String name, final int type, final Location location )
+	{
+		super( name, location );
 		this.primitive = true;
 		this.type = type;
 	}
@@ -94,8 +101,13 @@ public class Type
 		return this.primitive;
 	}
 
-	public boolean equals( final Type type )
+	public boolean equals( Type type )
 	{
+		if ( type instanceof TypeReference )
+		{
+			type = ((TypeReference) type).getTarget();
+		}
+
 		return this.type == type.type;
 	}
 
@@ -598,5 +610,152 @@ public class Type
 	{
 		AshRuntime.indentLine( stream, indent );
 		stream.println( "<TYPE " + this.name + ">" );
+	}
+
+	public static class BadType
+		extends Type
+		implements BadNode
+	{
+		public BadType( final String name, final Location location )
+		{
+			super( name, DataTypes.TYPE_ANY, location );
+		}
+	}
+
+	public static class TypeReference
+		extends Type
+	{
+		private final Type target;
+
+		public TypeReference( final Type target, final Location location )
+		{
+			super( target.name, target.type, location );
+			this.target = target;
+		}
+
+		public Type getTarget()
+		{
+			return this.target;
+		}
+
+		@Override
+		public Location getDefinitionLocation()
+		{
+			return this.target.getDefinitionLocation();
+		}
+
+		@Override
+		public int getType()
+		{
+			return this.target.getType();
+		}
+
+		@Override
+		public Type getBaseType()
+		{
+			return this.target.getBaseType();
+		}
+
+		@Override
+		public boolean isPrimitive()
+		{
+			return this.target.isPrimitive();
+		}
+
+		@Override
+		public boolean equals( final Type type )
+		{
+			return this.target.equals( type );
+		}
+
+		@Override
+		public boolean equals( final int type )
+		{
+			return this.target.equals( type );
+		}
+
+		@Override
+		public String toString()
+		{
+			return this.target.toString();
+		}
+
+		@Override
+		public Type simpleType()
+		{
+			return this.target.simpleType();
+		}
+
+		@Override
+		public Type asProxy()
+		{
+			return this.target.asProxy();
+		}
+
+		@Override
+		public Value initialValue()
+		{
+			return this.target.initialValue();
+		}
+
+		@Override
+		public Value parseValue( final String name, final boolean returnDefault )
+		{
+			return this.target.parseValue( name, returnDefault );
+		}
+
+		@Override
+		public Value makeValue( final Integer idval, final boolean returnDefault )
+		{
+			return this.target.makeValue( idval, returnDefault );
+		}
+
+		@Override
+		public List<String> getAmbiguousNames( final String s1, final Value value, final boolean quote )
+		{
+			return this.target.getAmbiguousNames( s1, value, quote );
+		}
+
+		@Override
+		public void validateValue( final ScriptRuntime controller, final String s1, final Value value )
+		{
+			this.target.validateValue( controller, s1, value );
+		}
+
+		@Override
+		public Value coerceValue( final Object object, final boolean returnDefault )
+		{
+			return this.target.coerceValue( object, returnDefault );
+		}
+
+		@Override
+		public Value allValues()
+		{
+			return this.target.allValues();
+		}
+
+		@Override
+		public Value initialValueExpression()
+		{
+			return this.target.initialValueExpression();
+		}
+
+		@Override
+		public int dataValues()
+		{
+			return this.target.dataValues();
+		}
+
+		@Override
+		public boolean isBad()
+		{
+			return this.target.isBad();
+		}
+
+		@Override
+		public void print( final PrintStream stream, final int indent )
+		{
+			this.target.print( stream, indent );
+		}
 	}
 }
