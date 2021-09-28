@@ -1213,7 +1213,7 @@ public class Parser
 		Scope scope = this.parseBlockOrSingleCommand( functionType, paramList, parentScope, false, false, false );
 
 		result.setScope( scope );
-		if ( !result.assertBarrier() && !functionType.equals( DataTypes.TYPE_VOID ) )
+		if ( !scope.assertBarrier() && !functionType.equals( DataTypes.TYPE_VOID ) )
 		{
 			functionErrors.submitSyntaxError( () -> {
 				this.error( functionLocation, "Missing return value" );

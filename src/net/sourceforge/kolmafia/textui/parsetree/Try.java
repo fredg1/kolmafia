@@ -114,17 +114,17 @@ public class Try
 				}
 			}
 		}
-	
+
 		interpreter.traceUnindent();
 		return result;
 	}
-	
+
 	@Override
 	public boolean assertBarrier()
 	{
 		return this.body.assertBarrier() || this.finalClause.assertBarrier();
 	}
-	
+
 	@Override
 	public boolean assertBreakable()
 	{
@@ -144,7 +144,7 @@ public class Try
 		stream.println( "<TRY>" );
 
 		this.body.print( stream, indent + 1 );
-		
+
 		if ( this.finalClause != null )
 		{
 			AshRuntime.indentLine( stream, indent );
