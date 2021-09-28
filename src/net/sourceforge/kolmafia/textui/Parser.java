@@ -1715,7 +1715,7 @@ public class Parser
 			throw this.parseException( ")", this.currentToken() );
 		}
 
-		if ( condition == null || condition.getType() != DataTypes.BOOLEAN_TYPE )
+		if ( condition == null || !condition.getType().equals( DataTypes.BOOLEAN_TYPE ) )
 		{
 			throw this.parseException( "\"if\" requires a boolean conditional expression" );
 		}
@@ -1773,7 +1773,7 @@ public class Parser
 						throw this.parseException( ")", this.currentToken() );
 					}
 
-					if ( condition == null || condition.getType() != DataTypes.BOOLEAN_TYPE )
+					if ( condition == null || !condition.getType().equals( DataTypes.BOOLEAN_TYPE ) )
 					{
 						throw this.parseException( "\"if\" requires a boolean conditional expression" );
 					}
@@ -1883,7 +1883,7 @@ public class Parser
 			throw this.parseException( ")", this.currentToken() );
 		}
 
-		if ( condition == null || condition.getType() != DataTypes.BOOLEAN_TYPE )
+		if ( condition == null || !condition.getType().equals( DataTypes.BOOLEAN_TYPE ) )
 		{
 			throw this.parseException( "\"while\" requires a boolean conditional expression" );
 		}
@@ -1933,7 +1933,7 @@ public class Parser
 			throw this.parseException( ")", this.currentToken() );
 		}
 
-		if ( condition == null || condition.getType() != DataTypes.BOOLEAN_TYPE )
+		if ( condition == null || !condition.getType().equals( DataTypes.BOOLEAN_TYPE ) )
 		{
 			throw this.parseException( "\"repeat\" requires a boolean conditional expression" );
 		}
@@ -2612,7 +2612,7 @@ public class Parser
 			throw this.parseException( ";", this.currentToken() );
 		}
 
-		if ( condition == null || condition.getType() != DataTypes.BOOLEAN_TYPE )
+		if ( condition == null || !condition.getType().equals( DataTypes.BOOLEAN_TYPE ) )
 		{
 			throw this.parseException( "\"for\" requires a boolean conditional expression" );
 		}
@@ -3192,7 +3192,7 @@ public class Parser
 
 			lhs = this.autoCoerceValue( DataTypes.BOOLEAN_TYPE, lhs, scope );
 			lhs = new Operation( lhs, new Operator( operator.content, this ) );
-			if ( lhs.getType() != DataTypes.BOOLEAN_TYPE )
+			if ( !lhs.getType().equals( DataTypes.BOOLEAN_TYPE ) )
 			{
 				throw this.parseException( "\"!\" operator requires a boolean value" );
 			}
@@ -3206,7 +3206,7 @@ public class Parser
 			}
 
 			lhs = new Operation( lhs, new Operator( operator.content, this ) );
-			if ( lhs.getType() != DataTypes.INT_TYPE && lhs.getType() != DataTypes.BOOLEAN_TYPE )
+			if ( !lhs.getType().equals( DataTypes.INT_TYPE ) && !lhs.getType().equals( DataTypes.BOOLEAN_TYPE ) )
 			{
 				throw this.parseException( "\"~\" operator requires an integer or boolean value" );
 			}
@@ -3268,7 +3268,7 @@ public class Parser
 
 				Value conditional = lhs;
 
-				if ( conditional.getType() != DataTypes.BOOLEAN_TYPE )
+				if ( !conditional.getType().equals( DataTypes.BOOLEAN_TYPE ) )
 				{
 					throw this.parseException(
 						"Non-boolean expression " + conditional + " (" + conditional.getType() + ")" );
@@ -3762,10 +3762,10 @@ public class Parser
 			String fullName = value.toString();
 			if ( !element.equalsIgnoreCase( fullName ) )
 			{
-				String s1 = CharacterEntities.escape( StringUtilities.globalStringReplace( element, ",", "\\," ).replaceAll("(?<= ) ", "\\\\ " ) );
-				String s2 = CharacterEntities.escape( StringUtilities.globalStringReplace( fullName, ",", "\\," ).replaceAll("(?<= ) ", "\\\\ " ) );
+				String s1 = CharacterEntities.escape( StringUtilities.globalStringReplace( element, ",", "\\," ).replaceAll( "(?<= ) ", "\\\\ " ) );
+				String s2 = CharacterEntities.escape( StringUtilities.globalStringReplace( fullName, ",", "\\," ).replaceAll( "(?<= ) ", "\\\\ " ) );
 				List<String> names = new ArrayList<String>();
-				if ( type == DataTypes.ITEM_TYPE )
+				if ( type.equals( DataTypes.ITEM_TYPE ) )
 				{
 					int itemId = (int)value.contentLong;
 					String name = ItemDatabase.getItemName( itemId );
@@ -3776,7 +3776,7 @@ public class Parser
 						names.add( s3 );
 					}
 				}
-				else if ( type == DataTypes.EFFECT_TYPE )
+				else if ( type.equals( DataTypes.EFFECT_TYPE ) )
 				{
 					int effectId = (int)value.contentLong;
 					String name = EffectDatabase.getEffectName( effectId );
@@ -3787,7 +3787,7 @@ public class Parser
 						names.add( s3 );
 					}
 				}
-				else if ( type == DataTypes.MONSTER_TYPE )
+				else if ( type.equals( DataTypes.MONSTER_TYPE ) )
 				{
 					int monsterId = (int)value.contentLong;
 					String name = MonsterDatabase.findMonsterById( monsterId ).getName();
@@ -3798,7 +3798,7 @@ public class Parser
 						names.add( s3 );
 					}
 				}
-				else if ( type == DataTypes.SKILL_TYPE )
+				else if ( type.equals( DataTypes.SKILL_TYPE ) )
 				{
 					int skillId = (int)value.contentLong;
 					String name = SkillDatabase.getSkillName( skillId );
@@ -5023,7 +5023,9 @@ public class Parser
 				revision = revision.substring( 1 );
 				int targetRevision = Integer.parseInt( revision );
 				int currentRevision = StaticEntity.getRevision();
-				if ( currentRevision < targetRevision )
+				// A revision of zero means you're probably running in a debugger, in which
+				// case you should be able to run anything.
+				if ( currentRevision != 0 && currentRevision < targetRevision )
 				{
 					throw this.sinceException( String.valueOf( currentRevision ), revision, true );
 				}
@@ -5039,24 +5041,9 @@ public class Parser
 				int targetMajor = Integer.parseInt( target[ 0 ] );
 				int targetMinor = Integer.parseInt( target[ 1 ] );
 
-				// strip "KoLMafia v" from the front
-				String currentVersion = StaticEntity.getVersion();
-				currentVersion = currentVersion.substring( currentVersion.indexOf( "v" ) + 1 );
-
-				// Strip " rxxxx" from end
-				int rindex = currentVersion.indexOf( " r" );
-				if ( rindex != -1 )
+				if ( targetMajor > 21 || targetMajor == 21 && targetMinor > 9 )
 				{
-					currentVersion = currentVersion.substring( 0, rindex );
-				}
-
-				String [] current = currentVersion.split( "\\." );
-				int currentMajor = Integer.parseInt( current[ 0 ] );
-				int currentMinor = Integer.parseInt( current[ 1 ] );
-
-				if ( targetMajor > currentMajor || ( targetMajor == currentMajor && targetMinor > currentMinor ) )
-				{
-					throw this.sinceException( currentVersion, revision, false );
+					throw this.parseException("invalid 'since' format (21.09 was the final point release)");
 				}
 			}
 		}
