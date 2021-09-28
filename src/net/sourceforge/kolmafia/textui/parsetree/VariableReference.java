@@ -49,11 +49,6 @@ public class VariableReference
 		this.target = target;
 	}
 
-	public boolean valid()
-	{
-		return this.target != null;
-	}
-
 	@Override
 	public Type getType()
 	{
