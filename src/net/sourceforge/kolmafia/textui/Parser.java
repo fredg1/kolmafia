@@ -6097,14 +6097,19 @@ public class Parser
 	}
 
 	/**
-	 * Returns the content of {@link #currentLine}
-	 * starting at {@link #currentIndex}.
+	 * Returns the content of {@link #currentLine} starting at {@link #currentIndex}.
 	 */
 	private String restOfLine()
 	{
 		return this.currentLine.substring( this.currentIndex );
 	}
 
+	/**
+	 * Calls {@link #currentToken()} in order to skip any
+	 * comment or whitespace we would be in front of,
+	 * then return whether or not we reached the end
+	 * of the file.
+	 */
 	private boolean atEndOfFile()
 		throws InterruptedException
 	{
