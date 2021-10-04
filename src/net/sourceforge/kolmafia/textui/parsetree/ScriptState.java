@@ -77,7 +77,7 @@ public abstract class ScriptState
 		AshRuntime.indentLine( stream, indent );
 		stream.println( "<COMMAND " + this.state + ">" );
 	}
-	
+
 	@Override
 	public boolean assertBarrier()
 	{

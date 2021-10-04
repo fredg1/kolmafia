@@ -1176,7 +1176,7 @@ public class Parser
 		Scope scope = this.parseBlockOrSingleCommand( functionType, paramList, parentScope, false, false, false );
 
 		result.setScope( scope );
-		if ( !result.assertBarrier() && !functionType.equals( DataTypes.TYPE_VOID ) )
+		if ( !scope.assertBarrier() && !functionType.equals( DataTypes.TYPE_VOID ) )
 		{
 			functionErrors.submitSyntaxError( () -> {
 				this.error( functionLocation, "Missing return value" );
@@ -1544,7 +1544,7 @@ public class Parser
 					this.error( typeToken, "Type name '" + typeToken + "' is already defined" );
 				} );
 			}
-				
+
 			throw this.parseException( "Type name '" + typeName + "' is already defined" );
 		}
 		else
@@ -2214,7 +2214,7 @@ public class Parser
 	{
 		Scope result = new Scope( parentScope );
 
-		ParseTreeNode command = this.parseCommand( functionType, parentScope, noElse, allowBreak, allowContinue );
+		Command command = this.parseCommand( functionType, parentScope, noElse, allowBreak, allowContinue );
 		if ( command != null )
 		{
 			result.addCommand( command, this );
@@ -2977,7 +2977,7 @@ public class Parser
 
 		this.readToken(); // catch
 
-		ParseTreeNode body = this.parseBlock( null, null, parentScope, true, false, false );
+		Command body = this.parseBlock( null, null, parentScope, true, false, false );
 		if ( body == null )
 		{
 			Value value = this.parseExpression( parentScope );
@@ -4897,7 +4897,7 @@ public class Parser
 					conc.addString( lhs );
 					conc.addString( rhs.value );
 				}
-				
+
 				resultString.setLength( 0 );
 				continue;
 			}

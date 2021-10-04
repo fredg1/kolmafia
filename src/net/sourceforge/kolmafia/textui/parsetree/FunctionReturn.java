@@ -119,7 +119,7 @@ public class FunctionReturn
 		{
 			interpreter.setState( ScriptRuntime.State.RETURN );
 		}
-		
+
 		if ( this.expectedType == null )
 		{
 			return result;
@@ -159,7 +159,7 @@ public class FunctionReturn
 			this.returnValue.print( stream, indent + 1 );
 		}
 	}
-	
+
 	@Override
 	public boolean assertBarrier()
 	{

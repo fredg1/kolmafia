@@ -190,7 +190,7 @@ public class Switch
 		this.getCondition().print( stream, indent + 1 );
 		this.getScope().print( stream, indent + 1, tests, offsets, defaultIndex );
 	}
-	
+
 	@Override
 	public boolean assertBarrier()
 	{
