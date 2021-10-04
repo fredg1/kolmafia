@@ -38,6 +38,9 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.lsp4j.Location;
+import org.eclipse.lsp4j.Range;
+
 import net.sourceforge.kolmafia.textui.DataTypes;
 import net.sourceforge.kolmafia.textui.AshRuntime;
 import net.sourceforge.kolmafia.textui.ScriptRuntime;
@@ -47,15 +50,21 @@ public class If
 {
 	private final List<Conditional> elseLoops;
 
-	public If( final Scope scope, final Value condition )
+	public If( final Location location, final Scope scope, final Value condition )
 	{
-		super( scope, condition );
+		super( location, scope, condition );
 		this.elseLoops = new ArrayList<>();
 	}
 
 	public void addElseLoop( final Conditional elseLoop )
 	{
 		this.elseLoops.add( elseLoop );
+		this.setLocation(
+			new Location(
+				this.getLocation().getUri(),
+				new Range(
+					this.getLocation().getRange().getStart(),
+					elseLoop.getLocation().getRange().getEnd() ) ) );
 	}
 
 	@Override

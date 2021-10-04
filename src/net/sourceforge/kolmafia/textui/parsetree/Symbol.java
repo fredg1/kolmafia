@@ -38,24 +38,29 @@ import java.util.List;
 
 import org.eclipse.lsp4j.Location;
 
+/**
+ * A type of {@link ParseTreeNode}.
+ * Unlike {@link Command}, the "same" {@link Symbol} can appear multiple times,
+ * split between Definition and Reference.
+ */
 public abstract class Symbol
 	extends ParseTreeNode
 	implements Comparable<Symbol>
 {
 	public final String name;
 
-	protected final Location definition;
-	protected List<Location> references;
+	public final Location location;
+	public final List<Location> references;
 
 	public Symbol()
 	{
 		this( null, null );
 	}
 
-	public Symbol( final String name, final Location definitionLocation )
+	public Symbol( final String name, final Location location )
 	{
 		this.name = name;
-		this.definition = definitionLocation;
+		this.location = location;
 		this.references = new ArrayList<>();
 	}
 
@@ -64,9 +69,14 @@ public abstract class Symbol
 		return this.name;
 	}
 
+	public Location getLocation()
+	{
+		return this.location;
+	}
+
 	public Location getDefinitionLocation()
 	{
-		return this.definition;
+		return this.location;
 	}
 
 	public List<Location> getReferenceLocations()

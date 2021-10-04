@@ -33,32 +33,35 @@
 
 package net.sourceforge.kolmafia.textui.parsetree;
 
-import java.io.PrintStream;
-
 import org.eclipse.lsp4j.Location;
 
-import net.sourceforge.kolmafia.textui.AshRuntime;
-
-public class ElseIf
-	extends Conditional
+/**
+ * A type of {@link ParseTreeNode}.
+ * Unlike {@link Symbol}, every {@link Command} is unique.
+ */
+public abstract class Command
+	extends ParseTreeNode
 {
-	public ElseIf( final Location location, final Scope scope, final Value condition )
+	private Location location;
+
+	@Deprecated
+	public Command()
 	{
-		super( location, scope, condition );
+		this.location = null;
 	}
 
-	@Override
-	public String toString()
+	public Command( final Location location )
 	{
-		return "else if";
+		this.location = location;
 	}
 
-	@Override
-	public void print( final PrintStream stream, final int indent )
+	protected void setLocation( final Location location )
 	{
-		AshRuntime.indentLine( stream, indent );
-		stream.println( "<ELSE IF>" );
-		this.getCondition().print( stream, indent + 1 );
-		this.getScope().print( stream, indent + 1 );
+		this.location = location;
+	}
+
+	public Location getLocation()
+	{
+		return this.location;
 	}
 }

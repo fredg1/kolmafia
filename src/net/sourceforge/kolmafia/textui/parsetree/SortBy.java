@@ -39,6 +39,8 @@ import java.lang.IllegalArgumentException;
 
 import java.util.Arrays;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.KoLmafia;
 
 import net.sourceforge.kolmafia.textui.DataTypes;
@@ -47,7 +49,7 @@ import net.sourceforge.kolmafia.textui.Parser;
 import net.sourceforge.kolmafia.textui.ScriptRuntime;
 
 public class SortBy
-	extends ParseTreeNode
+	extends Command
 {
 	private final VariableReference aggregate;
 	private final Variable indexvar, valuevar;
@@ -57,9 +59,10 @@ public class SortBy
 	String fileName;
 	int lineNumber;
 
-	public SortBy( final VariableReference aggregate, final Variable indexvar,
-		       final Variable valuevar, final Value expr, final Parser parser )
+	public SortBy( final Location location, final VariableReference aggregate, final Variable indexvar,
+	               final Variable valuevar, final Value expr, final Parser parser )
 	{
+		super( location );
 		this.aggregate = aggregate;
 		this.indexvar = indexvar;
 		this.valuevar = valuevar;

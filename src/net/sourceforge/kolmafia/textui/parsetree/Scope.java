@@ -42,30 +42,30 @@ import net.sourceforge.kolmafia.textui.Parser;
 public class Scope
 	extends BasicScope
 {
-	private final ArrayList<ParseTreeNode> commands;
+	private final ArrayList<Command> commands;
 	private int barrier = BasicScope.BARRIER_NONE;
 	private boolean breakable = false;
 
 	public Scope( VariableList variables, final BasicScope parentScope )
 	{
 		super( variables, parentScope );
-		this.commands = new ArrayList<ParseTreeNode>();
+		this.commands = new ArrayList<>();
 	}
 
 	public Scope( final BasicScope parentScope )
 	{
 		super( parentScope );
-		this.commands = new ArrayList<ParseTreeNode>();
+		this.commands = new ArrayList<>();
 	}
 
 	public Scope( FunctionList functions, VariableList variables, TypeList types )
 	{
 		super( functions, variables, types, null );
-		this.commands = new ArrayList<ParseTreeNode>();
+		this.commands = new ArrayList<>();
 	}
 
 	@Override
-	public void addCommand( final ParseTreeNode c, final Parser p )
+	public void addCommand( final Command c, final Parser p )
 	{
 		if ( c == null )
 		{
@@ -96,13 +96,13 @@ public class Scope
 		}
 	}
 
-	public List<ParseTreeNode> getCommandList()
+	public List<Command> getCommandList()
 	{
 		return this.commands;
 	}
 
 	@Override
-	public Iterator<ParseTreeNode> getCommands()
+	public Iterator<Command> getCommands()
 	{
 		return this.commands.iterator();
 	}

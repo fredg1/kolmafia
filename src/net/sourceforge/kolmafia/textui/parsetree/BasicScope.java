@@ -40,6 +40,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.KoLmafia;
 
 import net.sourceforge.kolmafia.textui.DataTypes;
@@ -53,14 +55,14 @@ import net.sourceforge.kolmafia.textui.parsetree.Function.MatchType;
 import net.sourceforge.kolmafia.utilities.PauseObject;
 
 public abstract class BasicScope
-	extends ParseTreeNode
+	extends Command
 {
 	private final PauseObject pauser = new PauseObject();
 	private static long nextPause = System.currentTimeMillis();
-	
+
 	protected static final int BARRIER_NONE = 0;	// no return, etc. yet
 	protected static final int BARRIER_SEEN = 1;	// just seen
-	protected static final int BARRIER_PAST = 2;	// already warned about dead code	
+	protected static final int BARRIER_PAST = 2;	// already warned about dead code
 
 	protected TypeList types;
 	protected VariableList variables;
@@ -71,6 +73,9 @@ public abstract class BasicScope
 
 	public BasicScope( FunctionList functions, VariableList variables, TypeList types, BasicScope parentScope )
 	{
+		// Scopes need to be instantiated before we reach their end,
+		// so we can't send their location straight away.
+		super( null );
 		this.functions = ( functions == null ) ? new FunctionList() : functions;
 		this.types = ( types == null ) ? new TypeList() : types;
 		this.variables = ( variables == null ) ? new VariableList() : variables;
@@ -93,6 +98,18 @@ public abstract class BasicScope
 	public BasicScope( final BasicScope parentScope )
 	{
 		this( null, null, null, parentScope );
+	}
+
+	/**
+	 * Scopes need to be instantiated before we reach their end,
+	 * so we can't send their location straight away.
+	 */
+	public void setScopeLocation( final Location location )
+	{
+		if ( this.getLocation() == null )
+		{
+			this.setLocation( location );
+		}
 	}
 
 	public BasicScope getParentScope()
@@ -284,7 +301,7 @@ public abstract class BasicScope
 	}
 
 	private Function findFunction( final Function[] functions, boolean library, String name,
-                                   final List<Value> params, MatchType match, boolean vararg )
+	                               final List<Value> params, MatchType match, boolean vararg )
 	{
 		// Search the function list for a match
 		for ( Function function : functions )
@@ -334,7 +351,7 @@ public abstract class BasicScope
 
 		return null;
 	}
-	
+
 	public Function findVarargClash( final UserDefinedFunction f )
 	{
 		// We will consider functions from this scope and from the RuntimeLibrary.
@@ -402,12 +419,12 @@ public abstract class BasicScope
 	public Function findFunction( final String name, boolean hasParameters )
 	{
 		Function function = findFunction( name, this.functions, hasParameters );
-		
+
 		if ( function != null )
 		{
 			return function;
 		}
-		
+
 		function = findFunction( name, RuntimeLibrary.functions, hasParameters );
 
 		return function;
@@ -416,7 +433,7 @@ public abstract class BasicScope
 	public Function findFunction( final String name, final FunctionList functionList, final boolean hasParameters )
 	{
 		Function[] functions = functionList.findFunctions( name );
-		
+
 		if ( functions.length == 0 )
 		{
 			return null;
@@ -442,14 +459,14 @@ public abstract class BasicScope
 				}
 				paramCount = 1;
 			}
-			
+
 			while ( refIterator.hasNext() )
 			{
 				refIterator.next();
 				isSingleString = false;
 				++paramCount;
 			}
-			
+
 			if ( paramCount == 0 )
 			{
 				if ( !hasParameters )
@@ -463,12 +480,12 @@ public abstract class BasicScope
 				{
 					return functions[ i ];
 				}
-				
+
 				if ( minParamCount == 1 )
 				{
 					isAmbiguous = true;
 				}
-				
+
 				bestMatch = functions[ i ];
 				minParamCount = 1;
 			}
@@ -483,10 +500,10 @@ public abstract class BasicScope
 				else if ( minParamCount == paramCount )
 				{
 					isAmbiguous = true;
-				}				
+				}
 			}
 		}
-		
+
 		if ( isAmbiguous )
 		{
 			return null;
@@ -528,10 +545,10 @@ public abstract class BasicScope
 		AshRuntime.indentLine( stream, indent + 1 );
 		stream.println( "<COMMANDS>" );
 
-		Iterator<ParseTreeNode> it = this.getCommands();
+		Iterator<Command> it = this.getCommands();
 		while ( it.hasNext() )
 		{
-			ParseTreeNode currentCommand = it.next();
+			Command currentCommand = it.next();
 			currentCommand.print( stream, indent + 2 );
 		}
 	}
@@ -559,10 +576,10 @@ public abstract class BasicScope
 			Value result = DataTypes.VOID_VALUE;
 			interpreter.traceIndent();
 
-			Iterator<ParseTreeNode> it = this.getCommands();
+			Iterator<Command> it = this.getCommands();
 			while ( it.hasNext() )
 			{
-				ParseTreeNode current = it.next();
+				Command current = it.next();
 				result = current.execute( interpreter );
 
 				// Abort processing now if command failed
@@ -596,7 +613,7 @@ public abstract class BasicScope
 		}
 	}
 
-	public abstract void addCommand( final ParseTreeNode c, final Parser p );
+	public abstract void addCommand( final Command c, final Parser p );
 
-	public abstract Iterator<ParseTreeNode> getCommands();
+	public abstract Iterator<Command> getCommands();
 }
