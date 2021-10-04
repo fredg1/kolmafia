@@ -1348,8 +1348,11 @@ public class Parser
 			}
 			else
 			{
-				throw this.parseException( "Encountered 'break' outside of loop" );
+				result = new LoopBreak();
 			}
+			else
+			{
+				this.error( commandStart, "Encountered 'break' outside of loop" );
 
 			this.readToken(); //break
 		}
@@ -1362,8 +1365,11 @@ public class Parser
 			}
 			else
 			{
-				throw this.parseException( "Encountered 'continue' outside of loop" );
+				result = new LoopContinue();
 			}
+			else
+			{
+				this.error( commandStart, "Encountered 'continue' outside of loop" );
 
 			this.readToken(); //continue
 		}
@@ -1455,7 +1461,7 @@ public class Parser
 		}
 		else
 		{
-			throw this.parseException( ";", this.currentToken() );
+			this.parseException( ";", this.currentToken() );
 		}
 
 		return result;
