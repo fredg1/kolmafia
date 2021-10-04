@@ -432,13 +432,6 @@ public class Parser
 		return this.notifyRecipient;
 	}
 
-	public List<Token> getTokens( final Range range )
-	{
-		// Done this way simply as to not encumber this section,
-		// since that method is a bit bulky.
-		return this.getTokensInRange( range );
-	}
-
 	public static Scope getExistingFunctionScope()
 	{
 		return new Scope( RuntimeLibrary.functions.clone(), null, DataTypes.simpleTypes.clone() );
@@ -1262,6 +1255,7 @@ public class Parser
 		{
 			postVariableToken.setType( SemanticTokenTypes.Operator );
 			this.readToken(); // read =
+		}
 
 			if ( this.currentToken().equals( "{" ) )
 			{
@@ -1278,19 +1272,27 @@ public class Parser
 						Location errorLocation = rhs != null ? rhs.location :
 							this.makeLocation( this.peekLastToken() );
 
-						this.error( errorLocation, "Cannot initialize " + variableName + " of type " + t + " with an aggregate literal" );
-						variableError = true;
-					}
-				}
-				else
-				{
-					rhs = this.parseAggregateLiteral( scope, (AggregateType) ltype );
-				}
+			if ( ltype instanceof AggregateType )
+			{
+				rhs = this.parseAggregateLiteral( scope, (AggregateType) ltype );
 			}
 			else
 			{
-				rhs = this.parseExpression( scope );
+				rhs = this.parseAggregateLiteral( scope, new BadAggregateType() );
+
+				if ( !variableError && allowInitialization && !ltype.isBad() )
+				{
+					Location errorLocation = rhs != null ? rhs.location :
+						this.makeLocation( this.peekLastToken() );
+
+					this.error( errorLocation, "Cannot initialize " + variableName + " of type " + t + " with an aggregate literal" );
+					variableError = true;
+				}
 			}
+		}
+		else if ( postVariableToken.equals( "=" ) )
+		{
+			rhs = this.parseExpression( scope );
 
 			if ( rhs != null )
 			{
@@ -1782,6 +1784,8 @@ public class Parser
 				break;
 			}
 
+			LocatedValue lhs;
+
 			// If we know we are reading an ArrayLiteral or haven't
 			// yet ensured we are reading a MapLiteral, allow any
 			// type of Value as the "key"
@@ -1867,7 +1871,7 @@ public class Parser
 				// not really correct since, to get here, what we got so far must have matched
 				// the value's datatype, but we can't tell what they put after the :, so just assume
 				// it's a key:value pair anyway
-				this.error( lhs.location, "cannot include keys when making an array literal" );
+				this.error( lhs.location, "Cannot include keys when making an array literal" );
 				aggregateError = true;
 			}
 
@@ -2382,15 +2386,15 @@ public class Parser
 
 		while ( true )
 		{
-			if ( this.currentToken().equals( "}" ) )
-			{
-				this.readToken(); // }
-				break;
-			}
-
 			if ( this.atEndOfFile() )
 			{
 				this.unexpectedTokenError( "}", this.currentToken() );
+				break;
+			}
+
+			if ( this.currentToken().equals( "}" ) )
+			{
+				this.readToken(); // }
 				break;
 			}
 
