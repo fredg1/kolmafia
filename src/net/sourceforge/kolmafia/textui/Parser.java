@@ -2710,8 +2710,21 @@ public class Parser
 		}
 		else
 		{
-			throw this.parseException( "from", this.currentToken() );
+			if ( !forError )
+			{
+				this.error( nameLocation, "Reserved word '" + name + "' cannot be an index variable name" );
+				forError = true;
+			}
+
+			name = null;
 		}
+		else if ( parentScope.findVariable( name ) != null )
+		{
+			if ( !forError )
+			{
+				this.error( nameLocation, "Index variable '" + name + "' is already defined" );
+				forError = true;
+			}
 
 		Value initial = this.parseExpression( parentScope );
 
@@ -2725,21 +2738,26 @@ public class Parser
 		if ( this.currentToken().equalsIgnoreCase( "upto" ) )
 		{
 			direction = 1;
+			this.readToken(); // upto
 		}
 		else if ( this.currentToken().equalsIgnoreCase( "downto" ) )
 		{
 			direction = -1;
+			this.readToken(); // downto
 		}
 		else if ( this.currentToken().equalsIgnoreCase( "to" ) )
 		{
 			direction = 0;
+			this.readToken(); // to
 		}
 		else
 		{
-			throw this.parseException( "to, upto, or downto", this.currentToken() );
+			if ( !forSyntaxError )
+			{
+				this.parseException( "to, upto, or downto", this.currentToken() );
+			}
+			forError = forSyntaxError = true;
 		}
-
-		this.readToken(); // upto/downto
 
 		Value last = this.parseExpression( parentScope );
 
