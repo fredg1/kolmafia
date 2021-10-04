@@ -1811,7 +1811,11 @@ public class Parser
 		}
 		else
 		{
-			throw this.parseException( "}", this.currentToken() );
+			this.readToken(); //read }
+		}
+		else
+		{
+			this.parseException( "}", this.currentToken() );
 		}
 
 		return scope;
