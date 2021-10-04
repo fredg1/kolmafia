@@ -3973,6 +3973,7 @@ public class Parser
 		Token name = this.currentToken();
 		Type type = scope.findType( name.content );
 		boolean plurals = false;
+		boolean typedConstantError = false, typedConstantSyntaxError = false;
 
 		if ( this.parseIdentifier( name ) )
 		{
@@ -4015,14 +4016,28 @@ public class Parser
 
 		if ( type == null )
 		{
-			throw this.parseException( "Unknown type " + name );
+			if ( !typedConstantSyntaxError )
+			{
+				this.error( typedConstantStart, "Unknown type " + name );
+			}
+			typedConstantError = typedConstantSyntaxError = true;
+
+			type = Type.BAD_TYPE;
+		}
+		else
+		{
+			type.addReference( this.makeLocation( typedConstantStart ) );
 		}
 
-		type.addReference( this.makeLocation( typedConstantStart ) );
-
-		if ( !type.isPrimitive() )
+		if ( !type.isPrimitive() && type != Type.BAD_TYPE )
 		{
-			throw this.parseException( "Non-primitive type " + name );
+			if ( !typedConstantError )
+			{
+				this.error( typedConstantStart, "Non-primitive type " + name );
+				typedConstantError = true;
+			}
+
+			type = Type.BAD_TYPE;
 		}
 
 		if ( this.currentToken().equals( "[" ) )
@@ -4031,7 +4046,12 @@ public class Parser
 		}
 		else
 		{
-			throw this.parseException( "[", this.currentToken() );
+			if ( !typedConstantSyntaxError )
+			{
+				this.parseException( "[", this.currentToken() );
+			}
+
+			return Value.BAD_VALUE;
 		}
 
 		if ( plurals )
@@ -4046,7 +4066,13 @@ public class Parser
 			{
 				return value;	// implicit enumeration
 			}
-			throw this.parseException( "Can't enumerate all " + name );
+
+			if ( !typedConstantSyntaxError )
+			{
+				this.error( "Can't enumerate all " + name );
+			}
+
+			return Value.BAD_VALUE;
 		}
 
 		StringBuilder resultString = new StringBuilder();
@@ -4058,7 +4084,16 @@ public class Parser
 
 			if ( i == line.length() )
 			{
-				throw this.parseException( "No closing ] found" );
+				this.currentLine = this.currentLine.clear();
+				this.currentToken = null;
+
+				if ( !typedConstantError )
+				{
+					this.error( "No closing ] found" );
+				}
+
+				String input = resultString.toString().trim();
+				return this.parseLiteral( type, input );
 			}
 
 			char c = line.charAt( i );
