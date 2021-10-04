@@ -891,10 +891,10 @@ public class Parser
 
 		if ( Parser.isReservedWord( functionName.content ) )
 		{
-			throw this.parseException( "Reserved word '" + functionName + "' cannot be used as a function name" );
+			this.error( functionStart, "Reserved word '" + functionName + "' cannot be used as a function name" );
+			functionError = true;
 		}
 
-		this.readToken(); //read Function name
 		this.readToken(); //read (
 
 		VariableList paramList = new VariableList();
@@ -911,31 +911,52 @@ public class Parser
 			Type paramType = this.parseType( parentScope, false );
 			if ( paramType == null )
 			{
-				throw this.parseException( ")", this.currentToken() );
+				if ( !parameterError )
+				{
+					this.parseException( parameterStart, ")", this.currentToken() );
+				}
+				functionError = parameterError = true;
+
+				break;
 			}
 
 			if ( this.currentToken().equals( "..." ) )
 			{
+				this.readToken(); //read ...
+
 				// We can only have a single vararg parameter
 				if ( vararg )
 				{
-					throw this.parseException( "Only one vararg parameter is allowed" );
+					if ( !parameterError )
+					{
+						this.error( parameterStart, "Only one vararg parameter is allowed" );
+					}
+					functionError = parameterError = true;
+
+					paramType = Type.BAD_TYPE;
 				}
-				// Make an vararg type out of the previously parsed type.
-				paramType = new VarArgType( paramType );
+				else
+				{
+					// Make an vararg type out of the previously parsed type.
+					paramType = new VarArgType( paramType );
 
-				this.readToken(); //read ...
+					paramType.getReferenceLocations().add( this.makeLocation( parameterStart ) );
 
-				paramType.getReferenceLocations().add( this.makeLocation( varargStart ) );
-
-				// Only one vararg is allowed
-				vararg = true;
+					// Only one vararg is allowed
+					vararg = true;
+				}
 			}
 
 			Variable param = this.parseVariable( paramType, null );
 			if ( param == null )
 			{
-				throw this.parseException( "identifier", this.currentToken() );
+				if ( !parameterError )
+				{
+					this.parseException( parameterStart, "identifier", this.currentToken() );
+				}
+				functionError = parameterError = true;
+
+				continue;
 			}
 
 			if ( !paramList.add( param ) )
@@ -946,9 +967,10 @@ public class Parser
 			if ( !this.currentToken().equals( ")" ) )
 			{
 				// The single vararg parameter must be the last one
-				if ( vararg )
+				if ( vararg && !parameterError )
 				{
-					throw this.parseException( "The vararg parameter must be the last one" );
+					this.error( parameterStart, "The vararg parameter must be the last one" );
+					functionError = parameterError = true;
 				}
 
 				if ( this.currentToken().equals( "," ) )
@@ -957,7 +979,15 @@ public class Parser
 				}
 				else
 				{
-					throw this.parseException( ",", this.currentToken() );
+					this.readToken(); //read comma
+				}
+				else
+				{
+					if ( !parameterError )
+					{
+						this.parseException( parameterStart, ",", this.currentToken() );
+					}
+					functionError = parameterError = true;
 				}
 			}
 
@@ -969,31 +999,34 @@ public class Parser
 
 		UserDefinedFunction f = new UserDefinedFunction( functionName.content, functionType, variableReferences );
 
-		if ( f.overridesLibraryFunction() )
+		if ( !functionError && f.overridesLibraryFunction() )
 		{
-			throw this.overridesLibraryFunctionException( f );
+			this.overridesLibraryFunctionError( functionStart, f );
+			functionError = true;
 		}
 
 		UserDefinedFunction existing = parentScope.findFunction( f );
 
-		if ( existing != null && existing.getScope() != null )
+		if ( !functionError && existing != null && existing.getScope() != null )
 		{
-			throw this.multiplyDefinedFunctionException( f );
+			this.multiplyDefinedFunctionError( functionStart, f );
+			functionError = true;
 		}
 
-		if ( vararg )
+		if ( !functionError && vararg )
 		{
 			Function clash = parentScope.findVarargClash( f );
 
 			if ( clash != null )
 			{
-				throw this.varargClashException( f, clash );
+				this.varargClashError( functionStart, f, clash );
+				functionError = true;
 			}
 		}
 
 		// Add new function or replace existing forward reference
 
-		UserDefinedFunction result = parentScope.replaceFunction( existing, f );
+		UserDefinedFunction result = functionError ? f : parentScope.replaceFunction( existing, f );
 
 		if ( this.currentToken().equals( ";" ) )
 		{
@@ -1007,7 +1040,7 @@ public class Parser
 		result.setScope( scope );
 		if ( !result.assertBarrier() && !functionType.equals( DataTypes.TYPE_VOID ) )
 		{
-			throw this.parseException( "Missing return value" );
+			this.error( functionLocation, "Missing return value" );
 		}
 
 		return result;
