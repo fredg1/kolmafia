@@ -1272,7 +1272,7 @@ public class Parser
 
 		else if ( ( result = this.parseReturn( functionType, scope ) ) != null )
 		{
-        }
+		}
 		else if ( ( result = this.parseBasicScript() ) != null )
 		{
 			// basic_script doesn't have a ; token
@@ -1300,7 +1300,7 @@ public class Parser
 		}
 		else if ( ( result = this.parseRepeat( functionType, scope ) ) != null )
 		{
-        }
+		}
 		else if ( ( result = this.parseSwitch( functionType, scope, allowContinue ) ) != null )
 		{
 			// switch doesn't have a ; token
@@ -1328,10 +1328,10 @@ public class Parser
 		}
 		else if ( ( result = this.parseSort( scope ) ) != null )
 		{
-        }
+		}
 		else if ( ( result = this.parseRemove( scope ) ) != null )
 		{
-        }
+		}
 		else if ( ( result = this.parseBlock( functionType, null, scope, noElse, allowBreak, allowContinue ) ) != null )
 		{
 			// {} doesn't have a ; token
@@ -1339,7 +1339,7 @@ public class Parser
 		}
 		else if ( ( result = this.parseValue( scope ) ) != null )
 		{
-        }
+		}
 		else
 		{
 			return null;
@@ -3513,7 +3513,7 @@ public class Parser
 		// numbers
 		else if ( ( result = this.parseNumber() ) != null )
 		{
-        }
+		}
 
 		else if ( ( result = this.parseString( scope ) ) != null )
 		{
@@ -3529,7 +3529,7 @@ public class Parser
 
 		else if ( ( result = this.parseCatchValue( scope ) ) != null )
 		{
-        }
+		}
 
 		else if ( ( result = this.parsePreIncDec( scope ) ) != null )
 		{
@@ -3538,11 +3538,11 @@ public class Parser
 
 		else if ( ( result = this.parseInvoke( scope ) ) != null )
 		{
-        }
+		}
 
 		else if ( ( result = this.parseCall( scope ) ) != null )
 		{
-        }
+		}
 
 		else
 		{
@@ -3568,7 +3568,7 @@ public class Parser
 				}
 				if ( ( result = this.parseVariableReference( scope ) ) != null )
 				{
-                }
+				}
 			}
 		}
 
@@ -5084,28 +5084,28 @@ public class Parser
 
 	private ScriptException multiplyDefinedFunctionException( final Function f )
 	{
-        String buffer = "Function '" +
-                f.getSignature() +
-                "' defined multiple times.";
-        return this.parseException( buffer );
+		String buffer = "Function '" +
+				f.getSignature() +
+				"' defined multiple times.";
+		return this.parseException( buffer );
 	}
 
 	private ScriptException overridesLibraryFunctionException( final Function f )
 	{
-        String buffer = "Function '" +
-                f.getSignature() +
-                "' overrides a library function.";
-        return this.parseException( buffer );
+		String buffer = "Function '" +
+				f.getSignature() +
+				"' overrides a library function.";
+		return this.parseException( buffer );
 	}
 
 	private ScriptException varargClashException( final Function f, final Function clash )
 	{
-        String buffer = "Function '" +
-                f.getSignature() +
-                "' clashes with existing function '" +
-                clash.getSignature() +
-                "'.";
-        return this.parseException( buffer );
+		String buffer = "Function '" +
+				f.getSignature() +
+				"' clashes with existing function '" +
+				clash.getSignature() +
+				"'.";
+		return this.parseException( buffer );
 	}
 
 	public final ScriptException sinceException( String current, String target, boolean targetIsRevision )
