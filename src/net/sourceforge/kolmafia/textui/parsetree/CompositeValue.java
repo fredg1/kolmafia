@@ -141,6 +141,9 @@ public abstract class CompositeValue
 	}
 
 	@Override
+	public abstract String toString();
+
+	@Override
 	public Object toJSON()
 		throws JSONException
 	{
