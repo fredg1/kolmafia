@@ -38,7 +38,7 @@ public abstract class AggregateLiteral
 {
 	protected AggregateValue aggr = null;
 
-        public AggregateLiteral( final AggregateType type )
+	public AggregateLiteral( final AggregateType type )
 	{
 		super( type );
 	}

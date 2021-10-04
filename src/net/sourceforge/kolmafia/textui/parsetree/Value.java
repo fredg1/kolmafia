@@ -67,60 +67,46 @@ public class Value
 	public String contentString = null;
 	public Object content = null;
 
-	@Deprecated
 	public Value()
 	{
 		this.type = DataTypes.VOID_TYPE;
 	}
 
-	@Deprecated
 	public Value( final long value )
 	{
 		this.type = DataTypes.INT_TYPE;
 		this.contentLong = value;
 	}
 
-	@Deprecated
 	public Value( final boolean value )
 	{
 		this.type = DataTypes.BOOLEAN_TYPE;
 		this.contentLong = value ? 1 : 0;
 	}
 
-	@Deprecated
 	public Value( final String value )
 	{
 		this.type = DataTypes.STRING_TYPE;
 		this.contentString = value == null ? "" : value;
 	}
 
-	@Deprecated
 	public Value( final double value )
 	{
 		this.type = DataTypes.FLOAT_TYPE;
 		this.contentLong = Double.doubleToRawLongBits( value );
 	}
 
-	@Deprecated
 	public Value( final Type type )
 	{
 		this.type = type;
 	}
 
-	public Value( final Type type, final Location location )
-	{
-		super( location );
-		this.type = type;
-	}
-
-	@Deprecated
 	public Value( final Type type, final String contentString )
 	{
 		this.type = type;
 		this.contentString = contentString;
 	}
 
-	@Deprecated
 	public Value( final Type type, final long contentLong, final String contentString )
 	{
 		this.type = type;
@@ -128,7 +114,6 @@ public class Value
 		this.contentString = contentString;
 	}
 
-	@Deprecated
 	public Value( final Type type, final String contentString, final Object content )
 	{
 		this.type = type;
@@ -136,7 +121,6 @@ public class Value
 		this.content = content;
 	}
 
-	@Deprecated
 	public Value( final Type type, final long contentLong, final String contentString, final Object content )
 	{
 		this.type = type;
@@ -145,7 +129,6 @@ public class Value
 		this.content = content;
 	}
 
-	@Deprecated
 	public Value( final Value original )
 	{
 		this.type = original.type;
@@ -268,7 +251,7 @@ public class Value
 	{
 		return this;
 	}
-	
+
 	public Value asProxy()
 	{
 		if ( this.getType() == DataTypes.CLASS_TYPE )
@@ -337,7 +320,7 @@ public class Value
 		}
 		return this;
 	}
-	
+
 	/* null-safe version of the above */
 	public static Value asProxy( Value value )
 	{
@@ -525,7 +508,7 @@ public class Value
 
 		if ( saw_backslash )
 		{
-			buffer.append('\\');
+			buffer.append( '\\' );
 		}
 
 		return buffer.toString();
@@ -545,14 +528,14 @@ public class Value
 		List<String> names = type.getAmbiguousNames( string, value, false );
 		if ( names != null && names.size() > 1 )
 		{
-            String message = "Multiple matches for " +
-                    string +
-                    "; using " +
-                    value.toString() +
-                    " in " +
-                    Parser.getLineAndFile( filename, line ) +
-                    ". Clarify by using one of:";
-            RequestLogger.printLine( message );
+			String message = "Multiple matches for " +
+					string +
+					"; using " +
+					value.toString() +
+					" in " +
+					Parser.getLineAndFile( filename, line ) +
+					". Clarify by using one of:";
+			RequestLogger.printLine( message );
 			for ( String str : names )
 			{
 				RequestLogger.printLine( str );
@@ -613,6 +596,32 @@ public class Value
 		else
 		{
 			return this.toString();
+		}
+	}
+
+	public final LocatedValue wrap( final Location location )
+	{
+		return new LocatedValue( location );
+	}
+
+	/**
+	 * {@link Value}s are used in various ways outside of {@link Parser}.
+	 * From constants to instances made at runtime (i.e. dynamically), we
+	 * can't force {@link Value} to hold a {@link Location} without imposing
+	 * an useless burden on the rest of KoLmafia, and tons of null checks.
+	 * <p>
+	 * So instead, we use this class to pass around locations throughout
+	 * {@link Parser}.
+	 */
+	public final class LocatedValue
+	{
+		public final Value value;
+		public final Location location;
+
+		private LocatedValue( final Location location )
+		{
+			this.value = Value.this;
+			this.location = location;
 		}
 	}
 }

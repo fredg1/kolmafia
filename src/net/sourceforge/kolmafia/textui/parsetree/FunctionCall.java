@@ -37,8 +37,6 @@ import java.io.PrintStream;
 
 import java.util.List;
 
-import org.eclipse.lsp4j.Location;
-
 import net.sourceforge.kolmafia.KoLmafia;
 
 import net.sourceforge.kolmafia.textui.DataTypes;
@@ -55,15 +53,9 @@ public class FunctionCall
 	protected final String fileName;
 	protected final int lineNumber;
 
-	public FunctionCall( final Location location, final Function target, final List<Value> params, final Parser parser )
+	public FunctionCall( final Function target, final List<Value> params, final Parser parser )
 	{
-		super( location );
 		this.target = target;
-		if ( target != null && location != null && target instanceof UserDefinedFunction )
-		{
-			// FIXME parser find a way to collect references to LibraryFunctions
-			target.addReference( location );
-		}
 		this.params = params;
 		this.fileName = parser.getShortFileName();
 		this.lineNumber = parser.getLineNumber();
