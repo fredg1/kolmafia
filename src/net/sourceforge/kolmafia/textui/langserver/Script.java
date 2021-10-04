@@ -50,7 +50,7 @@ import net.sourceforge.kolmafia.textui.Parser;
 import net.sourceforge.kolmafia.textui.Parser.AshDiagnostic;
 import net.sourceforge.kolmafia.textui.parsetree.Scope;
 
-class Script
+public class Script
 {
 	final AshLanguageServer parent;
 	final File file;
@@ -95,7 +95,6 @@ class Script
 	{
 		Parser parser;
 		Scope scope;
-		Map<File, Parser> imports;
 
 		private Thread parserThread;
 
@@ -121,8 +120,11 @@ class Script
 				this.parserThread.setName( Script.this.file.getName() + " - Parser" );
 			}
 
-			this.imports = Collections.synchronizedMap( new HashMap<>() );
-			this.parser = new LSParser( Script.this.file, Script.this.getStream(), this.imports );
+			this.parser =
+				new LSParser(
+					Script.this.file,
+					Script.this.getStream(),
+					Collections.synchronizedMap( new HashMap<>() ) );
 
 			try
 			{
@@ -164,7 +166,7 @@ class Script
 		{
 			this.waitForParsing();
 
-			if ( Script.this.handler != this || Thread.interrupted() )
+			if ( Script.this.handler != this || this.parser == null || Thread.interrupted() )
 			{
 				// We've been kicked out
 				return;
@@ -175,25 +177,28 @@ class Script
 			// don't change the name accordingly; it would change too fast.
 			Thread.currentThread().setName( Script.this.file.getName() + " - Diagnostics" );
 
-			for ( final Map.Entry<File, Parser> entry : this.imports.entrySet() )
+			synchronized ( this.parser.getImports() )
 			{
-				final File file = entry.getKey();
-				final Parser parser = entry.getValue();
-
-				final List<Diagnostic> diagnostics = new ArrayList<>();
-
-				for ( final AshDiagnostic diagnostic : parser.getDiagnostics() )
+				for ( final Map.Entry<File, Parser> entry : this.parser.getImports().entrySet() )
 				{
-					if ( diagnostic.originatesFrom( parser ) )
-					{
-						diagnostics.add( diagnostic.toLspDiagnostic() );
-					}
-				}
+					final File file = entry.getKey();
+					final Parser parser = entry.getValue();
 
-				Script.this.parent.client.publishDiagnostics(
-					new PublishDiagnosticsParams(
-						file.toURI().toString(),
-						diagnostics ) );
+					final List<Diagnostic> diagnostics = new ArrayList<>();
+
+					for ( final AshDiagnostic diagnostic : parser.getDiagnostics() )
+					{
+						if ( diagnostic.originatesFrom( parser ) )
+						{
+							diagnostics.add( diagnostic.toLspDiagnostic() );
+						}
+					}
+
+					Script.this.parent.client.publishDiagnostics(
+						new PublishDiagnosticsParams(
+							file.toURI().toString(),
+							diagnostics ) );
+				}
 			}
 
 			Thread.currentThread().setName( previousThreadName );
