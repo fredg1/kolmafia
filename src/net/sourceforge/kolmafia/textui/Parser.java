@@ -1023,6 +1023,7 @@ public class Parser
 			functionError = true;
 		}
 
+		this.readToken(); //read Function name
 		this.readToken(); //read (
 
 		VariableList paramList = new VariableList();
@@ -1231,8 +1232,6 @@ public class Parser
 		boolean variableError = false;
 		Variable result;
 
-		this.readToken(); // read name
-
 		if ( Parser.isReservedWord( variableName.content ) )
 		{
 			this.error( variableName, "Reserved word '" + variableName + "' cannot be a variable name" );
@@ -1250,6 +1249,7 @@ public class Parser
 			result = new Variable( variableName.content, t, this.makeLocation( variableName ) );
 		}
 
+		this.readToken(); // read name
 		// If we are parsing a parameter declaration, we are done.
 		// Otherwise, we must initialize the variable.
 
@@ -2945,8 +2945,8 @@ public class Parser
 		}
 
 		if ( this.nextToken() == null ||
-		     "(".equals( this.nextToken() ) ||
-		     "=".equals( this.nextToken() ) )
+		     this.nextToken().equals( "(" ) ||
+		     this.nextToken().equals( "=" ) )
 		{	// it's a call to a function named sort(), or an assigment to
 			// a variable named sort, not the sort statement.
 			return null;
@@ -3681,8 +3681,6 @@ public class Parser
 		nameToken.setType( SemanticTokenTypes.Struct );
 		boolean newRecordError = false, newRecordSyntaxError = false;
 
-		this.readToken(); //name
-
 		if ( type != null )
 		{
 			scope.addReference( type, this.makeLocation( nameToken ) );
@@ -3703,6 +3701,8 @@ public class Parser
 		}
 
 		RecordType target = (RecordType) type;
+
+		this.readToken(); //name
 
 		List<Value> params = new ArrayList<>();
 		String [] names = target.getFieldNames();
@@ -4184,13 +4184,13 @@ public class Parser
 		operToken.setType( SemanticTokenTypes.Operator );
 		String operStr = this.currentToken().equals( "++" ) ? Parser.POST_INCREMENT : Parser.POST_DECREMENT;
 
-		this.readToken(); // oper
-
 		int ltype = lhs.value.getType().getType();
 		if ( ltype != DataTypes.TYPE_INT && ltype != DataTypes.TYPE_FLOAT && !lhs.value.getType().isBad() )
 		{
 			this.error( lhs.location, operStr + " requires a numeric variable reference" );
 		}
+
+		this.readToken(); // oper
 
 		Operator oper = new Operator( this.makeLocation( operToken ), operStr, this );
 
@@ -5372,8 +5372,6 @@ public class Parser
 
 		Token name = this.currentToken();
 		Variable var = scope.findVariable( name.content, true );
-
-		this.readToken(); // read name
 
 		if ( var != null )
 		{
