@@ -1763,7 +1763,11 @@ public class Parser
 			}
 			else
 			{
-				throw this.parseException( ";", this.currentToken() );
+				this.readToken(); // ;
+			}
+			else
+			{
+				this.parseException( ";", this.currentToken() );
 			}
 		}
 
