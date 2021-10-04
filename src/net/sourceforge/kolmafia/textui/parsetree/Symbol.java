@@ -43,11 +43,6 @@ public abstract class Symbol
 
 	public final Location location;
 
-	public Symbol()
-	{
-		this( null, null );
-	}
-
 	public Symbol( final String name, final Location location )
 	{
 		this.name = name;

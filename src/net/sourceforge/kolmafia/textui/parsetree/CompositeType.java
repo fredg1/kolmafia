@@ -61,7 +61,12 @@ public abstract class CompositeType
 	 */
 	public abstract Type getDataType();
 
-	public abstract Type getDataType( final Value key );
+	/**
+	 * For {@link RecordType}, returns the type of the value associated with this key (if any).
+	 * 
+	 * <p>For {@link AggregateType}, use {@link CompositeType#getDataType()}.
+	 */
+	public abstract Type getDataType( final Object key );
 
 	public abstract Value getKey( final Value key );
 
