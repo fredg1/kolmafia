@@ -2378,13 +2378,26 @@ public class Parser
 
 		this.readToken(); // sort
 
+		Position aggregateStart = this.here();
+
 		// Get an aggregate reference
 		Value aggregate = this.parseVariableReference( parentScope );
+		AggregateType type;
 
 		if ( !( aggregate instanceof VariableReference ) ||
 		     !( aggregate.getType().getBaseType() instanceof AggregateType ) )
 		{
-			throw this.parseException( "Aggregate reference expected" );
+			if ( aggregate.getType().getBaseType().simpleType() != Type.BAD_TYPE )
+			{
+				this.error( aggregateStart, "Aggregate reference expected" );
+			}
+
+			aggregate = VariableReference.BAD_VARIABLE_REFERENCE;
+			type = AggregateType.BAD_AGGREGATE;
+		}
+		else
+		{
+			type = (AggregateType) aggregate.getType().getBaseType();
 		}
 
 		if ( this.currentToken().equalsIgnoreCase( "by" ) )
@@ -2393,15 +2406,14 @@ public class Parser
 		}
 		else
 		{
-			throw this.parseException( "by", this.currentToken() );
+			this.parseException( "by", this.currentToken() );
 		}
 
 		// Define key variables of appropriate type
 		VariableList varList = new VariableList();
-		AggregateType type = (AggregateType) aggregate.getType().getBaseType();
-		Variable valuevar = new Variable( "value", type.getDataType(), null );
+		Variable valuevar = new Variable( "value", type.getDataType(), this.make0WidthLocation() );
 		varList.add( valuevar );
-		Variable indexvar = new Variable( "index", type.getIndexType(), null );
+		Variable indexvar = new Variable( "index", type.getIndexType(), this.make0WidthLocation() );
 		varList.add( indexvar );
 
 		// Parse the key expression in a new scope containing 'index' and 'value'
