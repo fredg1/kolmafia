@@ -1191,12 +1191,21 @@ public class Parser
 			return false;
 		}
 
+		Position typedefStart = this.here();
+		boolean typedefError = false;
+
 		this.readToken(); // read typedef
 
 		Type t = this.parseType( parentScope, true );
 		if ( t == null )
 		{
-			throw this.parseException( "Missing data type for typedef" );
+			if ( !typedefError )
+			{
+				this.error( typedefStart, "Missing data type for typedef" );
+				typedefError = true;
+			}
+
+			t = Type.BAD_TYPE;
 		}
 
 		Token typeName = this.currentToken();
@@ -1207,11 +1216,18 @@ public class Parser
 		}
 		else if ( !this.parseIdentifier( typeName.content ) )
 		{
-			throw this.parseException( "Invalid type name '" + typeName + "'" );
+			if ( !typedefError )
+			{
+				this.error( nameStart, "Invalid type name '" + typeName + "'" );
+				typedefError = true;
+			}
+
+			typeName = null;
+			// don't read
 		}
 		else if ( Parser.isReservedWord( typeName.content ) )
 		{
-			throw this.parseException( "Reserved word '" + typeName + "' cannot be a type name" );
+			this.readToken(); // read name
 		}
 		else
 		{
@@ -1221,7 +1237,8 @@ public class Parser
 		Type existingType = parentScope.findType( typeName.content );
 		if ( existingType != null )
 		{
-			if ( existingType.getBaseType().equals( t ) )
+			if ( existingType.getBaseType().equals( t ) ||
+			     existingType.getBaseType().simpleType() == Type.BAD_TYPE )
 			{
 				// It is OK to redefine a typedef with an equivalent type
 				return true;
