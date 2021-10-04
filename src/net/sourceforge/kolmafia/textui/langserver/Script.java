@@ -165,28 +165,25 @@ class Script
 				return;
 			}
 
-			final Map<String, List<Diagnostic>> diagnosticsByUri = new HashMap<>();
-
-			for ( final AshDiagnostic diagnostic : this.parser.diagnostics )
+			for ( final Map.Entry<File, Parser> entry : this.imports.entrySet() )
 			{
-				final String uri = diagnostic.sourceUri;
+				final File file = entry.getKey();
+				final Parser parser = entry.getValue();
 
-				List<Diagnostic> diagnostics = diagnosticsByUri.get( uri );
-				if ( diagnostics == null )
+				final List<Diagnostic> diagnostics = new ArrayList<>();
+
+				for ( final AshDiagnostic diagnostic : parser.diagnostics )
 				{
-					diagnostics = new ArrayList<>();
-					diagnosticsByUri.put( uri, diagnostics );
+					if ( diagnostic.originatesFrom( parser ) )
+					{
+						diagnostics.add( diagnostic.toLspDiagnostic() );
+					}
 				}
 
-				diagnostics.add( diagnostic.toLspDiagnostic() );
-			}
-
-			for ( final Map.Entry<String, List<Diagnostic>> entry : diagnosticsByUri.entrySet() )
-			{
 				Script.this.parent.client.publishDiagnostics(
 					new PublishDiagnosticsParams(
-						entry.getKey(),
-						entry.getValue() ) );
+						file.toURI().toString(),
+						diagnostics ) );
 			}
 		}
 
