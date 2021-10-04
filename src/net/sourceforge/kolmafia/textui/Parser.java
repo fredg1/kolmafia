@@ -1093,12 +1093,14 @@ public class Parser
 				throw this.parseException( "Cannot initialize parameter " + param.getName() );
 			}
 
-			if ( !this.currentToken().equals( ")" ) )
+			if ( paramType instanceof VarArgType )
 			{
 				// Only one vararg is allowed
 				vararg = true;
 			}
 
+			if ( !this.currentToken().equals( ")" ) )
+			{
 				if ( this.currentToken().equals( "," ) )
 				{
 					this.readToken(); //read comma
