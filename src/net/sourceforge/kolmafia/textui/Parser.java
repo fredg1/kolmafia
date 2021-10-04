@@ -1260,20 +1260,32 @@ public class Parser
 
 		Token postVariableToken = this.currentToken();
 
+		Token postVariableToken = this.currentToken();
+
 		Type ltype = t.getBaseType();
-		if ( this.currentToken().equals( "=" ) )
+		if ( postVariableToken.equals( "=" ) )
 		{
 			postVariableToken.setType( SemanticTokenTypes.Operator );
 			this.readToken(); // read =
 		}
 
-			if ( this.currentToken().equals( "{" ) )
+		if ( this.currentToken().equals( "{" ) )
+		{
+			// We allow two ways of initializing aggregates:
+			// <aggregate type> <name> = {};
+			// <aggregate type> <name> {};
+			//
+			// Which is why we already read the "=" if it was there.
+
+			if ( ltype instanceof AggregateType )
 			{
-				if ( ltype instanceof AggregateType )
-				{
-					rhs = this.parseAggregateLiteral( scope, (AggregateType) ltype );
-				}
-				else
+				rhs = this.parseAggregateLiteral( scope, (AggregateType) ltype );
+			}
+			else
+			{
+				rhs = null;
+
+				if ( allowInitialization )
 				{
 					rhs = this.parseAggregateLiteral( scope, new BadAggregateType() );
 
@@ -1308,28 +1320,37 @@ public class Parser
 			if ( rhs != null )
 			{
 				rhs = this.autoCoerceValue( t, rhs, scope );
-				if ( !Operator.validCoercion( ltype, rhs.getType(), "assign" ) )
+				if ( allowInitialization && !Operator.validCoercion( ltype, rhs.getType(), "assign" ) )
 				{
 					throw this.parseException( "Cannot store " + rhs.getType() + " in " + variableName + " of type " + ltype );
 				}
 			}
 			else
 			{
-				throw this.parseException( "Expression expected" );
+				if ( allowInitialization )
+				{
+					throw this.parseException( "Expression expected" );
+				}
 			}
-		}
-		else if ( this.currentToken().equals( "{" ) && ltype instanceof AggregateType )
-		{
-			rhs = this.parseAggregateLiteral( scope, (AggregateType) ltype );
 		}
 		else
 		{
 			rhs = null;
 		}
 
-		scope.addVariable( result );
-		VariableReference lhs = new VariableReference( variableName.content, scope );
-		scope.addCommand( new Assignment( lhs, rhs ), this );
+		if ( !allowInitialization &&
+		     ( postVariableToken.equals( "=" ) ||
+		       postVariableToken.equals( "{" ) ) )
+		{
+			throw this.parseException( "Cannot initialize parameter " + variableName );
+		}
+
+		if ( allowInitialization )
+		{
+			scope.addVariable( result );
+			VariableReference lhs = new VariableReference( variableName.content, scope );
+			scope.addCommand( new Assignment( lhs, rhs ), this );
+		}
 
 		return result;
 	}
