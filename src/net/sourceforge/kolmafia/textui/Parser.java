@@ -516,11 +516,15 @@ public class Parser
 					s.append( "; " );
 				s.append( f.getPath() );
 			}
-			throw this.parseException( "too many matches for " + fileName + ": " + s );
+			this.error( "too many matches for " + fileName + ": " + s );
+
+			return scope;
 		}
 		if ( matches.size() == 0 )
 		{
-			throw this.parseException( fileName + " could not be found" );
+			this.error( fileName + " could not be found" );
+
+			return scope;
 		}
 
 		File scriptFile = matches.get( 0 );
