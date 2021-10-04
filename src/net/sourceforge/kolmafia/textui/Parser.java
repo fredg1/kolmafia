@@ -927,7 +927,7 @@ public class Parser
 
 		if ( Parser.isReservedWord( functionName.content ) )
 		{
-			this.error( functionStart, "Reserved word '" + functionName + "' cannot be used as a function name" );
+			this.error( functionNameToken, "Reserved word '" + functionName + "' cannot be used as a function name" );
 			functionError = true;
 		}
 
@@ -1037,7 +1037,7 @@ public class Parser
 
 		if ( !functionError && f.overridesLibraryFunction() )
 		{
-			this.overridesLibraryFunctionError( functionStart, f );
+			this.overridesLibraryFunctionError( functionLocation, f );
 			functionError = true;
 		}
 
@@ -1045,7 +1045,7 @@ public class Parser
 
 		if ( !functionError && existing != null && existing.getScope() != null )
 		{
-			this.multiplyDefinedFunctionError( functionStart, f );
+			this.multiplyDefinedFunctionError( functionLocation, f );
 			functionError = true;
 		}
 
@@ -1055,7 +1055,7 @@ public class Parser
 
 			if ( clash != null )
 			{
-				this.varargClashError( functionStart, f, clash );
+				this.varargClashError( functionLocation, f, clash );
 				functionError = true;
 			}
 		}
@@ -5890,30 +5890,30 @@ public class Parser
 		this.error( found, "Expected " + expected + ", found " + foundString );
 	}
 
-	private void multiplyDefinedFunctionError( final Position start, final Function f )
+	private void multiplyDefinedFunctionError( final Location location, final Function f )
 	{
 		String buffer = "Function '" +
 				f.getSignature() +
 				"' defined multiple times.";
-		this.error( start, buffer );
+		this.error( location, buffer );
 	}
 
-	private void overridesLibraryFunctionError( final Position start, final Function f )
+	private void overridesLibraryFunctionError( final Location location, final Function f )
 	{
 		String buffer = "Function '" +
 				f.getSignature() +
 				"' overrides a library function.";
-		this.error( start, buffer );
+		this.error( location, buffer );
 	}
 
-	private void varargClashError( final Position start, final Function f, final Function clash )
+	private void varargClashError( final Location location, final Function f, final Function clash )
 	{
 		String buffer = "Function '" +
 				f.getSignature() +
 				"' clashes with existing function '" +
 				clash.getSignature() +
 				"'.";
-		this.error( start, buffer );
+		this.error( location, buffer );
 	}
 
 	public final void sinceError( final String current, final String target, final Range directiveRange, final boolean targetIsRevision )
@@ -6032,7 +6032,7 @@ public class Parser
 
 	public final void error( final Token start, final Token end, final String msg1, final String msg2 )
 	{
-		this.error( new Range( start.getStart(), end.getEnd() ), msg1, msg2 );
+		this.error( this.makeRange( start, end ), msg1, msg2 );
 	}
 
 	public final void error( final Range range, final String msg )
