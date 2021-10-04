@@ -2039,13 +2039,21 @@ public class Parser
 		}
 		else
 		{
-			throw this.parseException( ")", this.currentToken() );
+			this.readToken(); // )
+		}
+		else if ( !whileError )
+		{
+			this.parseException( ")", this.currentToken() );
+			whileError = true;
 		}
 
 		if ( condition == null || condition.getType() != DataTypes.BOOLEAN_TYPE )
 		{
-			throw this.parseException( "\"while\" requires a boolean conditional expression" );
-		}
+			if ( !whileError )
+			{
+				this.error( conditionLocation, "\"while\" requires a boolean conditional expression" );
+				whileError = true;
+			}
 
 		Scope scope = this.parseLoopScope( functionType, null, parentScope );
 
