@@ -3129,7 +3129,7 @@ public class Parser
 				name = null;
 			}
 
-			Variable variable;
+			VariableReference lhs;
 
 			// If there is no data type, it is using an existing variable
 			if ( t == null )
@@ -3144,6 +3144,7 @@ public class Parser
 					}
 
 					variable = new BadVariable( name, new BadType( null, null ), this.makeLocation( nameToken ) );
+					lhs = new VariableReference( variable );
 				}
 
 				t = variable.getType();
@@ -3155,11 +3156,17 @@ public class Parser
 					variable = new Variable( name, t, this.makeLocation( nameToken ) );
 
 					scope.addVariable( variable );
+					lhs = new VariableReference( variable );
 				}
-				else if ( !javaForError )
+				else
 				{
-					this.error( nameToken, "Variable '" + name + "' already defined" );
-					javaForError = true;
+					if ( !javaForError )
+					{
+						this.error( nameToken, "Variable '" + name + "' already defined" );
+						javaForError = true;
+					}
+
+					lhs = new VariableReference( variable, this.makeLocation( nameToken ) );
 				}
 
 				// Create variable and add it to the scope
@@ -4988,9 +4995,11 @@ public class Parser
 
 		this.readToken(); // read name
 
+		VariableReference reference;
+
 		if ( var != null )
 		{
-			var.addReference( this.makeLocation( variableToken ) );
+			reference = new VariableReference( var, this.makeLocation( variableToken ) );
 		}
 		else
 		{
@@ -5039,6 +5048,7 @@ public class Parser
 				{
 					if ( !variableReferenceError && !type.isBad() )
 					{
+						Location location = this.makeLocation( current.getLocation(), this.makeLocation( this.peekPreviousToken() ) );
 						String message;
 						if ( indices.isEmpty() )
 						{
@@ -5048,7 +5058,7 @@ public class Parser
 						{
 							message = "Too many keys for '" + var.getName() + "'";
 						}
-						this.error( message );
+						this.error( location, message );
 						variableReferenceError = true;
 					}
 
@@ -5093,7 +5103,7 @@ public class Parser
 						// if what follows is even an identifier.
 						if ( !variableReferenceSyntaxError )
 						{
-							this.error( var.getLocation(), "Record expected" );
+							this.error( current.getLocation(), "Record expected" );
 						}
 						variableReferenceError = variableReferenceSyntaxError = true;
 					}

@@ -38,6 +38,8 @@ import java.io.PrintStream;
 import java.util.List;
 import java.util.Iterator;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.KoLmafia;
 
 import net.sourceforge.kolmafia.textui.DataTypes;
@@ -58,9 +60,9 @@ public class CompositeReference
 	String fileName;
 	int lineNumber;
 
-	public CompositeReference( final Variable target, final List<Value> indices, final Parser parser )
+	public CompositeReference( final Variable target, final Location location, final List<Value> indices, final Parser parser )
 	{
-		super( target );
+		super( target, location );
 		this.indices = indices;
 		this.fileName = parser.getShortFileName();
 		this.lineNumber = parser.getLineNumber();
@@ -78,6 +80,7 @@ public class CompositeReference
 		return type;
 	}
 
+	@Override
 	public Type getRawType()
 	{
 		Type type = this.target.getType();
