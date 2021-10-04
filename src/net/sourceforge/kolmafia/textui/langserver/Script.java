@@ -164,6 +164,11 @@ public class Script
 
 		void sendDiagnostics()
 		{
+			if ( Script.this.parent.client == null )
+			{
+				return;
+			}
+
 			this.waitForParsing();
 
 			if ( Script.this.handler != this || this.parser == null || Thread.interrupted() )

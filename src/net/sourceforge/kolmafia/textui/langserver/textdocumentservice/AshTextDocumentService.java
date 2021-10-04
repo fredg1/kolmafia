@@ -64,11 +64,12 @@ public abstract class AshTextDocumentService
 {
 	protected final AshLanguageServer parent;
 
-	private final SemanticTokensHandler semanticHandler = new SemanticTokensHandler( this );
+	private final SemanticTokensHandler semanticHandler;
 
 	public AshTextDocumentService( final AshLanguageServer parent )
 	{
 		this.parent = parent;
+		this.semanticHandler = new SemanticTokensHandler( parent );
 	}
 
 	public final void setCapabilities( final ServerCapabilities capabilities )

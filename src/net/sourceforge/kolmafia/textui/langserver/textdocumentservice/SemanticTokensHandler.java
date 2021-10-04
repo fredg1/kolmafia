@@ -159,12 +159,12 @@ class SemanticTokensHandler
 	private SemanticTokensCapabilities clientCapabilities;
 	private boolean relativeFormat = false;
 
-	SemanticTokensHandler( final AshTextDocumentService immediateParent )
+	SemanticTokensHandler( final AshLanguageServer parent )
 	{
-		this.parent = immediateParent.parent;
+		this.parent = parent;
 	}
 
-	void setCapabilities( final ServerCapabilities capabilities )
+	final void setCapabilities( final ServerCapabilities capabilities )
 	{
 		if ( this.parent.clientCapabilities != null &&
 		     this.parent.clientCapabilities.getTextDocument() != null )
@@ -220,38 +220,39 @@ class SemanticTokensHandler
 		Position previousTokenStart = new Position( 0, 0 );
 		for ( final Token token : tokens )
 		{
-			final List<Integer> group = new ArrayList<>( 5 );
+			final Integer[] group = new Integer[ 5 ];
 
 			// 0 = line
 			// 1 = start character
 			if ( !this.relativeFormat )
 			{
-				group.set( 0, token.getStart().getLine() );
-				group.set( 1, token.getStart().getCharacter() );
+				group[ 0 ] = token.getStart().getLine();
+				group[ 1 ] = token.getStart().getCharacter();
 			}
 			else if ( previousTokenStart.getLine() == token.getStart().getLine() )
 			{
-				group.set( 0, 0 );
-				group.set( 1, token.getStart().getCharacter() -
-				              previousTokenStart.getCharacter() );
+				group[ 0 ] = 0;
+				group[ 1 ] = token.getStart().getCharacter() -
+				             previousTokenStart.getCharacter();
 			}
 			else
 			{
-				group.set( 0, token.getStart().getLine() -
-				              previousTokenStart.getLine() );
-				group.set( 1, token.getStart().getCharacter() );
+				group[ 0 ] = token.getStart().getLine() -
+				             previousTokenStart.getLine();
+				group[ 1 ] = token.getStart().getCharacter();
 			}
 
 			// 2 = length
-			group.set( 2, token.getEnd().getCharacter() -
-			              token.getStart().getCharacter() );
+			group[ 2 ] = token.getEnd().getCharacter() -
+			             token.getStart().getCharacter();
 
 			try
 			{
 				// 3 = type
 				String type = token.getSemanticType();
 
-				if ( this.clientCapabilities.getTokenTypes() != null &&
+				if ( this.clientCapabilities != null &&
+				     this.clientCapabilities.getTokenTypes() != null &&
 				     !this.clientCapabilities.getTokenTypes().contains( type ) )
 				{
 					if ( SemanticTokenTypes.Enum.equals( type ) ||
@@ -274,7 +275,7 @@ class SemanticTokensHandler
 					}
 				}
 
-				group.set( 3, SemanticTokensHandler.getType( type ) );
+				group[ 3 ] = SemanticTokensHandler.getType( type );
 
 				// 4 = modifiers
 				int mask = 0;
@@ -284,7 +285,7 @@ class SemanticTokensHandler
 					mask |= 1 << SemanticTokensHandler.getModifier( modifier );
 				}
 
-				group.set( 4, mask );
+				group[ 4 ] = mask;
 			}
 			catch ( RuntimeException e )
 			{
@@ -295,7 +296,7 @@ class SemanticTokensHandler
 			}
 
 			previousTokenStart = token.getStart();
-			data.addAll( group );
+			data.addAll( Arrays.asList( group ) );
 		}
 
 		return new SemanticTokens( data );
