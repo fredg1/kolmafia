@@ -42,7 +42,7 @@ import java.util.TreeMap;
 import org.eclipse.lsp4j.Location;
 
 public class VariableList
-	implements Iterable<Variable>
+	extends SymbolList<Variable>
 {
 	private final Map<Variable, List<Location>> list = new TreeMap<>();
 
