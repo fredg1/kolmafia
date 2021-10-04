@@ -610,15 +610,15 @@ public class Parser
 	                          final boolean allowBreak,
 	                          final boolean allowContinue )
 	{
-		String importString;
+		Directive importDirective;
 
 		this.parseScriptName();
 		this.parseNotify();
 		this.parseSince();
 
-		while ( ( importString = this.parseImport() ) != null )
+		while ( ( importDirective = this.parseImport() ) != null )
 		{
-			result = this.importFile( importString, result );
+			result = this.importFile( importDirective.value, result );
 		}
 
 		while ( true )
@@ -4398,12 +4398,26 @@ public class Parser
 		return current;
 	}
 
-	private String parseDirective( final String directive )
+	private class Directive
+	{
+		final String value;
+		final Range range;
+
+		Directive( final String value, final Range range )
+		{
+			this.value = value;
+			this.range = range;
+		}
+	}
+
+	private Directive parseDirective( final String directive )
 	{
 		if ( !this.currentToken().equalsIgnoreCase( directive ) )
 		{
 			return null;
 		}
+
+		Position directiveStart = this.here();
 
 		this.readToken(); //directive
 
@@ -4468,38 +4482,38 @@ public class Parser
 			this.readToken(); //read ;
 		}
 
-		return resultString;
+		return new Directive( resultString, this.rangeToHere( directiveStart ) );
 	}
 
 	private void parseScriptName()
 	{
-		String resultString = this.parseDirective( "script" );
-		if ( this.scriptName == null )
+		Directive scriptDirective = this.parseDirective( "script" );
+		if ( this.scriptName == null && scriptDirective != null )
 		{
-			this.scriptName = resultString;
+			this.scriptName = scriptDirective.value;
 		}
 	}
 
 	private void parseNotify()
 	{
-		String resultString = this.parseDirective( "notify" );
-		if ( this.notifyRecipient == null )
+		Directive notifyDirective = this.parseDirective( "notify" );
+		if ( this.notifyRecipient == null && notifyDirective != null )
 		{
-			this.notifyRecipient = resultString;
+			this.notifyRecipient = notifyDirective.value;
 		}
 	}
 
 	private void parseSince()
 	{
-		String revision = this.parseDirective( "since" );
-		if ( revision != null )
+		Directive sinceDirective = this.parseDirective( "since" );
+		if ( sinceDirective != null )
 		{
 			// enforce "since" directives RIGHT NOW at parse time
-			this.enforceSince( revision );
+			this.enforceSince( sinceDirective.value, sinceDirective.range );
 		}
 	}
 
-	private String parseImport()
+	private Directive parseImport()
 	{
 		return this.parseDirective( "import" );
 	}
