@@ -1938,9 +1938,16 @@ public class Parser
 
 		while ( true )
 		{
+			if ( "}".equals( this.currentToken() ) )
+			{
+				this.readToken(); // }
+				break;
+			}
+
 			if ( this.atEndOfFile() )
 			{
-				throw this.parseException( "}", this.currentToken() );
+				this.parseException( "}", "end of file" );
+				break;
 			}
 
 			if ( this.currentToken().equals( "}" ) )
