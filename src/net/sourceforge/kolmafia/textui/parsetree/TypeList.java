@@ -61,7 +61,7 @@ public class TypeList
 	{
 		for ( Type currentType : this.list.keySet() )
 		{
-			if ( currentType.getName().equalsIgnoreCase( name ) )
+			if ( name != null && name.equalsIgnoreCase( currentType.getName() ) )
 			{
 				return currentType;
 			}

@@ -69,6 +69,12 @@ public abstract class Symbol
 		return this.location;
 	}
 
+	@Override
+	public String toString()
+	{
+		return this.name;
+	}
+
 	public int compareTo( final Symbol o )
 	{
 		if ( !( o instanceof Symbol ) )

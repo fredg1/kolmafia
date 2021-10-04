@@ -3110,6 +3110,11 @@ public class Parser
 				break;
 			}
 
+			if ( type instanceof TypeReference )
+			{
+				type = ((TypeReference) type).getTarget();
+			}
+
 			if ( type instanceof AggregateType )
 			{
 				itype = ( (AggregateType) type ).getIndexType();
@@ -3406,7 +3411,7 @@ public class Parser
 
 			}
 
-			Assignment initializer = new Assignment( lhs, rhs.value );
+			Assignment initializer = new Assignment( lhs, rhs == null ? null : rhs.value );
 
 			initializers.add( initializer );
 

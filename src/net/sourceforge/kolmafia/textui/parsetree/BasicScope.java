@@ -117,6 +117,11 @@ public abstract class BasicScope
 		return this.parentScope;
 	}
 
+	public TypeList getTypes()
+	{
+		return this.types;
+	}
+
 	public boolean addType( final Type t )
 	{
 		return this.types.add( t );

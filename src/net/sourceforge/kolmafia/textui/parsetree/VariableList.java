@@ -61,7 +61,8 @@ public class VariableList
 	{
 		for ( Variable variable : this.list.keySet() )
 		{
-			if ( variable != null && variable.getName().equalsIgnoreCase( name ) )
+			if ( variable != null && name != null &&
+			     name.equalsIgnoreCase( variable.getName() ) )
 			{
 				return variable;
 			}
