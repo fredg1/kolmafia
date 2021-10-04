@@ -3232,7 +3232,9 @@ public class Parser
 
 		if ( lhs == null )
 		{
-			throw this.parseException( "Bad 'remove' statement" );
+			this.error( "Bad 'remove' statement" );
+
+			lhs = Value.BAD_VALUE;
 		}
 
 		return lhs;
