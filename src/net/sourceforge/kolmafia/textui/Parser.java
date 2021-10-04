@@ -718,18 +718,25 @@ public class Parser
 
 		if ( this.currentToken().equals( ";" ) )
 		{
-			throw this.parseException( "Record name expected" );
+			this.error( "Record name expected" );
+
+			return Type.BAD_TYPE;
 		}
 
 		// Allow anonymous records
 		String recordName = null;
 		Location recordDefinition = null;
 		Position recordStart = this.here();
+		boolean recordError = false;
 
 		if ( !this.currentToken().equals( "{" ) )
 		{
 			// Named record
 			recordName = this.currentToken().content;
+
+			this.readToken(); // read name
+
+			recordDefinition = this.makeLocation( recordStart );
 
 			if ( !this.parseIdentifier( recordName ) )
 			{
@@ -741,12 +748,18 @@ public class Parser
 			}
 			else if ( parentScope.findType( recordName ) != null )
 			{
-				throw this.parseException( "Record name '" + recordName + "' is already defined" );
+				this.error( recordDefinition, "Reserved word '" + recordName + "' cannot be a record name" );
+				recordError = true;
+
+				recordName = null;
 			}
+			else if ( parentScope.findType( recordName ) != null )
+			{
+				this.error( recordDefinition, "Record name '" + recordName + "' is already defined" );
+				recordError = true;
 
-			this.readToken(); // read name
-
-			recordDefinition = this.makeLocation( recordStart );
+				recordName = null;
+			}
 		}
 
 		if ( this.currentToken().equals( "{" ) )
@@ -755,14 +768,18 @@ public class Parser
 		}
 		else
 		{
-			throw this.parseException( "{", this.currentToken() );
+			this.readToken(); // read {
 		}
+		else
+		{
+			this.parseException( "{", this.currentToken() );
 
 		// Loop collecting fields
 		List<Type> fieldTypes = new ArrayList<Type>();
 		List<String> fieldNames = new ArrayList<String>();
 
-		while ( true )
+		Position previousPosition = null;
+		while ( this.madeProgress( previousPosition, previousPosition = this.here() ) )
 		{
 			if ( this.atEndOfFile() )
 			{
@@ -784,7 +801,10 @@ public class Parser
 			Type fieldType = this.parseType( parentScope, true );
 			if ( fieldType == null )
 			{
-				throw this.parseException( "Type name expected" );
+				this.error( fieldStart, "Type name expected" );
+				recordError = fieldError = true;
+
+				fieldType = Type.BAD_TYPE;
 			}
 
 			if ( fieldType.getBaseType().equals( DataTypes.VOID_TYPE ) )
@@ -804,11 +824,18 @@ public class Parser
 			}
 			else if ( Parser.isReservedWord( fieldName.content ) )
 			{
-				throw this.parseException( "Reserved word '" + fieldName + "' cannot be used as a field name" );
+				if ( !fieldError )
+				{
+					this.error( fieldStart, "Reserved word '" + fieldName + "' cannot be used as a field name" );
+				}
+				recordError = fieldError = true;
+
+				fieldName = null;
+				this.readToken(); // read name
 			}
 			else if ( fieldNames.contains( fieldName.content ) )
 			{
-				throw this.parseException( "Field name '" + fieldName + "' is already defined" );
+				this.readToken(); // read name
 			}
 			else
 			{
@@ -839,7 +866,7 @@ public class Parser
 					( "(anonymous record " + Integer.toHexString( Arrays.hashCode( fieldNameArray ) ) + ")" ),
 				fieldNameArray, fieldTypeArray, recordDefinition );
 
-		if ( recordName != null )
+		if ( !recordError && recordName != null )
 		{
 			// Enter into type table
 			parentScope.addType( rec );
