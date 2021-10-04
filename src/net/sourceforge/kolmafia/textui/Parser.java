@@ -1184,6 +1184,7 @@ public class Parser
 		{
 			return false;
 		}
+
 		this.readToken(); // read typedef
 
 		Type t = this.parseType( parentScope, true );
@@ -3952,37 +3953,41 @@ public class Parser
 		Type type = scope.findType( name.content );
 		boolean plurals = false;
 
-		if ( type == null )
+		if ( this.parseIdentifier( name ) )
 		{
 			StringBuilder buf = new StringBuilder( name.content );
 			int length = name.length();
 
-			if ( name.endsWith( "ies" ) )
+			if ( type == null )
 			{
-				buf.delete( length - 3, length );
-				buf.insert( length - 3, "y" );
-			}
-			else if ( name.endsWith( "es" ) )
-			{
-				buf.delete( length - 2, length );
-			}
-			else if ( name.endsWith( "s" ) )
-			{
-				buf.deleteCharAt( length - 1 );
-			}
-			else if ( name.endsWith( "a" ) )
-			{
-				buf.deleteCharAt( length - 1 );
-				buf.insert( length - 1, "um" );
-			}
-			else
-			{
-				throw this.parseException( "Unknown type " + name );
-			}
+				StringBuilder buf = new StringBuilder( name );
+				int length = name.length();
+	
+				if ( name.endsWith( "ies" ) )
+				{
+					buf.delete( length - 3, length );
+					buf.insert( length - 3, "y" );
+				}
+				else if ( name.endsWith( "es" ) )
+				{
+					buf.delete( length - 2, length );
+				}
+				else if ( name.endsWith( "s" ) )
+				{
+					buf.deleteCharAt( length - 1 );
+				}
+				else if ( name.endsWith( "a" ) )
+				{
+					buf.deleteCharAt( length - 1 );
+					buf.insert( length - 1, "um" );
+				}
 
 			type = scope.findType( buf.toString() );
 
-			plurals = true;
+				plurals = true;
+			}
+
+			this.readToken();
 		}
 
 		this.readToken();
@@ -3991,6 +3996,8 @@ public class Parser
 		{
 			throw this.parseException( "Unknown type " + name );
 		}
+
+		type.addReference( this.makeLocation( typedConstantStart ) );
 
 		if ( !type.isPrimitive() )
 		{
