@@ -55,6 +55,8 @@ import static org.eclipse.lsp4j.DiagnosticSeverity.*;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
+import org.eclipse.lsp4j.SemanticTokenModifiers;
+import org.eclipse.lsp4j.SemanticTokenTypes;
 
 import net.sourceforge.kolmafia.KoLConstants;
 import net.sourceforge.kolmafia.KoLmafiaCLI;
@@ -818,6 +820,7 @@ public class Parser
 		}
 
 		Token recordStartToken = this.currentToken();
+		recordStartToken.setType( SemanticTokenTypes.Keyword );
 
 		this.readToken(); // read record
 
@@ -935,6 +938,8 @@ public class Parser
 				recordError = fieldError = true;
 
 				fieldName = null;
+				this.currentToken().setType( SemanticTokenTypes.Property );
+				this.currentToken().addModifier( SemanticTokenModifiers.Declaration );
 				this.readToken(); // read name
 			}
 			else if ( fieldNames.contains( fieldName.content ) )
@@ -943,6 +948,8 @@ public class Parser
 			}
 			else
 			{
+				this.currentToken().setType( SemanticTokenTypes.Property );
+				this.currentToken().addModifier( SemanticTokenModifiers.Declaration );
 				this.readToken(); // read name
 			}
 
@@ -1029,12 +1036,10 @@ public class Parser
 			{
 				// Make a vararg type out of the previously parsed type.
 				paramType = new VarArgType( paramType );
-				paramType = new TypeReference( paramType, this.makeLocation( parameterTypeToken, this.currentToken() ) );
+				paramType = new TypeReference( paramType, this.makeLocation( paramType.getLocation(), this.currentToken() ) );
 
 				this.readToken(); //read ...
 			}
-
-			Token paramNameToken = this.currentToken();
 
 			Variable param = this.parseVariable( paramType, parentScope, false );
 			if ( param == null )
@@ -1138,9 +1143,15 @@ public class Parser
 
 		if ( this.currentToken().equals( ";" ) )
 		{
+			functionNameToken.addModifier( SemanticTokenModifiers.Declaration );
+
 			// Return forward reference
 			this.readToken(); // ;
 			return result;
+		}
+		else
+		{
+			functionNameToken.addModifier( SemanticTokenModifiers.Definition );
 		}
 
 		Scope scope = this.parseBlockOrSingleCommand( functionType, paramList, parentScope, false, false, false );
@@ -1230,6 +1241,7 @@ public class Parser
 		Type ltype = t.getBaseType();
 		if ( this.currentToken().equals( "=" ) )
 		{
+			postVariableToken.setType( SemanticTokenTypes.Operator );
 			this.readToken(); // read =
 
 			if ( this.currentToken().equals( "{" ) )
@@ -1396,6 +1408,7 @@ public class Parser
 		}
 
 		Token typedefToken = this.currentToken();
+		typedefToken.setType( SemanticTokenTypes.Keyword );
 		boolean typedefError = false;
 
 		this.readToken(); // read typedef
@@ -1435,6 +1448,8 @@ public class Parser
 		}
 		else
 		{
+			typeToken.setType( SemanticTokenTypes.Type );
+			typeToken.addModifier( SemanticTokenModifiers.Definition );
 			this.readToken(); // read name
 		}
 
@@ -1483,6 +1498,7 @@ public class Parser
 			{
 				this.error( commandStart, "Encountered 'break' outside of loop" );
 
+			this.currentToken().setType( SemanticTokenTypes.Keyword );
 			this.readToken(); //break
 		}
 
@@ -1500,12 +1516,14 @@ public class Parser
 			{
 				this.error( commandStart, "Encountered 'continue' outside of loop" );
 
+			this.currentToken().setType( SemanticTokenTypes.Keyword );
 			this.readToken(); //continue
 		}
 
 		else if ( "exit".equalsIgnoreCase( this.currentToken().value ) )
 		{
 			result = new ScriptExit( this.makeLocation( this.currentToken() ) );
+			this.currentToken().setType( SemanticTokenTypes.Keyword );
 			this.readToken(); //exit
 		}
 
@@ -1630,6 +1648,20 @@ public class Parser
 		}
 		else if ( ( valType = scope.findType( this.currentToken().value ) ) != null )
 		{
+			if ( valType instanceof RecordType )
+			{
+				this.currentToken().setType( SemanticTokenTypes.Struct );
+			}
+			else
+			{
+				this.currentToken().setType( SemanticTokenTypes.Type );
+			}
+
+			if ( DataTypes.simpleTypes.contains( valType ) )
+			{
+				this.currentToken().addModifier( SemanticTokenModifiers.DefaultLibrary );
+			}
+
 			scope.addReference( valType, this.makeLocation( this.currentToken() ) );
 			valType = new TypeReference( valType, this.makeLocation( this.currentToken() ) );
 			this.readToken();
@@ -1652,6 +1684,7 @@ public class Parser
 			this.error( this.currentToken(), "Unknown type " + this.currentToken().value );
 
 			valType = new BadType( this.currentToken().value, this.makeLocation( this.currentToken() ) );
+			this.currentToken().setType( SemanticTokenTypes.Type );
 			this.readToken();
 
 			/* However, this only checks for single word (simple) types.
@@ -2024,6 +2057,7 @@ public class Parser
 		}
 
 		Token returnStartToken = this.currentToken();
+		returnStartToken.setType( SemanticTokenTypes.Keyword );
 
 		this.readToken(); //return
 
@@ -2176,6 +2210,7 @@ public class Parser
 		}
 
 		Token conditionalStartToken = this.currentToken();
+		conditionalStartToken.setType( SemanticTokenTypes.Keyword );
 
 		this.readToken(); // if
 
@@ -2245,6 +2280,7 @@ public class Parser
 			if ( !noElse && this.currentToken().equalsIgnoreCase( "else" ) )
 			{
 				conditionalStartToken = this.currentToken();
+				conditionalStartToken.setType( SemanticTokenTypes.Keyword );
 
 				if ( finalElse && !elseError )
 				{
@@ -2318,6 +2354,7 @@ public class Parser
 		}
 
 		Token basicScriptStartToken = this.currentToken();
+		basicScriptStartToken.setType( SemanticTokenTypes.Keyword );
 
 		this.readToken(); // cli_execute
 		this.readToken(); // {
@@ -2363,7 +2400,8 @@ public class Parser
 
 			if ( line.length() > 0 )
 			{
-				this.currentLine.makeToken( line.length() );
+				this.currentLine.makeToken( line.length() )
+					.setType( SemanticTokenTypes.Macro );
 			}
 			this.currentLine = this.currentLine.nextLine;
 			this.currentIndex = this.currentLine.offset;
@@ -2382,6 +2420,7 @@ public class Parser
 		}
 
 		Token whileStartToken = this.currentToken();
+		whileStartToken.setType( SemanticTokenTypes.Keyword );
 
 		this.readToken(); // while
 
@@ -2438,6 +2477,7 @@ public class Parser
 		}
 
 		Token repeatStartToken = this.currentToken();
+		repeatStartToken.setType( SemanticTokenTypes.Keyword );
 
 		this.readToken(); // repeat
 
@@ -2447,6 +2487,7 @@ public class Parser
 
 		if ( this.currentToken().equalsIgnoreCase( "until" ) )
 		{
+			this.currentToken().setType( SemanticTokenTypes.Keyword );
 			this.readToken(); // until
 		}
 		else
@@ -2505,6 +2546,7 @@ public class Parser
 		}
 
 		Token switchStartToken = this.currentToken();
+		switchStartToken.setType( SemanticTokenTypes.Keyword );
 
 		this.readToken(); // switch
 
@@ -2579,6 +2621,7 @@ public class Parser
 		{
 			if ( this.currentToken().equalsIgnoreCase( "case" ) )
 			{
+				this.currentToken().setType( SemanticTokenTypes.Keyword );
 				this.readToken(); // case
 
 				Position testStart = this.here();
@@ -2654,6 +2697,7 @@ public class Parser
 			if ( this.currentToken().equalsIgnoreCase( "default" ) )
 			{
 				Token defaultToken = this.currentToken();
+				defaultToken.setType( SemanticTokenTypes.Keyword );
 
 				this.readToken(); // default
 
@@ -2755,6 +2799,7 @@ public class Parser
 		}
 
 		Token tryStartToken = this.currentToken();
+		tryStartToken.setType( SemanticTokenTypes.Keyword );
 
 		this.readToken(); // try
 
@@ -2766,6 +2811,7 @@ public class Parser
 
 		if ( this.currentToken().equalsIgnoreCase( "finally" ) )
 		{
+			this.currentToken().setType( SemanticTokenTypes.Keyword );
 			this.readToken(); // finally
 
 			finalClause = this.parseBlockOrSingleCommand( functionType, null, body, false, allowBreak, allowContinue );
@@ -2790,6 +2836,7 @@ public class Parser
 			return null;
 		}
 
+		this.currentToken().setType( SemanticTokenTypes.Keyword );
 		this.readToken(); // catch
 
 		Scope body = this.parseBlockOrSingleCommand( functionType, null, parentScope, false, allowBreak, allowContinue );
@@ -2806,6 +2853,7 @@ public class Parser
 		}
 
 		Token catchStartToken = this.currentToken();
+		catchStartToken.setType( SemanticTokenTypes.Keyword );
 
 		this.readToken(); // catch
 
@@ -2835,6 +2883,7 @@ public class Parser
 		}
 
 		Token staticStartToken = this.currentToken();
+		staticStartToken.setType( SemanticTokenTypes.Keyword );
 
 		this.readToken(); // static
 
@@ -2885,6 +2934,7 @@ public class Parser
 		}
 
 		Token sortStartToken = this.currentToken();
+		sortStartToken.setType( SemanticTokenTypes.Keyword );
 
 		this.readToken(); // sort
 
@@ -2910,6 +2960,7 @@ public class Parser
 
 		if ( this.currentToken().equalsIgnoreCase( "by" ) )
 		{
+			this.currentToken().setType( SemanticTokenTypes.Keyword );
 			this.readToken();	// by
 		}
 		else
@@ -2957,6 +3008,7 @@ public class Parser
 		}
 
 		Token foreachStartToken = this.currentToken();
+		foreachStartToken.setType( SemanticTokenTypes.Keyword );
 
 		this.readToken(); // foreach
 
@@ -3006,6 +3058,8 @@ public class Parser
 				names.add( name.content );
 			}
 
+			nameToken.setType( SemanticTokenTypes.Variable );
+			nameToken.addModifier( SemanticTokenModifiers.Declaration );
 			this.readToken(); // name
 
 			if ( this.currentToken().equals( "," ) )
@@ -3016,6 +3070,7 @@ public class Parser
 
 			if ( this.currentToken().equalsIgnoreCase( "in" ) )
 			{
+				this.currentToken().setType( SemanticTokenTypes.Keyword );
 				this.readToken(); // in
 				break;
 			}
@@ -3102,6 +3157,7 @@ public class Parser
 		}
 
 		Token forStartToken = this.currentToken();
+		forStartToken.setType( SemanticTokenTypes.Keyword );
 
 		this.readToken(); // for
 
@@ -3152,16 +3208,19 @@ public class Parser
 		if ( this.currentToken().equalsIgnoreCase( "upto" ) )
 		{
 			direction = 1;
+			this.currentToken().setType( SemanticTokenTypes.Keyword );
 			this.readToken(); // upto
 		}
 		else if ( this.currentToken().equalsIgnoreCase( "downto" ) )
 		{
 			direction = -1;
+			this.currentToken().setType( SemanticTokenTypes.Keyword );
 			this.readToken(); // downto
 		}
 		else if ( this.currentToken().equalsIgnoreCase( "to" ) )
 		{
 			direction = 0;
+			this.currentToken().setType( SemanticTokenTypes.Keyword );
 			this.readToken(); // to
 		}
 		else
@@ -3183,6 +3242,7 @@ public class Parser
 		Value increment = DataTypes.ONE_VALUE;
 		if ( this.currentToken().equalsIgnoreCase( "by" ) )
 		{
+			this.currentToken().setType( SemanticTokenTypes.Keyword );
 			this.readToken(); // by
 			increment = this.parseExpression( parentScope );
 
@@ -3221,6 +3281,7 @@ public class Parser
 		Token javaForStartToken = this.currentToken();
 
 		this.readToken(); // for
+		javaForStartToken.setType( SemanticTokenTypes.Keyword );
 		this.readToken(); // (
 
 		Token loopScopeStartToken = this.currentToken();
@@ -3282,6 +3343,8 @@ public class Parser
 
 					scope.addVariable( variable );
 					lhs = new VariableReference( variable );
+
+					nameToken.addModifier( SemanticTokenModifiers.Declaration );
 				}
 				else
 				{
@@ -3308,6 +3371,7 @@ public class Parser
 
 			if ( this.currentToken().equals( "=" ) )
 			{
+				this.currentToken().setType( SemanticTokenTypes.Operator );
 				this.readToken(); // =
 
 				rhs = this.parseExpression( scope );
@@ -3575,6 +3639,7 @@ public class Parser
 		}
 
 		Token newRecordStartToken = this.currentToken();
+		newRecordStartToken.setType( SemanticTokenTypes.Keyword );
 
 		this.readToken();
 
@@ -3587,6 +3652,7 @@ public class Parser
 		Type type = scope.findType( name );
 
 		Token nameToken = this.currentToken();
+		nameToken.setType( SemanticTokenTypes.Struct );
 		boolean newRecordError = false, newRecordSyntaxError = false;
 
 		this.readToken(); //name
@@ -3736,6 +3802,11 @@ public class Parser
 			params = this.autoCoerceParameters( target, params, scope );
 
 			scope.addReference( target, functionCallLocation );
+
+			if ( RuntimeLibrary.functions.contains( target ) )
+			{
+				nameToken.addModifier( SemanticTokenModifiers.DefaultLibrary );
+			}
 		}
 		else
 		{
@@ -3839,6 +3910,7 @@ public class Parser
 		}
 
 		Token invokeStartToken = this.currentToken();
+		invokeStartToken.setType( SemanticTokenTypes.Keyword );
 
 		this.readToken(); // call
 
@@ -4083,6 +4155,7 @@ public class Parser
 		}
 
 		Token operToken = this.currentToken();
+		operToken.setType( SemanticTokenTypes.Operator );
 		String operStr = "++".equals( this.currentToken().value ) ? Parser.POST_INCREMENT : Parser.POST_DECREMENT;
 
 		this.readToken(); // oper
@@ -4225,6 +4298,8 @@ public class Parser
 				return lhs;
 			}
 
+			this.currentToken().setType( SemanticTokenTypes.Operator );
+
 			if ( "?".equals( this.currentToken().value ) )
 			{
 				this.readToken(); // ?
@@ -4254,6 +4329,7 @@ public class Parser
 
 				if ( this.currentToken().equals( ":" ) )
 				{
+					this.currentToken().setType( SemanticTokenTypes.Operator );
 					this.readToken(); // :
 				}
 				else
@@ -4365,7 +4441,7 @@ public class Parser
 		LocatedValue result = null;
 
 		// Parse parenthesized expressions
-		if ( "(".equals( this.currentToken().value ) )
+		if ( "(".equals( valueStartToken.value ) )
 		{
 			this.readToken(); // (
 
@@ -4392,22 +4468,25 @@ public class Parser
 		// Parse constant values
 		// true and false are reserved words
 
-		else if ( "true".equalsIgnoreCase( this.currentToken().value ) )
+		else if ( "true".equalsIgnoreCase( valueStartToken.value ) )
 		{
+			valueStartToken.setType( SemanticTokenTypes.Keyword );
 			this.readToken();
-			result = DataTypes.TRUE_VALUE.wrap( this.makeLocation( this.peekLastToken() ) );
+			result = DataTypes.TRUE_VALUE.wrap( this.makeLocation( valueStartToken ) );
 		}
 
-		else if ( "false".equalsIgnoreCase( this.currentToken().value ) )
+		else if ( "false".equalsIgnoreCase( valueStartToken.value ) )
 		{
+			valueStartToken.setType( SemanticTokenTypes.Keyword );
 			this.readToken();
-			result = DataTypes.FALSE_VALUE.wrap( this.makeLocation( this.peekLastToken() ) );
+			result = DataTypes.FALSE_VALUE.wrap( this.makeLocation( valueStartToken ) );
 		}
 
-		else if ( "__FILE__".equals( this.currentToken().value ) )
+		else if ( "__FILE__".equals( valueStartToken.value ) )
 		{
+			valueStartToken.setType( SemanticTokenTypes.Keyword );
 			this.readToken();
-			result = new Value( String.valueOf( this.shortFileName ) ).wrap( this.makeLocation( this.peekLastToken() ) );
+			result = new Value( String.valueOf( this.shortFileName ) ).wrap( this.makeLocation( valueStartToken ) );
 		}
 
 		// numbers
@@ -4518,6 +4597,7 @@ public class Parser
 			}
 
 			sign = -1;
+			this.currentToken().setType( SemanticTokenTypes.Number );
 			this.readToken(); // Read -
 		}
 
@@ -4528,6 +4608,7 @@ public class Parser
 
 			if ( this.readIntegerToken( fraction.content ) )
 			{
+				this.currentToken().setType( SemanticTokenTypes.Number );
 				this.readToken(); // integer
 			}
 			else
@@ -4546,6 +4627,7 @@ public class Parser
 			return null;
 		}
 
+		this.currentToken().setType( SemanticTokenTypes.Number );
 		this.readToken(); // integer
 
 		if ( ".".equals( this.currentToken().value ) )
@@ -4559,7 +4641,9 @@ public class Parser
 		if ( ".".equals( this.currentToken().value ) &&
 		     this.readIntegerToken( fraction ) )
 		{
+			this.currentToken().setType( SemanticTokenTypes.Number );
 			this.readToken(); // .
+			this.currentToken().setType( SemanticTokenTypes.Number );
 			this.readToken(); // fraction
 
 			number = new Value( sign * StringUtilities.parseDouble( integer + "." + fraction ) );
@@ -4729,11 +4813,15 @@ public class Parser
 		if ( ++i == line.length() )
 		{
 			resultString.append( '\n' );
-			this.currentLine.makeToken( i );
+			this.currentLine.makeToken( i )
+				.setType( SemanticTokenTypes.String );
 			this.currentLine = this.currentLine.nextLine;
 			this.currentIndex = this.currentLine.offset;
 			return -1;
 		}
+
+		// TODO try to add the "escaped string" semantic type/modifier
+		// to these characters if/when lsp4j adds that
 
 		char ch = line.charAt( i );
 
@@ -4931,6 +5019,9 @@ public class Parser
 				plurals = true;
 			}
 
+			typedConstantTypeToken.setType( plurals ?
+				SemanticTokenTypes.Enum :
+				SemanticTokenTypes.EnumMember );
 			this.readToken();
 		}
 
@@ -5015,7 +5106,8 @@ public class Parser
 			{
 				if ( i > 0 )
 				{
-					this.currentLine.makeToken( i );
+					this.currentLine.makeToken( i )
+						.setType( SemanticTokenTypes.String );
 					this.currentIndex += i;
 				}
 
@@ -5094,7 +5186,8 @@ public class Parser
 			{
 				if ( i > 0 )
 				{
-					this.currentLine.makeToken( i );
+					this.currentLine.makeToken( i )
+						.setType( SemanticTokenTypes.String );
 					this.currentIndex += i;
 				}
 
@@ -5131,7 +5224,8 @@ public class Parser
 				slash = false;
 				if ( ch == '/' )
 				{
-					this.currentLine.makeToken( i - 1 );
+					this.currentLine.makeToken( i - 1 )
+						.setType( SemanticTokenTypes.String );
 					this.currentIndex += i - 1;
 					// Throw away the rest of the line
 					this.currentLine.makeComment( this.restOfLine().length() );
@@ -5358,6 +5452,8 @@ public class Parser
 					return this.parseCall( scope, current );
 				}
 
+				final boolean readOnly = DataTypes.enumeratedTypes.contains( type );
+
 				type = type.asProxy();
 				if ( !( type instanceof RecordType ) )
 				{
@@ -5384,6 +5480,11 @@ public class Parser
 				}
 				else
 				{
+					fieldToken.setType( SemanticTokenTypes.Property );
+					if ( readOnly )
+					{
+						fieldToken.addModifier( SemanticTokenModifiers.Readonly );
+					}
 					this.readToken(); // read name
 				}
 				else
@@ -5404,7 +5505,7 @@ public class Parser
 				{
 					if ( !variableReferenceError )
 					{
-						this.error( fieldToken, "Invalid field name '" + field + "'" );
+						this.error( fieldToken, "Invalid field name '" + fieldToken.value + "'" );
 						variableReferenceError = true;
 					}
 
@@ -5457,6 +5558,7 @@ public class Parser
 		}
 
 		Token directiveToken = this.currentToken();
+		directiveToken.setType( SemanticTokenTypes.Keyword );
 		Token directiveValueToken = null;
 
 		this.readToken(); //directive
@@ -5514,6 +5616,7 @@ public class Parser
 
 			resultString = line.substring( 0, endIndex );
 			directiveValueToken = this.currentToken = this.currentLine.makeToken( endIndex );
+			this.currentToken().setType( SemanticTokenTypes.String );
 			this.readToken();
 		}
 
@@ -6025,6 +6128,7 @@ public class Parser
 		private Token makeComment( final int commentLength )
 		{
 			final Token newToken = new Comment( commentLength );
+			newToken.setType( SemanticTokenTypes.Comment );
 			this.tokens.addLast( newToken );
 			return newToken;
 		}
@@ -6041,6 +6145,9 @@ public class Parser
 			final String content;
 			final String followingWhitespace;
 			final int restOfLineStart;
+
+			private String semanticType;
+			private List<String> semanticModifiers = new ArrayList<>();
 
 			private Token( final int tokenLength )
 			{
@@ -6078,6 +6185,26 @@ public class Parser
 				this.followingWhitespace = lineRemainder.substring( 0, lTrim );
 
 				this.restOfLineStart = offset + tokenLength + lTrim;
+			}
+
+			public String getSemanticType()
+			{
+				return this.semanticType;
+			}
+
+			private void setType( final String semanticType )
+			{
+				this.semanticType = semanticType;
+			}
+
+			public List<String> getSemanticModifiers()
+			{
+				return this.semanticModifiers;
+			}
+
+			private void addModifier( final String semanticModifier )
+			{
+				this.semanticModifiers.add( semanticModifier );
 			}
 
 			/** The Line in which this token exists */
