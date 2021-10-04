@@ -3271,7 +3271,7 @@ public class Parser
 
 		while ( !this.atEndOfFile() && !this.currentToken().equals( ")" ) )
 		{
-			Value value = parsePreIncDec( scope );
+			Value value = this.parsePreIncDec( scope );
 			if ( value != null )
 			{
 				incrementers.add( value );
@@ -3295,7 +3295,7 @@ public class Parser
 
 				if ( lhs == ref )
 				{
-					Assignment incrementer = parseAssignment( scope, ref );
+					Assignment incrementer = this.parseAssignment( scope, ref );
 
 					if ( incrementer != null )
 					{
@@ -3565,12 +3565,12 @@ public class Parser
 		return target.initialValueExpression( params );
 	}
 
-	private Value parseCall( final BasicScope scope )
+	private FunctionCall parseCall( final BasicScope scope )
 	{
 		return this.parseCall( scope, null );
 	}
 
-	private Value parseCall( final BasicScope scope, final Value firstParam )
+	private FunctionCall parseCall( final BasicScope scope, final Value firstParam )
 	{
 		if ( !"(".equals( this.nextToken() ) )
 		{
@@ -3746,9 +3746,7 @@ public class Parser
 		}
 
 		Location invokeLocation = this.makeLocation( invokeStartToken, this.peekPreviousToken() );
-		FunctionInvocation call = new FunctionInvocation( invokeLocation, scope, type, name, params, this );
-
-		return this.parsePostCall( scope, call );
+		return new FunctionInvocation( invokeLocation, scope, type, name, params, this );
 	}
 
 	private Assignment parseAssignment( final BasicScope scope, final VariableReference lhs )
