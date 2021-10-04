@@ -1144,7 +1144,7 @@ public class Parser
 		return rhs;
 	}
 
-	private List<Value> autoCoerceParameters( Function target, List<Value>params, BasicScope scope )
+	private List<Value> autoCoerceParameters( Function target, List<Value> params, BasicScope scope )
 	{
 		ListIterator<VariableReference> refIterator = target.getVariableReferences().listIterator();
 		ListIterator<Value> valIterator = params.listIterator();
@@ -3223,9 +3223,6 @@ public class Parser
 			return null;
 		}
 
-		Value lhs = null;
-		String operStr = null;
-
 		// --[VariableReference]
 		// ++[VariableReference]
 
@@ -4779,6 +4776,13 @@ public class Parser
 	private boolean tokenString( final String s )
 	{
 		return Parser.multiCharTokens.contains( s );
+	}
+
+	private boolean atEndOfFile()
+	{
+		this.currentToken();
+
+		return this.currentLine == null;
 	}
 
 	/**
