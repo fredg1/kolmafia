@@ -1368,7 +1368,7 @@ public class Parser
 		Type valType = scope.findType( this.currentToken().content );
 		if ( valType == null )
 		{
-			if ( records && "record".equalsIgnoreCase( this.currentToken() ) )
+			if ( !records )
 			{
 				valType = this.parseRecord( scope );
 
@@ -1384,7 +1384,13 @@ public class Parser
 
 				return valType;
 			}
-
+		}
+		else if ( ( valType = scope.findType( this.currentToken() ) ) != null )
+		{
+			this.readToken();
+		}
+		else
+		{
 			return null;
 		}
 
