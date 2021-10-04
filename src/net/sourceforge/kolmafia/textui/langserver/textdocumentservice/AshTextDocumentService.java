@@ -150,7 +150,7 @@ public abstract class AshTextDocumentService
 		this.parent.executor.execute( () -> {
 			TextDocumentItem document = params.getTextDocument();
 
-			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
+			File file = FilesMonitor.URIToFile( document.getUri() );
 
 			this.parent.monitor.updateFile( file, document.getText(), document.getVersion() );
 		} );
@@ -169,7 +169,7 @@ public abstract class AshTextDocumentService
 				return;
 			}
 
-			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
+			File file = FilesMonitor.URIToFile( document.getUri() );
 
 			// We don't support incremental changes, so we expect the client
 			// to put the whole file's content in a single TextDocumentContentChangeEvent
@@ -183,7 +183,7 @@ public abstract class AshTextDocumentService
 		this.parent.executor.execute( () -> {
 			TextDocumentIdentifier document = params.getTextDocument();
 
-			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
+			File file = FilesMonitor.URIToFile( document.getUri() );
 
 			this.parent.monitor.updateFile( file, null, -1 );
 		} );
@@ -203,7 +203,7 @@ public abstract class AshTextDocumentService
 			TextDocumentIdentifier document = params.getTextDocument();
 			Position position = params.getPosition();
 
-			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
+			File file = FilesMonitor.URIToFile( document.getUri() );
 
 			return Either.forLeft( this.symbolManager.getDefinition( file, position ) );
 		}, this.parent.executor );
@@ -216,7 +216,7 @@ public abstract class AshTextDocumentService
 			TextDocumentIdentifier document = params.getTextDocument();
 			Position position = params.getPosition();
 
-			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
+			File file = FilesMonitor.URIToFile( document.getUri() );
 
 			return Either.forLeft( this.symbolManager.getTypeDefinition( file, position ) );
 		}, this.parent.executor );
@@ -230,7 +230,7 @@ public abstract class AshTextDocumentService
 			Position position = params.getPosition();
 			//params.getContext().isIncludeDeclaration(); //for when we support declaration
 
-			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
+			File file = FilesMonitor.URIToFile( document.getUri() );
 
 			return this.symbolManager.getReferences( file, position );
 		}, this.parent.executor );
@@ -242,7 +242,7 @@ public abstract class AshTextDocumentService
 		return CompletableFuture.supplyAsync( () -> {
 			TextDocumentIdentifier document = params.getTextDocument();
 
-			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
+			File file = FilesMonitor.URIToFile( document.getUri() );
 
 			return this.semanticHandler.getSemanticTokens( file, null );
 		}, this.parent.executor );
@@ -255,7 +255,7 @@ public abstract class AshTextDocumentService
 			TextDocumentIdentifier document = params.getTextDocument();
 			Range range = params.getRange();
 
-			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
+			File file = FilesMonitor.URIToFile( document.getUri() );
 
 			return this.semanticHandler.getSemanticTokens( file, range );
 		}, this.parent.executor );
