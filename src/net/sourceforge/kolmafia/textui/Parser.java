@@ -1398,7 +1398,12 @@ public class Parser
 
 		if ( this.currentToken().equals( "[" ) )
 		{
-			return this.parseAggregateType( valType, scope );
+			valType = this.parseAggregateType( valType, scope );
+		}
+
+		if ( valType != null )
+		{
+			valType.addReference( this.makeLocation( typeStart ) );
 		}
 
 		return valType;
