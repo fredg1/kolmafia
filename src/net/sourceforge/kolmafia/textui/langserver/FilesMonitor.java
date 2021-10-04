@@ -43,7 +43,7 @@ import net.java.dev.spellcast.utilities.DataUtilities;
 
 import net.sourceforge.kolmafia.KoLConstants;
 
-class FilesMonitor
+public class FilesMonitor
 {
 	final AshLanguageServer parent;
 
@@ -52,7 +52,7 @@ class FilesMonitor
 		this.parent = parent;
 	}
 
-	void updateFile( final File file, final String text, final int version )
+	public void updateFile( final File file, final String text, final int version )
 	{
 		synchronized ( this.parent.scripts )
 		{
@@ -182,7 +182,7 @@ class FilesMonitor
 		}
 	}
 
-	static String sanitizeURI( final String uri )
+	public static String sanitizeURI( final String uri )
 	{
 		if ( uri == null )
 		{

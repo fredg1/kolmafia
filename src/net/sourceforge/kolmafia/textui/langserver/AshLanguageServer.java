@@ -46,11 +46,8 @@ import java.util.concurrent.ExecutorService;
 import org.eclipse.lsp4j.ClientCapabilities;
 import org.eclipse.lsp4j.InitializeParams;
 import org.eclipse.lsp4j.InitializeResult;
-import org.eclipse.lsp4j.SaveOptions;
 import org.eclipse.lsp4j.ServerCapabilities;
 import org.eclipse.lsp4j.ServerInfo;
-import org.eclipse.lsp4j.TextDocumentSyncKind;
-import org.eclipse.lsp4j.TextDocumentSyncOptions;
 import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.eclipse.lsp4j.launch.LSPLauncher;
 import org.eclipse.lsp4j.services.LanguageClient;
@@ -141,94 +138,12 @@ public abstract class AshLanguageServer
 		} );
 
 		return CompletableFuture.supplyAsync( () -> {
-			ServerCapabilities capabilities = new ServerCapabilities();
-			// soooo... what *can* we do, currently?
+			final ServerCapabilities capabilities = new ServerCapabilities();
 
-			// textDocumentSync
-			TextDocumentSyncOptions textDocumentSyncOptions = new TextDocumentSyncOptions();
-			textDocumentSyncOptions.setOpenClose( true );
-			textDocumentSyncOptions.setChange( TextDocumentSyncKind.Full );
-			textDocumentSyncOptions.setWillSave( false );
-			textDocumentSyncOptions.setWillSaveWaitUntil( false );
-			textDocumentSyncOptions.setSave( new SaveOptions( false ) );
+			this.textDocumentService.setCapabilities( capabilities );
+			this.workspaceService.setCapabilities( capabilities );
 
-			capabilities.setTextDocumentSync( textDocumentSyncOptions );
-
-			// completionProvider
-
-			// hoverProvider
-
-			// signatureHelpProvider
-
-			// declarationProvider
-			// Only for functions
-			// TODO
-
-			// definitionProvider
-			// TODO
-
-			// typeDefinitionProvider
-			// TODO
-
-			// implementationProvider
-			// Doesn't exist in ASH
-
-			// referencesProvider
-			//capabilities.setReferencesProvider( Boolean.TRUE );
-
-			// documentHighlightProvider
-
-			// documentSymbolProvider
-
-			// codeActionProvider
-			// for fixing misspelled literals/typed constants?
-
-			// codeLensProvider
-
-			// documentLinkProvider
-			// for imports statement? To point to the imported file?
-			// We may just settle with the file being the "definition" target...
-
-			// colorProvider
-
-			// documentFormattingProvider
-			// maybe trim trailing whitespaces?
-
-			// documentRangeFormattingProvider
-
-			// documentOnTypeFormattingProvider
-
-			// renameProvider
-
-			// foldingRangeProvider
-
-			// executeCommandProvider
-
-			// selectionRangeProvider
-
-			// linkedEditingRangeProvider
-
-			// callHierarchyProvider
-
-			// semanticTokensProvider
-
-			// monikerProvider
-			// not even sure what that it? Looking into the docs,
-			// it seems like it's something that "should" be a normal feature,
-			// but then why was it added so recently? TODO look into this
-			// https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_moniker
-
-			// workspaceSymbolProvider
-
-			// workspace
-
-			// typeHierarchyProvider
-			// Neither part of LSP yet, nor a thing in ASH
-
-			// experimental
-			// no..?
-
-			ServerInfo info = new ServerInfo( StaticEntity.getVersion() );
+			final ServerInfo info = new ServerInfo( StaticEntity.getVersion() );
 
 			return new InitializeResult( capabilities, info );
 		}, this.executor );
