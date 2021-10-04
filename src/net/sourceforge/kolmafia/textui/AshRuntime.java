@@ -114,7 +114,7 @@ public class AshRuntime
 		return this.parser.getFileName();
 	}
 
-	public Map<File, Long> getImports()
+	public Map<File, Parser> getImports()
 	{
 		return this.parser.getImports();
 	}

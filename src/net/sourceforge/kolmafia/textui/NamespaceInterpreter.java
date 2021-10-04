@@ -68,13 +68,13 @@ public class NamespaceInterpreter
 
 		if ( !shouldRefresh )
 		{
-			Map<File, Long> imports = this.parser.getImports();
+			Map<File, Parser> imports = this.parser.getImports();
 
-			for ( Entry<File, Long> entry : imports.entrySet() )
+			for ( Entry<File, Parser> entry : imports.entrySet() )
 			{
 				File file = entry.getKey();
-				Long date = entry.getValue();
-				shouldRefresh = date.longValue() != file.lastModified();
+				long date = entry.getValue().getModificationDate();
+				shouldRefresh = date != file.lastModified();
 			}
 		}
 

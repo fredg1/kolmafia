@@ -92,7 +92,7 @@ class Script
 	{
 		Parser parser;
 		Scope scope;
-		Map<File, Long> imports;
+		Map<File, Parser> imports;
 
 		Thread parserThread;
 
@@ -216,7 +216,7 @@ class Script
 		private class LSParser
 			extends Parser
 		{
-			private LSParser( final File scriptFile, final InputStream stream, final Map<File, Long> imports )
+			private LSParser( final File scriptFile, final InputStream stream, final Map<File, Parser> imports )
 			{
 				super( scriptFile, stream, imports );
 			}
