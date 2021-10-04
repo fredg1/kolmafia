@@ -607,16 +607,18 @@ public class Parser
 	                          final Type expectedType,
 	                          final VariableList variables,
 	                          final BasicScope parentScope,
+	                          final boolean wholeFile,
 	                          final boolean allowBreak,
 	                          final boolean allowContinue )
 	{
 		Scope result = startScope == null ? new Scope( variables, parentScope ) : startScope;
-		return this.parseScope( result, expectedType, parentScope, allowBreak, allowContinue );
+		return this.parseScope( result, expectedType, parentScope, wholeFile, allowBreak, allowContinue );
 	}
 
 	private Scope parseScope( Scope result,
 	                          final Type expectedType,
 	                          final BasicScope parentScope,
+	                          final boolean wholeFile,
 	                          final boolean allowBreak,
 	                          final boolean allowContinue )
 	{
@@ -632,8 +634,24 @@ public class Parser
 		}
 
 		Position previousPosition = null;
-		while ( !this.atEndOfFile() && !this.madeProgress( previousPosition, previousPosition = this.here() ) )
+		while ( !this.atEndOfFile() )
 		{
+			// Infinite loop prevention
+			if ( !this.madeProgress( previousPosition, previousPosition = this.here() ) )
+			{
+				if ( !wholeFile )
+				{
+					break;
+				}
+
+				// If we're at the top scope of a file, and we reached a node we
+				// couldn't parse, just read the current token and continue
+				this.readToken();
+
+				this.error( previousPosition, "Empty or unknown node" );
+				continue;
+			}
+
 			if ( this.parseTypedef( result ) )
 			{
 				if ( this.currentToken().equals( ";" ) )
@@ -2012,7 +2030,7 @@ public class Parser
 
 		this.readToken(); // {
 
-		Scope scope = this.parseScope( null, functionType, variables, parentScope, allowBreak, allowContinue );
+		Scope scope = this.parseScope( null, functionType, variables, parentScope, false, allowBreak, allowContinue );
 
 		if ( this.currentToken().equals( "}" ) )
 		{
@@ -3285,7 +3303,7 @@ public class Parser
 
 			this.readToken(); // {
 
-			this.parseScope( result, functionType, parentScope, true, true );
+			this.parseScope( result, functionType, parentScope, false, true, true );
 
 			if ( this.currentToken().equals( "}" ) )
 			{
