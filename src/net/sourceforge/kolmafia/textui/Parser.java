@@ -408,7 +408,7 @@ public class Parser
 
 	public static Scope getExistingFunctionScope()
 	{
-		return new Scope( RuntimeLibrary.functions, null, DataTypes.simpleTypes );
+		return new Scope( RuntimeLibrary.functions.clone(), null, DataTypes.simpleTypes.clone() );
 	}
 
 	// **************** Parser *****************
@@ -1182,7 +1182,7 @@ public class Parser
 				}
 				else
 				{
-					rhs = this.parseAggregateLiteral( scope, new BadAggregateType( null ) );
+					rhs = this.parseAggregateLiteral( scope, new BadAggregateType() );
 
 					if ( !variableError && allowInitialization && !ltype.isBad() )
 					{
@@ -1269,11 +1269,7 @@ public class Parser
 			Function target = scope.findFunction( name, params, MatchType.EXACT );
 			if ( target != null && target.getType().equals( ltype ) )
 			{
-				if ( target instanceof UserDefinedFunction )
-				{
-					// FIXME parser find a way to collect references to LibraryFunctions
-					target.addReference( rhs.location );
-				}
+				scope.addReference( target, rhs.location );
 				return new FunctionCall( target, params, this )
 					.wrap( rhs.location );
 			}
@@ -1289,11 +1285,7 @@ public class Parser
 			Function target = scope.findFunction( name, params, MatchType.EXACT );
 			if ( target != null && target.getType().equals( ltype ) )
 			{
-				if ( target instanceof UserDefinedFunction )
-				{
-					// FIXME parser find a way to collect references to LibraryFunctions
-					target.addReference( rhs.location );
-				}
+				scope.addReference( target, rhs.location );
 				return new FunctionCall( target, params, this )
 					.wrap( rhs.location );
 			}
@@ -1577,6 +1569,7 @@ public class Parser
 		}
 		else if ( ( valType = scope.findType( this.currentToken().value ) ) != null )
 		{
+			scope.addReference( valType, this.makeLocation( this.currentToken() ) );
 			valType = new TypeReference( valType, this.makeLocation( this.currentToken() ) );
 			this.readToken();
 		}
@@ -2835,7 +2828,7 @@ public class Parser
 				this.error( errorLocation, "Aggregate reference expected" );
 			}
 
-			aggregate = new VariableReference( new BadVariable( null, new BadAggregateType( null ), null ) )
+			aggregate = new VariableReference( new BadVariable( null, new BadAggregateType(), null ) )
 				.wrap( errorLocation );
 		}
 
@@ -3219,7 +3212,7 @@ public class Parser
 						javaForError = true;
 					}
 
-					variable.addReference( this.makeLocation( nameToken ) );
+					parentScope.addReference( variable, this.makeLocation( nameToken ) );
 
 					lhs = new VariableReference( variable );
 				}
@@ -3518,9 +3511,7 @@ public class Parser
 
 		if ( type != null )
 		{
-			// Make one (to add to the type's references), but don't use it
-			// (since we'd want to fetch its target immediately)
-			new TypeReference( type, this.makeLocation( nameToken ) );
+			scope.addReference( type, this.makeLocation( nameToken ) );
 		}
 
 		if ( !( type instanceof RecordType ) )
@@ -3660,11 +3651,7 @@ public class Parser
 		{
 			params = this.autoCoerceParameters( target, params, scope );
 
-			if ( target instanceof UserDefinedFunction )
-			{
-				// FIXME parser find a way to collect references to LibraryFunctions
-				target.addReference( functionCallLocation );
-			}
+			scope.addReference( target, functionCallLocation );
 		}
 		else
 		{
@@ -4863,6 +4850,7 @@ public class Parser
 		}
 		else
 		{
+			scope.addReference( type, this.makeLocation( typedConstantTypeToken ) );
 			type = new TypeReference( type, this.makeLocation( typedConstantTypeToken ) );
 		}
 
@@ -5169,7 +5157,7 @@ public class Parser
 
 		if ( var != null )
 		{
-			var.addReference( variableLocation );
+			scope.addReference( var, variableLocation );
 		}
 		else
 		{
@@ -5237,7 +5225,7 @@ public class Parser
 						variableReferenceError = true;
 					}
 
-					type = new BadAggregateType( null );
+					type = new BadAggregateType();
 				}
 
 				AggregateType atype = (AggregateType) type;
