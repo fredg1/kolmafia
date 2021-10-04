@@ -750,11 +750,13 @@ public class Parser
 			return null;
 		}
 
+		Token recordHeadToken = this.currentToken();
+
 		this.readToken(); // read record
 
 		if ( this.currentToken().equals( ";" ) )
 		{
-			this.error( "Record name expected" );
+			this.error( recordHeadToken, "Record name expected" );
 
 			return Type.BAD_TYPE;
 		}
@@ -958,14 +960,12 @@ public class Parser
 
 			if ( this.currentToken().equals( "..." ) )
 			{
-				this.readToken(); //read ...
-
 				// We can only have a single vararg parameter
 				if ( vararg )
 				{
 					if ( !parameterError )
 					{
-						this.error( parameterStart, "Only one vararg parameter is allowed" );
+						this.error( parameterTypeToken, this.currentToken(), "Only one vararg parameter is allowed" );
 					}
 					functionError = parameterError = true;
 
@@ -973,15 +973,19 @@ public class Parser
 				}
 				else
 				{
-					// Make an vararg type out of the previously parsed type.
+					// Make a vararg type out of the previously parsed type.
 					paramType = new VarArgType( paramType );
 
-					paramType.getReferenceLocations().add( this.makeLocation( parameterStart ) );
+					paramType.getReferenceLocations().add( this.makeLocation( parameterTypeToken, this.currentToken() ) );
 
 					// Only one vararg is allowed
 					vararg = true;
 				}
+
+				this.readToken(); //read ...
 			}
+
+			Token paramNameToken = this.currentToken();
 
 			Variable param = this.parseVariable( paramType, null );
 			if ( param == null )
@@ -1005,7 +1009,7 @@ public class Parser
 				// The single vararg parameter must be the last one
 				if ( vararg && !parameterError )
 				{
-					this.error( parameterStart, "The vararg parameter must be the last one" );
+					this.error( parameterTypeToken, paramNameToken, "The vararg parameter must be the last one" );
 					functionError = parameterError = true;
 				}
 
@@ -1131,19 +1135,19 @@ public class Parser
 
 		if ( Parser.isReservedWord( variableName ) )
 		{
-			this.error( variableStart, "Reserved word '" + variableName + "' cannot be a variable name" );
+			this.error( variableToken, "Reserved word '" + variableName + "' cannot be a variable name" );
 			result = Variable.BAD_VARIABLE;
 			variableError = true;
 		}
 		else if ( scope != null && scope.findVariable( variableName ) != null )
 		{
-			this.error( variableStart, "Variable " + variableName + " is already defined" );
+			this.error( variableToken, "Variable " + variableName + " is already defined" );
 			result = Variable.BAD_VARIABLE;
 			variableError = true;
 		}
 		else
 		{
-			result = new Variable( variableName, t, this.makeLocation( variableStart ) );
+			result = new Variable( variableName, t, this.makeLocation( variableToken ) );
 		}
 
 		// If we are parsing a parameter declaration (if "scope" is null), we are done.
@@ -1309,7 +1313,7 @@ public class Parser
 			return false;
 		}
 
-		Position typedefStart = this.here();
+		Token typedefToken = this.currentToken();
 		boolean typedefError = false;
 
 		this.readToken(); // read typedef
@@ -1319,7 +1323,7 @@ public class Parser
 		{
 			if ( !typedefError )
 			{
-				this.error( typedefStart, "Missing data type for typedef" );
+				this.error( typedefToken, this.currentToken(), "Missing data type for typedef" );
 				typedefError = true;
 			}
 
@@ -1336,7 +1340,7 @@ public class Parser
 		{
 			if ( !typedefError )
 			{
-				this.error( nameStart, "Invalid type name '" + typeName + "'" );
+				this.error( typeToken, "Invalid type name '" + typeName + "'" );
 				typedefError = true;
 			}
 
@@ -2792,28 +2796,33 @@ public class Parser
 			     !"in".equalsIgnoreCase( this.nextToken() ) &&
 			     !",".equals( this.nextToken() ) )
 			{
-				// don't read
-				this.error( nameStart, "Key variable name expected" );
+				this.error( nameToken, "Key variable name expected" );
+
+				if ( ",".equals( this.currentToken().value ) )
+				{
+					this.readToken(); // ,
+					continue;
+				}
+
+				this.readToken(); // unknown
+				break;
 			}
 			else if ( Parser.isReservedWord( name.content ) )
 			{
-				this.readToken(); // name
-				this.error( "Reserved word '" + name + "' cannot be a key variable name" );
+				this.error( nameToken, "Reserved word '" + name + "' cannot be a key variable name" );
 				names.add( null );
 				locations.add( null );
 			}
 			else if ( names.contains( name.content ) )
 			{
-				this.readToken(); // name
-				this.error( "Key variable '" + name + "' is already defined" );
+				this.error( nameToken, "Key variable '" + name + "' is already defined" );
 				names.add( null );
 				locations.add( null );
 			}
 			else
 			{
-				this.readToken(); // name
 				names.add( name );
-				locations.add( this.makeLocation( nameStart ) );
+				locations.add( this.makeLocation( nameToken ) );
 			}
 			else
 			{
@@ -2834,26 +2843,13 @@ public class Parser
 				break;
 			}
 
-			if ( !this.madeProgress( nameStart, this.here() ) )
-			{
-				// happened because we got a non-identifier token as a name
-				// (e.g. a period or a parenthesis)
-
-				// just skip the token and move forward
-				this.readToken();
-			}
-			else
-			{
-				this.unexpectedTokenError( "in", this.currentToken() );
-			}
-
+			this.unexpectedTokenError( "in", this.currentToken() );
 			break;
 		}
 
 		// Get an aggregate reference
-		Value aggregate = this.parseValue( parentScope );
-
 		Position aggregateStart = this.here();
+		Value aggregate = this.parseValue( parentScope );
 
 		if ( aggregate == null || !( aggregate.getType().getBaseType() instanceof AggregateType ) )
 		{
@@ -2946,7 +2942,7 @@ public class Parser
 		{
 			if ( !forError )
 			{
-				this.error( nameLocation, "Reserved word '" + name + "' cannot be an index variable name" );
+				this.error( nameToken, "Reserved word '" + name + "' cannot be an index variable name" );
 				forError = true;
 			}
 
@@ -2956,7 +2952,7 @@ public class Parser
 		{
 			if ( !forError )
 			{
-				this.error( nameLocation, "Index variable '" + name + "' is already defined" );
+				this.error( nameToken, "Index variable '" + name + "' is already defined" );
 				forError = true;
 			}
 
@@ -3061,7 +3057,7 @@ public class Parser
 			{
 				if ( !javaForSyntaxError )
 				{
-					this.error( nameStart, "Identifier required" );
+					this.error( nameToken, "Identifier required" );
 				}
 				javaForError = javaForSyntaxError = true;
 
@@ -3078,7 +3074,7 @@ public class Parser
 				{
 					if ( !javaForError )
 					{
-						this.error( nameStart, "Unknown variable '" + name + "'" );
+						this.error( nameToken, "Unknown variable '" + name + "'" );
 						javaForError = true;
 					}
 
@@ -3091,13 +3087,13 @@ public class Parser
 			{
 				if ( scope.findVariable( name.content, true ) != null )
 				{
-					variable = new Variable( name, t, this.makeLocation( nameStart ) );
+					variable = new Variable( name, t, this.makeLocation( nameToken ) );
 				}
 				else
 				{
 					if ( !javaForError )
 					{
-						this.error( nameStart, "Variable '" + name + "' already defined" );
+						this.error( nameToken, "Variable '" + name + "' already defined" );
 						javaForError = true;
 					}
 
@@ -3370,14 +3366,14 @@ public class Parser
 		String name = this.currentToken().content;
 		Type type = scope.findType( name );
 
-		Position nameStart = this.here();
+		Token nameToken = this.currentToken();
 		boolean newRecordError = false, newRecordSyntaxError = false;
 
 		this.readToken(); //name
 
 		if ( type != null )
 		{
-			type.addReference( this.makeLocation( nameStart ) );
+			type.addReference( this.makeLocation( nameToken ) );
 		}
 
 		if ( !( type instanceof RecordType ) )
@@ -3386,7 +3382,7 @@ public class Parser
 			{
 				if ( !newRecordSyntaxError )
 				{
-					this.error( nameStart, "'" + name + "' is not a record type" );
+					this.error( nameToken, "'" + name + "' is not a record type" );
 				}
 				newRecordError = newRecordSyntaxError = true;
 			}
@@ -3507,7 +3503,7 @@ public class Parser
 		Token name = this.currentToken();
 		this.readToken(); //name
 
-		Location nameLocation = this.makeLocation( nameStart );
+		this.readToken(); //name
 
 		List<Value> params = this.parseParameters( scope, firstParam );
 		Function target = scope.findFunction( name.content, params );
@@ -4895,11 +4891,11 @@ public class Parser
 
 		if ( var != null )
 		{
-			var.addReference( this.makeLocation( variableStart ) );
+			var.addReference( this.makeLocation( variableToken ) );
 		}
 		else
 		{
-			this.error( variableStart, "Unknown variable '" + name + "'" );
+			this.error( variableToken, "Unknown variable '" + name + "'" );
 
 		Position start = this.here();
 
@@ -5086,7 +5082,8 @@ public class Parser
 			return null;
 		}
 
-		Position directiveStart = this.here();
+		Token directiveToken = this.currentToken();
+		Token directiveValueToken = null;
 
 		this.readToken(); //directive
 
@@ -5142,7 +5139,7 @@ public class Parser
 			}
 
 			resultString = line.substring( 0, endIndex );
-			this.currentToken = this.currentLine.makeToken( endIndex );
+			directiveValueToken = this.currentToken = this.currentLine.makeToken( endIndex );
 			this.readToken();
 		}
 
@@ -5151,7 +5148,7 @@ public class Parser
 			this.readToken(); //read ;
 		}
 
-		return new Directive( resultString, this.rangeToHere( directiveStart ) );
+		return new Directive( resultString, this.makeRange( directiveToken, directiveValueToken ) );
 	}
 
 	private void parseScriptName()
@@ -5960,7 +5957,7 @@ public class Parser
 				String [] target = revision.split( "\\." );
 				if ( target.length != 2 )
 				{
-					this.error( "invalid 'since' format" );
+					this.error( directiveRange, "invalid 'since' format" );
 					return;
 				}
 
@@ -5991,7 +5988,7 @@ public class Parser
 		}
 		catch ( NumberFormatException e )
 		{
-			this.error( "invalid 'since' format" );
+			this.error( directiveRange, "invalid 'since' format" );
 		}
 	}
 
