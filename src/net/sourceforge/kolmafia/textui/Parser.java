@@ -1275,8 +1275,16 @@ public class Parser
 			// <aggregate type> <name> = {};
 			// <aggregate type> <name> {};
 			//
-			// Which is why we already read the "=" if it was there.
+			// Which is why our steps are:
+			// 1- is there a "="? If so, read it.
+			// 2- Either way, is there a "{" now? If so, parse an aggregate.
+			// 3- If not, did we see a "=" on step 1? If so, parse an expression.
 
+			this.readToken(); // read =
+		}
+
+		if ( this.currentToken().equals( "{" ) )
+		{
 			if ( ltype instanceof AggregateType )
 			{
 				rhs = this.parseAggregateLiteral( scope, (AggregateType) ltype );
