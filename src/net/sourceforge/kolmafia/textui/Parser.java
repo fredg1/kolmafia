@@ -980,7 +980,7 @@ public class Parser
 
 			Token paramNameToken = this.currentToken();
 
-			Variable param = this.parseVariable( paramType, null );
+			Variable param = this.parseVariable( paramType, parentScope, false );
 			if ( param == null )
 			{
 				if ( !parameterError )
@@ -1102,7 +1102,7 @@ public class Parser
 	{
 		while ( true )
 		{
-			Variable v = this.parseVariable( t, parentScope );
+			Variable v = this.parseVariable( t, parentScope, true );
 			if ( v == null )
 			{
 				return false;
@@ -1118,7 +1118,7 @@ public class Parser
 		}
 	}
 
-	private Variable parseVariable( final Type t, final BasicScope scope )
+	private Variable parseVariable( final Type t, final BasicScope scope, final boolean allowInitialization )
 	{
 		if ( !this.parseIdentifier( this.currentToken().content ) )
 		{
@@ -1151,7 +1151,7 @@ public class Parser
 			result = new BadVariable( variableName, t, this.makeLocation( variableToken ) );
 			variableError = true;
 		}
-		else if ( scope != null && scope.findVariable( variableName ) != null )
+		else if ( scope.findVariable( variableName ) != null )
 		{
 			this.error( variableToken, "Variable " + variableName + " is already defined" );
 			result = new BadVariable( variableName, t, this.makeLocation( variableToken ) );
@@ -1162,10 +1162,12 @@ public class Parser
 			result = new Variable( variableName, t, this.makeLocation( variableToken ) );
 		}
 
-		// If we are parsing a parameter declaration (if "scope" is null), we are done.
+		// If we are parsing a parameter declaration, we are done.
 		// Otherwise, we must initialize the variable.
 
 		LocatedValue rhs;
+
+		Token postVariableToken = this.currentToken();
 
 		Type ltype = t.getBaseType();
 		if ( this.currentToken().equals( "=" ) )
@@ -1182,7 +1184,7 @@ public class Parser
 				{
 					rhs = this.parseAggregateLiteral( scope, new BadAggregateType( null ) );
 
-					if ( !variableError && !ltype.isBad() )
+					if ( !variableError && allowInitialization && !ltype.isBad() )
 					{
 						Location errorLocation = rhs != null ? rhs.location :
 							this.makeLocation( this.peekLastToken() );
