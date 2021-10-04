@@ -1399,6 +1399,35 @@ public class Parser
 		{
 			this.readToken();
 		}
+		// We can safely assume that two non-reserved identifiers in a row
+		// are a type-variable pair.
+		else if ( !Parser.isReservedWord( this.currentToken() ) &&
+		          this.parseIdentifier( this.nextToken() ) &&
+		          !Parser.isReservedWord( this.nextToken() ) &&
+		          //FIXME
+		          // ... or we WOULD be able to safely assume it, had ASH not
+		          // have 'foreach x in y' and 'for x from a to b' ...
+		          // The best we can do is see if the next token is a variable
+		          // reference, but we may need to just remove this... :(
+		          scope.findVariable( this.nextToken(), true ) == null &&
+		          // yup, we remove it. It's not enough, since 'call' is also possible.
+		          // may become available again once we are able to get rid of the 'replaceToken' in 'parseValue'
+		          false )
+		{
+			this.error( typeStart, "Unknown type " + this.currentToken() );
+
+			valType = Type.BAD_TYPE;
+			this.readToken();
+
+			/* However, this only checks for single word (simple) types.
+			   We'd need to also check for misspelled aggregate types,
+			   but it is sadly not currently possible;
+			   since ASH requires those to be declared with brackets,
+			   we would need a way to look multiple tokens forward for
+			   a combination of "[", ",", "]", numbers and/or identifiers,
+			   and THEN make sure all that is followed by a valid identifier.
+			   But we only have access to nextToken. :( */
+		}
 		else
 		{
 			return null;
@@ -1411,7 +1440,7 @@ public class Parser
 			valType = this.parseAggregateType( valType, scope );
 		}
 
-		if ( valType != null )
+		if ( valType != null && valType.simpleType() != Type.BAD_TYPE )
 		{
 			valType.addReference( this.makeLocation( typeStart ) );
 		}
