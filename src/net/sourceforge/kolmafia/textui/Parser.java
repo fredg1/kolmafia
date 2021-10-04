@@ -6002,6 +6002,10 @@ public class Parser
 		return Parser.multiCharTokens.contains( s );
 	}
 
+	/**
+	 * Returns the content of {@link #currentLine}
+	 * starting at {@link #currentIndex}.
+	 */
 	private String restOfLine()
 	{
 		return this.currentLine.substring( this.currentIndex );
