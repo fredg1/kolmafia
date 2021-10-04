@@ -65,7 +65,7 @@ public class MapValue
 		this.content = value;
 	}
 
-	@SuppressWarnings("unchecked") 
+	@SuppressWarnings("unchecked")
 	private Map<Value,Value> getMap()
 	{
 		return (Map<Value,Value>) this.content;
@@ -136,7 +136,7 @@ public class MapValue
 			// Return the current value
 			Value rv = this.aref( key, interpreter );
 
-			@SuppressWarnings("unchecked") 
+			@SuppressWarnings("unchecked")
 			Iterator<Value> it = (Iterator<Value>) interpreter.iterators.get( i + 2 );
 			it.remove();
 
@@ -146,7 +146,7 @@ public class MapValue
 
 			return rv;
 		}
-		
+
 		Map<Value,Value> map = this.getMap();
 		return map.remove( key );
 	}

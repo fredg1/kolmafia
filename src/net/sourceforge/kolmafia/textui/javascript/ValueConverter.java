@@ -73,7 +73,7 @@ public class ValueConverter {
 		for ( Value key : mapValue.keys() )
 		{
 			Value value = mapValue.aref( key );
-			if ( key.getType().equals(DataTypes.STRING_TYPE)
+			if ( key.getType().equals( DataTypes.STRING_TYPE )
 				|| DataTypes.enumeratedTypes.contains( key.getType() ) && key.contentString.length() > 0 )
 			{
 				ScriptableObject.putProperty( result, key.contentString, asJava( value ) );
