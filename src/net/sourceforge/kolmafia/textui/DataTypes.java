@@ -164,6 +164,9 @@ public class DataTypes
 
 	public static final Type STRICT_STRING_TYPE = new Type( "strict_string", DataTypes.TYPE_STRICT_STRING );
 	public static final Type AGGREGATE_TYPE = new Type( "aggregate", DataTypes.TYPE_AGGREGATE );
+	// Only used to share their references
+	public static final Type RECORD_TYPE = new Type( "record", DataTypes.TYPE_RECORD );
+	public static final Type TYPEDEF_TYPE = new Type( "typedef", DataTypes.TYPE_TYPEDEF );
 	
 	// Map from ITEM -> INT
 	public static final AggregateType ITEM_TO_INT_TYPE =

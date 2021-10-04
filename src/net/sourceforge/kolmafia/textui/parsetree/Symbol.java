@@ -33,24 +33,50 @@
 
 package net.sourceforge.kolmafia.textui.parsetree;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.eclipse.lsp4j.Location;
+
 public abstract class Symbol
 	extends ParseTreeNode
 	implements Comparable<Symbol>
 {
-	public String name;
+	public final String name;
+
+	protected final Location definition;
+	protected List<Location> references;
 
 	public Symbol()
 	{
+		this( null, null );
 	}
 
-	public Symbol( final String name )
+	public Symbol( final String name, final Location definitionLocation )
 	{
 		this.name = name;
+		this.definition = definitionLocation;
+		this.references = new ArrayList<>();
 	}
 
 	public String getName()
 	{
 		return this.name;
+	}
+
+	public Location getDefinitionLocation()
+	{
+		return this.definition;
+	}
+
+	public List<Location> getReferenceLocations()
+	{
+		return this.references;
+	}
+
+	public void addReference( final Location location )
+	{
+		this.references.add( location );
 	}
 
 	public int compareTo( final Symbol o )

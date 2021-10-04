@@ -46,6 +46,10 @@ import java.util.stream.Collectors;
 
 import net.java.dev.spellcast.utilities.DataUtilities;
 
+import org.eclipse.lsp4j.Location;
+import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
+
 import net.sourceforge.kolmafia.KoLConstants;
 import net.sourceforge.kolmafia.KoLmafiaCLI;
 import net.sourceforge.kolmafia.RequestLogger;
@@ -115,6 +119,120 @@ import net.sourceforge.kolmafia.utilities.ByteArrayStream;
 import net.sourceforge.kolmafia.utilities.CharacterEntities;
 import net.sourceforge.kolmafia.utilities.StringUtilities;
 
+/*
+Scope
+	Typedef
+		Identifier (exactly 1)
+	Type
+		existing type
+		Record
+			( Type + Identifier ) (0+)
+		AggregateType
+			AggregateType
+				AggregateType
+					(...) (e.g. boolean [string][string][string] [...] )
+	Command (one of:)
+		Return
+			Expression
+				Expression
+					Expression
+						(...)
+				Value
+				Operator
+		BasicScript
+		While
+			Expression
+			+	LoopScope (one of:)
+					Scope
+					Command
+		Foreach
+			Identifier + Value + LoopScope
+		JavaFor
+			Type + Identifier + Expression (0-1)
+			+ Expression
+			+ PreIncDec (0-1) + VariableReference + PostIncDec (0-1) + Assignment
+			+ LoopScope
+		For
+			Identifier + Expression + Expression + Expression (0-1)
+			+ LoopScope
+		Repeat
+			LoopScope + Expression
+		Switch
+			Expression
+			+	(1+):
+				Expression (0-1)
+				+	Type
+					Command
+					Variables
+		Conditional
+			Expression
+			+	(1+)
+				BlockOrSingleCommand
+				+ Expression (0-1)
+		Try
+			BlockOrSingleCommand (one of:)
+				Block
+				SingleCommandScope
+					Command (exactly 1)
+			+ BlockOrSingleCommand
+		Catch
+			BlockOrSingleCommand
+		Static
+			CommandOrDeclaration
+				Type
+				Command
+				Variables
+			Scope
+		Sort
+			VariableReference + Expression
+		Remove
+			Expression
+		Block
+			Scope
+		Value
+			Expression
+			Number
+			String
+				Expression
+				Literal
+			TypedConstant
+				Type
+				String
+				Literal
+			NewRecord
+				Identifier
+				+	AggregateLiteral
+					Expression
+			CatchValue
+				Block
+				Expression
+			PreIncDec
+				VariableReference
+			Invoke
+				Type
+				+	Expression
+					Identifier + VariableReference
+				+	Parameters
+						Expression (0+)
+				+	PostCall
+						VariableReference
+			Call
+				ScopedIdentifier
+				+ Parameters
+				+ PostCall
+			Type + ( AggregateLiteral / VariableReference )
+	Function
+		Identifier + ( Type + Variable ) (0+)
+		+	BlockOrSingleCommand
+	Variables
+		Variable (1+)
+			Identifier
+	AggregateLiteral
+		AggregateLiteral
+			AggregateLiteral
+				(...)
+		Expression
+*/
 public class Parser
 {
 	public static final String APPROX = "\u2248";
@@ -422,8 +540,10 @@ public class Parser
 					parser.getScriptName().replace( ".ash", "" )
 						.replaceAll( "[^a-zA-Z0-9]", "_" ),
 				parser.mainMethod.getType(),
+				parser.mainMethod.getDefinitionLocation(),
 				parser.mainMethod.getVariableReferences() );
 			f.setScope( ((UserDefinedFunction)parser.mainMethod).getScope() );
+			f.setVariableReferences( parser.mainMethod.getVariableReferences() );
 			result.addFunction( f );
 		}
 
@@ -597,6 +717,8 @@ public class Parser
 
 		// Allow anonymous records
 		String recordName = null;
+		Location recordDefinition = null;
+		Position recordStart = this.here();
 
 		if ( !this.currentToken().equals( "{" ) )
 		{
@@ -617,6 +739,8 @@ public class Parser
 			}
 
 			this.readToken(); // read name
+
+			recordDefinition = this.makeSymbolLocation( recordStart );
 		}
 
 		if ( this.currentToken().equals( "{" ) )
@@ -707,7 +831,7 @@ public class Parser
 			new RecordType(
 				recordName != null ? recordName :
 					( "(anonymous record " + Integer.toHexString( Arrays.hashCode( fieldNameArray ) ) + ")" ),
-				fieldNameArray, fieldTypeArray );
+				fieldNameArray, fieldTypeArray, recordDefinition );
 
 		if ( recordName != null )
 		{
@@ -768,6 +892,8 @@ public class Parser
 				paramType = new VarArgType( paramType );
 
 				this.readToken(); //read ...
+
+				paramType.getReferenceLocations().add( this.makeSymbolLocation( varargStart ) );
 
 				// Only one vararg is allowed
 				vararg = true;
@@ -899,6 +1025,9 @@ public class Parser
 
 		this.readToken(); // If parsing of Identifier succeeded, go to next token.
 		// If we are parsing a parameter declaration, we are done
+
+		Variable result = new Variable( variableName, t, this.makeSymbolLocation( start ) );
+
 		if ( scope == null )
 		{
 			if ( this.currentToken().equals( "=" ) )
@@ -966,7 +1095,7 @@ public class Parser
 	private Value autoCoerceValue( Type ltype, Value rhs, final BasicScope scope )
 	{
 		// DataTypes.TYPE_ANY has no name
-		if ( ltype == null || ltype.getName() == null)
+		if ( ltype == null || ltype.getName() == null )
 		{
 			return rhs;
 		}
@@ -989,6 +1118,8 @@ public class Parser
 			Function target = scope.findFunction( name, params, MatchType.EXACT );
 			if ( target != null && target.getType().equals( ltype ) )
 			{
+				target.addReference( this.make0WidthSymbolLocation() );
+
 				return new FunctionCall( target, params, this );
 			}
 		}
@@ -1003,6 +1134,8 @@ public class Parser
 			Function target = scope.findFunction( name, params, MatchType.EXACT );
 			if ( target != null && target.getType().equals( ltype ) )
 			{
+				target.addReference( this.make0WidthSymbolLocation() );
+
 				return new FunctionCall( target, params, this );
 			}
 		}
@@ -2227,7 +2360,7 @@ public class Parser
 		Value aggregate = this.parseVariableReference( parentScope );
 
 		if ( !( aggregate instanceof VariableReference ) ||
-                !( aggregate.getType().getBaseType() instanceof AggregateType ) )
+		     !( aggregate.getType().getBaseType() instanceof AggregateType ) )
 		{
 			throw this.parseException( "Aggregate reference expected" );
 		}
@@ -2244,9 +2377,9 @@ public class Parser
 		// Define key variables of appropriate type
 		VariableList varList = new VariableList();
 		AggregateType type = (AggregateType) aggregate.getType().getBaseType();
-		Variable valuevar = new Variable( "value", type.getDataType() );
+		Variable valuevar = new Variable( "value", type.getDataType(), null );
 		varList.add( valuevar );
-		Variable indexvar = new Variable( "index", type.getIndexType() );
+		Variable indexvar = new Variable( "index", type.getIndexType(), null );
 		varList.add( indexvar );
 
 		// Parse the key expression in a new scope containing 'index' and 'value'
@@ -2273,6 +2406,7 @@ public class Parser
 		this.readToken(); // foreach
 
 		List<String> names = new ArrayList<String>();
+		List<Position> positions = new ArrayList<>();
 
 		while ( true )
 		{
@@ -2329,8 +2463,11 @@ public class Parser
 		List<VariableReference> variableReferences = new ArrayList<VariableReference>();
 		Type type = aggregate.getType().getBaseType();
 
-		for ( String name : names )
+		for ( int i = 0; i < names.size(); i++ )
 		{
+			String name = names.get( i );
+			Position start = positions.get( i );
+
 			Type itype;
 			if ( type == null )
 			{
@@ -2347,7 +2484,7 @@ public class Parser
 				type = null;
 			}
 
-			Variable keyvar = new Variable( name, itype );
+			Variable keyvar = new Variable( name, itype, makeSymbolLocation( start ) );
 			varList.add( keyvar );
 			variableReferences.add( new VariableReference( keyvar ) );
 		}
@@ -2491,6 +2628,8 @@ public class Parser
 			{
 				throw this.parseException( "Identifier required" );
 			}
+
+			this.readToken(); // name
 
 			// If there is no data type, it is using an existing variable
 			if ( t == null )
@@ -2717,14 +2856,21 @@ public class Parser
 		String name = this.currentToken().content;
 		Type type = scope.findType( name );
 
+		Position start = this.here();
+
+		this.readToken(); //name
+
+		if ( type != null )
+		{
+			type.addReference( this.makeSymbolLocation( start ) );
+		}
+
 		if ( !( type instanceof RecordType ) )
 		{
 			throw this.parseException( "'" + name + "' is not a record type" );
 		}
 
 		RecordType target = (RecordType) type;
-
-		this.readToken(); //name
 
 		List<Value> params = new ArrayList<>();
 		String [] names = target.getFieldNames();
@@ -2828,6 +2974,8 @@ public class Parser
 
 		Token name = this.currentToken();
 		this.readToken(); //name
+
+		Location nameLocation = this.makeSymbolLocation( start );
 
 		List<Value> params = this.parseParameters( scope, firstParam );
 		Function target = scope.findFunction( name.content, params );
@@ -3392,7 +3540,7 @@ public class Parser
 		{
         }
 
-		else if ( ( result = this.parseCall( scope, null ) ) != null )
+		else if ( ( result = this.parseCall( scope ) ) != null )
 		{
         }
 
@@ -4105,6 +4253,8 @@ public class Parser
 		{
 			throw this.parseException( "Unknown variable '" + name + "'" );
 		}
+
+		Position start = this.here();
 
 		this.readToken(); // read name
 

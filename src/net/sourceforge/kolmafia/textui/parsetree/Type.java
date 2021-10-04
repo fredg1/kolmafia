@@ -30,8 +30,8 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
- 
- package net.sourceforge.kolmafia.textui.parsetree;
+
+package net.sourceforge.kolmafia.textui.parsetree;
 
 import java.io.PrintStream;
 
@@ -41,6 +41,8 @@ import java.util.List;
 import java.util.Map;
 
 import java.util.regex.Pattern;
+
+import org.eclipse.lsp4j.Location;
 
 import net.sourceforge.kolmafia.CoinmasterRegistry;
 import net.sourceforge.kolmafia.EdServantData;
@@ -74,7 +76,12 @@ public class Type
 
 	public Type( final String name, final int type )
 	{
-		super( name );
+		this( name, type, null );
+	}
+
+	public Type( final String name, final int type, final Location location )
+	{
+		super( name, location );
 		this.primitive = true;
 		this.type = type;
 	}
