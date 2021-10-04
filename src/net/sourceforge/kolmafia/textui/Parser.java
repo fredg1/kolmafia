@@ -2810,6 +2810,8 @@ public class Parser
 		Scope scope = new Scope( parentScope );
 		List<Assignment> initializers = new ArrayList<Assignment>();
 
+		boolean javaForError = false, javaForSyntaxError = false;
+
 		// Parse each initializer in the context of scope, adding
 		// variable to variable list in the scope, and saving
 		// initialization expressions in initializers.
@@ -2823,10 +2825,16 @@ public class Parser
 
 			if ( !this.parseIdentifier( name.content ) || Parser.isReservedWord( name.content ) )
 			{
-				throw this.parseException( "Identifier required" );
+				if ( !javaForSyntaxError )
+				{
+					this.error( nameStart, "Identifier required" );
+				}
+				javaForError = javaForSyntaxError = true;
+
+				name = null;
 			}
 
-			this.readToken(); // name
+			Variable variable;
 
 			// If there is no data type, it is using an existing variable
 			if ( t == null )
@@ -2834,15 +2842,32 @@ public class Parser
 				variable = parentScope.findVariable( name.content );
 				if ( variable == null )
 				{
-					throw this.parseException( "Unknown variable '" + name + "'" );
+					if ( !javaForError )
+					{
+						this.error( nameStart, "Unknown variable '" + name + "'" );
+						javaForError = true;
+					}
+
+					variable = Variable.BAD_VARIABLE;
 				}
+
 				t = variable.getType();
 			}
 			else
 			{
 				if ( scope.findVariable( name.content, true ) != null )
 				{
-					throw this.parseException( "Variable '" + name + "' already defined" );
+					variable = new Variable( name, t, this.makeLocation( nameStart ) );
+				}
+				else
+				{
+					if ( !javaForError )
+					{
+						this.error( nameStart, "Variable '" + name + "' already defined" );
+						javaForError = true;
+					}
+
+					variable = Variable.BAD_VARIABLE;
 				}
 
 				// Create variable and add it to the scope
@@ -2863,7 +2888,13 @@ public class Parser
 
 				if ( rhs == null )
 				{
-					throw this.parseException( "Expression expected" );
+					if ( !javaForSyntaxError )
+					{
+						this.error( "Expression expected" );
+					}
+					javaForError = javaForSyntaxError = true;
+
+					rhs = Value.BAD_VALUE;
 				}
 
 				Type ltype = t.getBaseType();
@@ -2872,14 +2903,20 @@ public class Parser
 
 				if ( !Operator.validCoercion( ltype, rtype, "assign" ) )
 				{
-					throw this.parseException( "Cannot store " + rtype + " in " + name + " of type " + ltype );
+					if ( !javaForError )
+					{
+						this.error( "Cannot store " + rtype + " in " + name + " of type " + ltype );
+						javaForError = true;
+					}
+
+					rhs = Value.BAD_VALUE;
 				}
 
 			}
 
 			Assignment initializer = new Assignment( lhs, rhs );
 
-			initializers.add( initializer);
+			initializers.add( initializer );
 
 			if ( this.currentToken().equals( "," ) )
 			{
@@ -2887,7 +2924,11 @@ public class Parser
 
 				if ( this.currentToken().equals( ";" ) )
 				{
-					throw this.parseException( "Identifier expected" );
+					if ( !javaForSyntaxError )
+					{
+						this.error( "Identifier expected" );
+					}
+					javaForError = javaForSyntaxError = true;
 				}
 			}
 		}
@@ -2898,7 +2939,15 @@ public class Parser
 		}
 		else
 		{
-			throw this.parseException( ";", this.currentToken() );
+			this.readToken(); // ;
+		}
+		else
+		{
+			if ( !javaForSyntaxError )
+			{
+				this.parseException( ";", this.currentToken() );
+			}
+			javaForError = javaForSyntaxError = true;
 		}
 
 		// Parse condition in context of scope
@@ -2913,12 +2962,15 @@ public class Parser
 		}
 		else
 		{
-			throw this.parseException( ";", this.currentToken() );
+			this.readToken(); // ;
 		}
-
-		if ( condition == null || condition.getType() != DataTypes.BOOLEAN_TYPE )
+		else
 		{
-			throw this.parseException( "\"for\" requires a boolean conditional expression" );
+			if ( !javaForSyntaxError )
+			{
+				this.parseException( ";", this.currentToken() );
+			}
+			javaForError = javaForSyntaxError = true;
 		}
 
 		// Parse incrementers in context of scope
@@ -2937,7 +2989,13 @@ public class Parser
 				value = this.parseVariableReference( scope );
 				if ( !( value instanceof VariableReference ) )
 				{
-					throw this.parseException( "Variable reference expected" );
+					if ( !javaForSyntaxError )
+					{
+						this.error( "Variable reference expected" );
+					}
+					javaForError = javaForSyntaxError = true;
+
+					value = VariableReference.BAD_VARIABLE_REFERENCE;
 				}
 
 				VariableReference ref = (VariableReference) value;
@@ -2953,10 +3011,15 @@ public class Parser
 					}
 					else
 					{
-						throw this.parseException( "Variable '" + ref.getName() + "' not incremented" );
+						incrementers.add( incrementer );
+					}
+					else if ( !javaForError )
+					{
+						this.error( "Variable '" + ref.getName() + "' not incremented" );
+						javaForError = true;
 					}
 				}
-				else 
+				else
 				{
 					incrementers.add( lhs );
 				}
@@ -2968,7 +3031,11 @@ public class Parser
 
 				if ( this.atEndOfFile() || this.currentToken().equals( ")" ) )
 				{
-					throw this.parseException( "Identifier expected" );
+					if ( !javaForSyntaxError )
+					{
+						this.error( "Identifier expected" );
+					}
+					javaForError = javaForSyntaxError = true;
 				}
 			}
 		}
@@ -2979,7 +3046,15 @@ public class Parser
 		}
 		else
 		{
-			throw this.parseException( ")", this.currentToken() );
+			this.readToken(); // )
+		}
+		else
+		{
+			if ( !javaForSyntaxError )
+			{
+				this.parseException( ")", this.currentToken() );
+			}
+			javaForError = javaForSyntaxError = true;
 		}
 
 		// Parse scope body
