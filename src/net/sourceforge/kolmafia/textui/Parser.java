@@ -1693,6 +1693,8 @@ public class Parser
 			return null;
 		}
 
+		Position returnStart = this.here();
+
 		this.readToken(); //return
 
 		if ( expectedType == null )
@@ -1712,7 +1714,7 @@ public class Parser
 
 		if ( expectedType != null && expectedType.equals( DataTypes.TYPE_VOID ) )
 		{
-			throw this.parseException( "Cannot return a value from a void function" );
+			this.error( returnStart, "Cannot return a value from a void function" );
 		}
 
 		Value value = this.parseExpression( parentScope );
@@ -1723,12 +1725,18 @@ public class Parser
 		}
 		else
 		{
-			throw this.parseException( "Expression expected" );
+			value = this.autoCoerceValue( expectedType, value, parentScope );
+		}
+		else
+		{
+			this.error( "Expression expected" );
+
+			value = Value.BAD_VALUE;
 		}
 
 		if ( expectedType != null && !Operator.validCoercion( expectedType, value.getType(), "return" ) )
 		{
-			throw this.parseException( "Cannot return " + value.getType() + " value from " + expectedType + " function" );
+			this.error( returnStart, "Cannot return " + value.getType() + " value from " + expectedType + " function" );
 		}
 
 		return new FunctionReturn( value, expectedType );
