@@ -6123,7 +6123,11 @@ public class Parser
 				final int ltrim = line.indexOf( trimmed.charAt( 0 ) );
 				offset += ltrim;
 			}
-			else
+
+			// Remove whitespace at front and end
+			final String trimmed = line.trim();
+
+			if ( !trimmed.isEmpty() )
 			{
 				// We are the "end of file"
 				// (or there was an IOException when reading)
