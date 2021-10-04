@@ -3010,6 +3010,9 @@ public class Parser
 		{
 			throw this.undefinedFunctionException( name.content, params );
 		}
+		else
+		{
+			this.error( nameLocation, Parser.undefinedFunctionMessage( name, params ) );
 
 		FunctionCall call = new FunctionCall( target, params, this );
 
