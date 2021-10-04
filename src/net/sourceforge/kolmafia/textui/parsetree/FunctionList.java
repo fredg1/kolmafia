@@ -38,6 +38,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.eclipse.lsp4j.Location;
@@ -45,7 +46,7 @@ import org.eclipse.lsp4j.Location;
 public class FunctionList
 	implements Iterable<Function>
 {
-	private final TreeMap<String,Function> list = new TreeMap<String,Function>();
+	private final SortedMap<String,Function> list = new TreeMap<String, Function>();
 	private final Map<Function, List<Location>> references = new TreeMap<>( FUNCTION_COMPARATOR );
 
 	// Assumes there will not be more than 65535 functions in any scope.
