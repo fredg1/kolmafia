@@ -37,6 +37,8 @@ import java.io.PrintStream;
 
 import java.util.List;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.textui.AshRuntime;
 
 public class VariableReference
