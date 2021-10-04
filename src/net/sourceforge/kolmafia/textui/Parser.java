@@ -519,7 +519,7 @@ public class Parser
 		return this.importFile( fileName, scope, null );
 	}
 
-	public Scope importFile( final String fileName, final Scope scope, final Location location )
+	private Scope importFile( final String fileName, final Scope scope, final Location location )
 		throws InterruptedException
 	{
 		if ( Thread.interrupted() )
@@ -593,6 +593,11 @@ public class Parser
 		}
 
 		return result;
+	}
+
+	protected Parser getParser( final File scriptFile )
+	{
+		return new Parser( scriptFile, null, this.imports );
 	}
 
 	private Scope parseCommandOrDeclaration( final Scope result, final Type expectedType )
