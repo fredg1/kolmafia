@@ -38,6 +38,8 @@ import net.sourceforge.kolmafia.textui.DataTypes;
 public class AggregateType
 	extends CompositeType
 {
+	public static final AggregateType BAD_AGGREGATE = new AggregateType( Type.BAD_TYPE, Type.BAD_TYPE );
+
 	protected final Type dataType;
 	protected final Type indexType;
 	protected final boolean caseInsensitive;

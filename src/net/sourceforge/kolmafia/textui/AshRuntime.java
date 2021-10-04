@@ -42,6 +42,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
+import static org.eclipse.lsp4j.DiagnosticSeverity.*;
+
 import net.sourceforge.kolmafia.KoLConstants.MafiaState;
 import net.sourceforge.kolmafia.KoLConstants;
 import net.sourceforge.kolmafia.KoLmafia;
@@ -188,24 +190,32 @@ public class AshRuntime
 		{
 			this.parser = new Parser( scriptFile, stream, null );
 			this.scope = parser.parse();
-			this.resetTracing();
-			if ( ScriptRuntime.isTracing() )
-			{
-				this.printScope( this.scope );
-			}
-			return true;
-		}
-		catch ( ScriptException e )
-		{
-			String message = CharacterEntities.escape( e.getMessage() );
-			KoLmafia.updateDisplay( MafiaState.ERROR, message );
-			return false;
 		}
 		catch ( Exception e )
 		{
 			StaticEntity.printStackTrace( e );
 			return false;
 		}
+
+		// Look at what the parser found
+		for ( Parser.AshDiagnostic diagnostic : parser.diagnostics )
+		{
+			if ( diagnostic.severity == Error )
+			{
+				String message = CharacterEntities.escape( diagnostic.toString() );
+				KoLmafia.updateDisplay( MafiaState.ERROR, message );
+				return false;
+			}
+
+			RequestLogger.printLine( diagnostic.toString() );
+		}
+
+		this.resetTracing();
+		if ( ScriptRuntime.isTracing() )
+		{
+			this.printScope( this.scope );
+		}
+		return true;
 	}
 
 	@Override

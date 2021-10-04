@@ -57,6 +57,8 @@ public class Value
 	extends ParseTreeNode
 	implements Comparable<Value>
 {
+	public static final Value BAD_VALUE = new Value( Type.BAD_TYPE );
+
 	public Type type;
 
 	public long contentLong = 0;

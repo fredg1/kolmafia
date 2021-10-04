@@ -34,7 +34,7 @@
 package net.sourceforge.kolmafia.textui.parsetree;
 
 
-public class AggregateValue
+public abstract class AggregateValue
 	extends CompositeValue
 {
 	public AggregateValue( final AggregateType type )

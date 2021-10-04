@@ -49,6 +49,8 @@ import net.sourceforge.kolmafia.textui.AshRuntime;
 public abstract class Function
 	extends Symbol
 {
+	public static final Function BAD_FUNCTION = new UserDefinedFunction( null, Type.BAD_TYPE, null, new ArrayList<>() );
+
 	protected Type type;
 	protected List<VariableReference> variableReferences;
 	private String signature;
