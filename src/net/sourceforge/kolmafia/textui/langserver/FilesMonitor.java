@@ -80,13 +80,14 @@ class FilesMonitor
 			{
 				// make a new handler
 				handlers.add( script.makeHandler() );
-				handlers.get( 0 ).start();
 			}
 			else
 			{
 				for ( final Script.Handler handler : handlers )
 				{
-					handler.instructions.offer( new Script.Instruction.ParseFile.Refresh() );
+					this.parent.executor.execute( () -> {
+						handler.refreshParsing();
+					} );
 				}
 			}
 		}
@@ -142,7 +143,6 @@ class FilesMonitor
 			{
 				// make a new handler
 				handlers.add( script.makeHandler() );
-				handlers.get( 0 ).start();
 			}
 		}
 
@@ -166,6 +166,11 @@ class FilesMonitor
 		for ( final File file :
 			Arrays.asList( DataUtilities.listFiles( directory ) ) )
 		{
+			if ( Thread.interrupted() )
+			{
+				break;
+			}
+
 			if ( file.isDirectory() )
 			{
 				this.scan( file );
