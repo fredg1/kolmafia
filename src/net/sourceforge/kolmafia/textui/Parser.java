@@ -1518,7 +1518,7 @@ public class Parser
 			this.readToken(); //break
 		}
 
-		else if ( "continue".equalsIgnoreCase( this.currentToken().value ) )
+		else if ( "continue".equalsIgnoreCase( this.currentToken().content ) )
 		{
 			if ( allowContinue )
 			{
@@ -1536,7 +1536,7 @@ public class Parser
 			this.readToken(); //continue
 		}
 
-		else if ( "exit".equalsIgnoreCase( this.currentToken().value ) )
+		else if ( "exit".equalsIgnoreCase( this.currentToken().content ) )
 		{
 			result = new ScriptExit( this.makeLocation( this.currentToken() ) );
 			this.currentToken().setType( SemanticTokenTypes.Keyword );
@@ -1662,7 +1662,7 @@ public class Parser
 				return valType;
 			}
 		}
-		else if ( ( valType = scope.findType( this.currentToken().value ) ) != null )
+		else if ( ( valType = scope.findType( this.currentToken().content ) ) != null )
 		{
 			if ( valType instanceof RecordType )
 			{
@@ -1684,7 +1684,7 @@ public class Parser
 		}
 		// We can safely assume that two non-reserved identifiers in a row
 		// are a type-variable pair.
-		else if ( !Parser.isReservedWord( this.currentToken().value ) &&
+		else if ( !Parser.isReservedWord( this.currentToken().content ) &&
 		          this.parseIdentifier( this.nextToken() ) &&
 		          !Parser.isReservedWord( this.nextToken() ) &&
 		          //FIXME
@@ -1697,9 +1697,9 @@ public class Parser
 		          // may become available again once we are able to get rid of the 'replaceToken' in 'parseValue'
 		          false )
 		{
-			this.error( this.currentToken(), "Unknown type " + this.currentToken().value );
+			this.error( this.currentToken(), "Unknown type " + this.currentToken().content );
 
-			valType = new BadType( this.currentToken().value, this.makeLocation( this.currentToken() ) );
+			valType = new BadType( this.currentToken().content, this.makeLocation( this.currentToken() ) );
 			this.currentToken().setType( SemanticTokenTypes.Type );
 			this.readToken();
 
@@ -1773,7 +1773,7 @@ public class Parser
 				break;
 			}
 
-			if ( "}".equals( this.currentToken().value ) )
+			if ( "}".equals( this.currentToken().content ) )
 			{
 				this.readToken(); // read }
 				break;
@@ -2379,7 +2379,7 @@ public class Parser
 
 		while ( true )
 		{
-			if ( "}".equals( this.currentToken().value ) )
+			if ( "}".equals( this.currentToken().content ) )
 			{
 				this.readToken(); // }
 				break;
@@ -2664,7 +2664,7 @@ public class Parser
 					test = Value.BAD_VALUE.wrap( errorLocation );
 				}
 
-				if ( ":".equals( this.currentToken().value ) )
+				if ( ":".equals( this.currentToken().content ) )
 				{
 					this.readToken(); // :
 				}
@@ -3043,7 +3043,7 @@ public class Parser
 			{
 				this.error( nameToken, "Key variable name expected" );
 
-				if ( ",".equals( this.currentToken().value ) )
+				if ( ",".equals( this.currentToken().content ) )
 				{
 					this.readToken(); // ,
 					continue;
@@ -3717,7 +3717,7 @@ public class Parser
 					break;
 				}
 
-				if ( ")".equals( this.currentToken().value ) )
+				if ( ")".equals( this.currentToken().content ) )
 				{
 					this.readToken(); // )
 					break;
@@ -3745,11 +3745,11 @@ public class Parser
 				Type expected = currentType.getBaseType();
 				LocatedValue val;
 
-				if ( ",".equals( this.currentToken().value ) )
+				if ( ",".equals( this.currentToken().content ) )
 				{
 					val = DataTypes.VOID_VALUE.wrap( this.make0WidthLocation() );
 				}
-				else if ( "{".equals( this.currentToken().value ) )
+				else if ( "{".equals( this.currentToken().content ) )
 				{
 					val = this.parseAggregateLiteral( scope, (AggregateType) expected );
 				}
@@ -3882,9 +3882,9 @@ public class Parser
 				throw this.parseException( ")", this.currentToken() );
 			}
 
-			if ( !",".equals( this.currentToken().value ) )
+			if ( !",".equals( this.currentToken().content ) )
 			{
-				if ( !")".equals( this.currentToken().value ) )
+				if ( !")".equals( this.currentToken().content ) )
 				{
 					this.unexpectedTokenError( ")", this.currentToken() );
 					break;
@@ -3899,7 +3899,7 @@ public class Parser
 				throw this.parseException( "parameter", this.currentToken() );
 			}
 
-			if ( ")".equals( this.currentToken().value ) )
+			if ( ")".equals( this.currentToken().content ) )
 			{
 				this.unexpectedTokenError( "parameter", this.currentToken() );
 				// we'll break out at the start of the next loop
@@ -4169,15 +4169,15 @@ public class Parser
 		// [VariableReference]++
 		// [VariableReference]--
 
-		if ( !"++".equals( this.currentToken().value ) &&
-		     !"--".equals( this.currentToken().value ) )
+		if ( !"++".equals( this.currentToken().content ) &&
+		     !"--".equals( this.currentToken().content ) )
 		{
 			return lhs;
 		}
 
 		Token operToken = this.currentToken();
 		operToken.setType( SemanticTokenTypes.Operator );
-		String operStr = "++".equals( this.currentToken().value ) ? Parser.POST_INCREMENT : Parser.POST_DECREMENT;
+		String operStr = "++".equals( this.currentToken().content ) ? Parser.POST_INCREMENT : Parser.POST_DECREMENT;
 
 		this.readToken(); // oper
 
@@ -4314,14 +4314,14 @@ public class Parser
 				return lhs;
 			}
 
-			if ( ":".equals( this.currentToken().value ) )
+			if ( ":".equals( this.currentToken().content ) )
 			{
 				return lhs;
 			}
 
 			this.currentToken().setType( SemanticTokenTypes.Operator );
 
-			if ( "?".equals( this.currentToken().value ) )
+			if ( "?".equals( this.currentToken().content ) )
 			{
 				this.readToken(); // ?
 
@@ -4462,7 +4462,7 @@ public class Parser
 		LocatedValue result = null;
 
 		// Parse parenthesized expressions
-		if ( "(".equals( valueStartToken.value ) )
+		if ( "(".equals( valueStartToken.content ) )
 		{
 			this.readToken(); // (
 
@@ -4489,21 +4489,21 @@ public class Parser
 		// Parse constant values
 		// true and false are reserved words
 
-		else if ( "true".equalsIgnoreCase( valueStartToken.value ) )
+		else if ( "true".equalsIgnoreCase( valueStartToken.content ) )
 		{
 			valueStartToken.setType( SemanticTokenTypes.Keyword );
 			this.readToken();
 			result = DataTypes.TRUE_VALUE.wrap( this.makeLocation( valueStartToken ) );
 		}
 
-		else if ( "false".equalsIgnoreCase( valueStartToken.value ) )
+		else if ( "false".equalsIgnoreCase( valueStartToken.content ) )
 		{
 			valueStartToken.setType( SemanticTokenTypes.Keyword );
 			this.readToken();
 			result = DataTypes.FALSE_VALUE.wrap( this.makeLocation( valueStartToken ) );
 		}
 
-		else if ( "__FILE__".equals( valueStartToken.value ) )
+		else if ( "__FILE__".equals( valueStartToken.content ) )
 		{
 			valueStartToken.setType( SemanticTokenTypes.Keyword );
 			this.readToken();
@@ -4607,7 +4607,7 @@ public class Parser
 
 		int sign = 1;
 
-		if ( "-".equals( this.currentToken().value ) )
+		if ( "-".equals( this.currentToken().content ) )
 		{
 			String next = this.nextToken();
 
@@ -4622,7 +4622,7 @@ public class Parser
 			this.readToken(); // Read -
 		}
 
-		if ( ".".equals( this.currentToken().value ) )
+		if ( ".".equals( this.currentToken().content ) )
 		{
 			this.readToken();
 			Token fraction = this.currentToken();
@@ -4659,7 +4659,7 @@ public class Parser
 				return new Value( sign * StringUtilities.parseLong( integer.content ) );
 			}
 
-		if ( ".".equals( this.currentToken().value ) &&
+		if ( ".".equals( this.currentToken().content ) &&
 		     this.readIntegerToken( fraction ) )
 		{
 			this.currentToken().setType( SemanticTokenTypes.Number );
@@ -5407,7 +5407,7 @@ public class Parser
 		Type type = var.value.getType();
 		List<Value> indices = new ArrayList<Value>();
 
-		boolean parseAggregate = "[".equals( this.currentToken().value );
+		boolean parseAggregate = "[".equals( this.currentToken().content );
 		boolean variableReferenceError = false, variableReferenceSyntaxError = false;
 
 		while ( this.currentToken().equals( "[" ) ||
@@ -5418,7 +5418,7 @@ public class Parser
 
 			type = type.getBaseType();
 
-			if ( "[".equals( this.currentToken().value ) || ",".equals( this.currentToken().value ) )
+			if ( "[".equals( this.currentToken().content ) || ",".equals( this.currentToken().content ) )
 			{
 				this.readToken(); // read [ or ,
 				parseAggregate = true;
@@ -5526,7 +5526,7 @@ public class Parser
 				{
 					if ( !variableReferenceError )
 					{
-						this.error( fieldToken, "Invalid field name '" + fieldToken.value + "'" );
+						this.error( fieldToken, "Invalid field name '" + fieldToken.content + "'" );
 						variableReferenceError = true;
 					}
 
@@ -6418,7 +6418,7 @@ public class Parser
 
 	private void unexpectedTokenError( final String expected, final Token found )
 	{
-		String foundString = found.value;
+		String foundString = found.content;
 
 		if ( found.getLine().content == null )
 		{
