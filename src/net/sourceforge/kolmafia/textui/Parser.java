@@ -1090,19 +1090,27 @@ public class Parser
 		}
 
 		this.readToken(); // If parsing of Identifier succeeded, go to next token.
-		// If we are parsing a parameter declaration, we are done
 
-		Variable result = new Variable( variableName, t, this.makeLocation( start ) );
+		Variable result;
 
-		if ( scope == null )
+		if ( Parser.isReservedWord( variableName ) )
 		{
-			if ( "=".equals( this.currentToken() ) )
-			{
-				throw this.parseException( "Cannot initialize parameter " + variableName );
-			}
-			return result;
+			this.error( variableStart, "Reserved word '" + variableName + "' cannot be a variable name" );
+			result = Variable.BAD_VARIABLE;
+			variableError = true;
+		}
+		else if ( scope != null && scope.findVariable( variableName ) != null )
+		{
+			this.error( variableStart, "Variable " + variableName + " is already defined" );
+			result = Variable.BAD_VARIABLE;
+			variableError = true;
+		}
+		else
+		{
+			result = new Variable( variableName, t, this.makeLocation( variableStart ) );
 		}
 
+		// If we are parsing a parameter declaration (if "scope" is null), we are done.
 		// Otherwise, we must initialize the variable.
 
 		Value rhs;
@@ -1120,8 +1128,16 @@ public class Parser
 				}
 				else
 				{
-					throw this.parseException(
-						"Cannot initialize " + variableName + " of type " + t + " with an aggregate literal" );
+					if ( !variableError && ltype != Type.BAD_TYPE )
+					{
+						this.error( variableStart, "Cannot initialize " + variableName + " of type " + t + " with an aggregate literal" );
+						variableError = true;
+					}
+					rhs = this.parseAggregateLiteral( scope, AggregateType.BAD_AGGREGATE );
+				}
+				else
+				{
+					rhs = this.parseAggregateLiteral( scope, (AggregateType) ltype );
 				}
 			}
 			else
