@@ -1168,7 +1168,7 @@ public class Parser
 			result = new BadVariable( variableName, t, this.makeLocation( variableToken ) );
 			variableError = true;
 		}
-		else if ( scope.findVariable( variableName ) != null )
+		else if ( allowInitialization && scope.findVariable( variableName ) != null )
 		{
 			this.error( variableToken, "Variable " + variableName + " is already defined" );
 			result = new BadVariable( variableName, t, this.makeLocation( variableToken ) );
@@ -4392,6 +4392,8 @@ public class Parser
 			{
 				if ( baseType != null )
 				{
+					// TODO find a way to spot these with lookaheads
+					// otherwise it means we mistakenly added a reference to that type
 					this.rewindBackTo( anchor );
 				}
 				if ( ( result = this.parseVariableReference( scope ) ) != null )
@@ -5310,8 +5312,6 @@ public class Parser
 						this.error( fieldToken, "Field name expected" );
 					}
 					variableReferenceError = variableReferenceSyntaxError = true;
-
-					field = null;
 				}
 
 				index = rtype.getFieldIndex( field.content );
@@ -5332,7 +5332,7 @@ public class Parser
 				}
 				else
 				{
-					type = rtype.getDataType( index );
+					type = rtype.getDataType( index.value );
 				}
 			}
 

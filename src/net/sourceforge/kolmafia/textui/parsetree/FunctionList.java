@@ -34,6 +34,7 @@
 package net.sourceforge.kolmafia.textui.parsetree;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +46,7 @@ public class FunctionList
 	implements Iterable<Function>
 {
 	private final TreeMap<String,Function> list = new TreeMap<String,Function>();
-	private final Map<Function, List<Location>> references = new TreeMap<>();
+	private final Map<Function, List<Location>> references = new TreeMap<>( FUNCTION_COMPARATOR );
 
 	// Assumes there will not be more than 65535 functions in any scope.
 	// Assumes that \0 will never appear in a function name.
@@ -61,8 +62,7 @@ public class FunctionList
 
 	public boolean remove( final Function f )
 	{
-		return this.list.values().remove( f ) &&
-		       this.references.remove( f ) != null;
+		return this.list.values().remove( f );
 	}
 
 	public Function[] findFunctions( String name )
@@ -83,14 +83,14 @@ public class FunctionList
 
 	public boolean contains( final Function f )
 	{
-		return references.containsKey( f );
+		return list.values().contains( f );
 	}
 
 	public FunctionList clone()
 	{
 		FunctionList result = new FunctionList();
 
-		for ( Function type : this.references.keySet() )
+		for ( Function type : this.list.values() )
 		{
 			result.add( type );
 		}
@@ -111,6 +111,74 @@ public class FunctionList
 	public List<Location> getReferences( final Function function )
 	{
 		return this.references.get( function );
+	}
+
+	private static final Comparator<Function> FUNCTION_COMPARATOR =
+		( Function f1, Function f2 ) -> {
+			int comparison = f1.compareTo( f2 );
+
+			if ( comparison != 0 )
+			{
+				return comparison;
+			}
+
+			Iterator<VariableReference> f1Refs = f1.getVariableReferences().iterator();
+			Iterator<VariableReference> f2Refs = f2.getVariableReferences().iterator();
+
+			while ( f1Refs.hasNext() )
+			{
+				if ( !f2Refs.hasNext() )
+				{
+					return 1;
+				}
+
+				Type f1Type = f1Refs.next().getRawType();
+				Type f2Type = f2Refs.next().getRawType();
+
+				comparison = compareTypes( f1Type, f2Type );
+
+				if ( comparison != 0 )
+				{
+					return comparison;
+				}
+			}
+
+			if ( f2Refs.hasNext() )
+			{
+				return -1;
+			}
+
+			return 0;
+		};
+
+	private static final int compareTypes( final Type t1, final Type t2 )
+	{
+		int comparison = t1.getType() - t2.getType();
+
+		if ( comparison != 0 )
+		{
+			return comparison;
+		}
+
+		if ( t1 instanceof AggregateType )
+		{
+			comparison = compareTypes( ((AggregateType) t1).dataType, ((AggregateType) t2).dataType );
+
+			if ( comparison == 0 )
+			{
+				comparison = compareTypes( ((AggregateType) t1).indexType, ((AggregateType) t2).indexType );
+			}
+		}
+		else if ( t1 instanceof RecordType )
+		{
+			comparison = t1.compareTo( t2 );
+		}
+		else if ( t1 instanceof TypeDef )
+		{
+			comparison = compareTypes( ((TypeDef) t1).base, ((TypeDef) t2).base );
+		}
+
+		return comparison;
 	}
 }
 

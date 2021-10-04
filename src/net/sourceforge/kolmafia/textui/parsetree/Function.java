@@ -80,7 +80,7 @@ public abstract class Function
 	{
 		this.variableReferences = variableReferences;
 	}
-	
+
 	public String getSignature()
 	{
 		if ( this.signature == null )
@@ -93,7 +93,7 @@ public abstract class Function
 			//buf.append( " " );
 			buf.append( this.name );
 			buf.append( "(" );
-		
+
 			String sep = "";
 			for ( VariableReference current : this.variableReferences )
 			{
@@ -102,7 +102,7 @@ public abstract class Function
 				Type paramType = current.getType();
 				buf.append( paramType );
 			}
-			
+
 			buf.append( ")" );
 			this.signature = buf.toString();
 		}
