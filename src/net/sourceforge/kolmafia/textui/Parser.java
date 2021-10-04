@@ -3638,7 +3638,9 @@ public class Parser
 			}
 			else
 			{
-				throw this.parseException( "numeric value", fraction );
+				this.parseException( "numeric value", fraction );
+
+				return new Value( (double) 0 );
 			}
 
 			return new Value( sign * StringUtilities.parseDouble( "0." + fraction ) );
