@@ -4269,10 +4269,15 @@ public class Parser
 		Token name = this.currentToken();
 		Variable var = scope.findVariable( name.content, true );
 
-		if ( var == null )
+		this.readToken(); // read name
+
+		if ( var != null )
 		{
-			throw this.parseException( "Unknown variable '" + name + "'" );
+			var.addReference( this.makeLocation( variableStart ) );
 		}
+		else
+		{
+			this.error( variableStart, "Unknown variable '" + name + "'" );
 
 		Position start = this.here();
 
@@ -4298,6 +4303,7 @@ public class Parser
 		List<Value> indices = new ArrayList<Value>();
 
 		boolean parseAggregate = "[".equals( this.currentToken() );
+		boolean variableReferenceError = false, variableReferenceSyntaxError = false;
 
 		while ( this.currentToken().equals( "[" ) ||
 		        this.currentToken().equals( "." ) ||
@@ -4314,14 +4320,22 @@ public class Parser
 
 				if ( !( type instanceof AggregateType ) )
 				{
-					if ( indices.isEmpty() )
+					if ( !variableReferenceError && type != Type.BAD_TYPE )
 					{
-						throw this.parseException( "Variable '" + var.getName() + "' cannot be indexed" );
+						String message;
+						if ( indices.isEmpty() )
+						{
+							message = "Variable '" + var.getName() + "' cannot be indexed";
+						}
+						else
+						{
+							message = "Too many keys for '" + var.getName() + "'";
+						}
+						this.error( message );
+						variableReferenceError = true;
 					}
-					else
-					{
-						throw this.parseException( "Too many keys for '" + var.getName() + "'" );
-					}
+
+					type = AggregateType.BAD_AGGREGATE;
 				}
 
 				AggregateType atype = (AggregateType) type;
@@ -4331,7 +4345,10 @@ public class Parser
 					throw this.parseException( "Index for '" + current.getName() + "' expected" );
 				}
 
-				if ( !index.getType().getBaseType().equals( atype.getIndexType().getBaseType() ) )
+				if ( !variableReferenceError &&
+				     !index.getType().getBaseType().equals( atype.getIndexType().getBaseType() ) &&
+				     index.getType().getBaseType() != Type.BAD_TYPE &&
+				     atype.getIndexType().getBaseType() != Type.BAD_TYPE )
 				{
 					throw this.parseException(
 						"Index for '" + current.getName() + "' has wrong data type " + "(expected " + atype.getIndexType() + ", got " + index.getType() + ")" );
@@ -4353,7 +4370,18 @@ public class Parser
 				type = type.asProxy();
 				if ( !( type instanceof RecordType ) )
 				{
-					throw this.parseException( "Record expected" );
+					if ( type != Type.BAD_TYPE )
+					{
+						// See this as a syntax error, since we don't know yet
+						// if what follows is even an identifier.
+						if ( !variableReferenceSyntaxError )
+						{
+							this.error( "Record expected" );
+						}
+						variableReferenceError = variableReferenceSyntaxError = true;
+					}
+
+					type = RecordType.BAD_RECORD;
 				}
 
 				RecordType rtype = (RecordType) type;
@@ -4365,7 +4393,15 @@ public class Parser
 				}
 				else
 				{
-					throw this.parseException( "Field name expected" );
+					this.readToken(); // read name
+				}
+				else
+				{
+					if ( !variableReferenceSyntaxError )
+					{
+						this.error( "Field name expected" );
+					}
+					variableReferenceError = variableReferenceSyntaxError = true;
 				}
 
 				index = rtype.getFieldIndex( field.content );
@@ -4375,7 +4411,18 @@ public class Parser
 				}
 				else
 				{
-					throw this.parseException( "Invalid field name '" + field + "'" );
+					if ( !variableReferenceError )
+					{
+						this.error( "Invalid field name '" + field + "'" );
+						variableReferenceError = true;
+					}
+
+					index = Value.BAD_VALUE;
+					type = Type.BAD_TYPE;
+				}
+				else
+				{
+					type = rtype.getDataType( index );
 				}
 			}
 
@@ -4390,7 +4437,7 @@ public class Parser
 			current = new CompositeReference( current.target, indices, this );
 		}
 
-		if ( parseAggregate )
+		if ( parseAggregate && !variableReferenceSyntaxError )
 		{
 			throw this.parseException( "]", this.currentToken() );
 		}
