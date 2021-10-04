@@ -3260,13 +3260,15 @@ public class Parser
 		lhs = this.parseVariableReference( scope );
 		if ( lhs == null )
 		{
-			throw this.parseException( "Variable reference expected" );
+			this.error( "Variable reference expected" );
+
+			lhs = VariableReference.BAD_VARIABLE_REFERENCE;
 		}
 
 		int ltype = lhs.getType().getType();
-		if ( ltype != DataTypes.TYPE_INT && ltype != DataTypes.TYPE_FLOAT )
+		if ( ltype != DataTypes.TYPE_INT && ltype != DataTypes.TYPE_FLOAT && lhs.getType() != Type.BAD_TYPE )
 		{
-			throw this.parseException( operStr + " requires a numeric variable reference" );
+			this.error( operStr + " requires a numeric variable reference" );
 		}
 
 		Operator oper = new Operator( operStr, this );
@@ -3287,13 +3289,13 @@ public class Parser
 
 		String operStr = "++".equals( this.currentToken() ) ? Parser.POST_INCREMENT : Parser.POST_DECREMENT;
 
-		int ltype = lhs.getType().getType();
-		if ( ltype != DataTypes.TYPE_INT && ltype != DataTypes.TYPE_FLOAT )
-		{
-			throw this.parseException( operStr + " requires a numeric variable reference" );
-		}
-
 		this.readToken(); // oper
+
+		int ltype = lhs.getType().getType();
+		if ( ltype != DataTypes.TYPE_INT && ltype != DataTypes.TYPE_FLOAT && lhs.getType() != Type.BAD_TYPE )
+		{
+			this.error( operStr + " requires a numeric variable reference" );
+		}
 
 		Operator oper = new Operator( operStr, this );
 
