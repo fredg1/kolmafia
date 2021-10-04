@@ -1718,7 +1718,7 @@ public class Parser
 		{
 			if ( !records )
 			{
-				throw this.parseException( "Record creation is not allowed here" );
+				throw this.parseException( "Existing type expected for function parameter" );
 			}
 		}
 		else if ( ( valType = scope.findType( this.currentToken().content ) ) != null )

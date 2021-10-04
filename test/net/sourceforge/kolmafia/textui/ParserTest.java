@@ -2279,7 +2279,7 @@ public class ParserTest
 			{
 				"Illegal record creation",
 				"void f( record foo {int a; int b;} bar )",
-				"Record creation is not allowed here",
+				"Existing type expected for function parameter",
 				null,
 			},
 			{
