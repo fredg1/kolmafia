@@ -631,7 +631,8 @@ public class Parser
 			result = this.importFile( importDirective.value, result );
 		}
 
-		while ( true )
+		Position previousPosition = null;
+		while ( !this.atEndOfFile() && !this.madeProgress( previousPosition, previousPosition = this.here() ) )
 		{
 			if ( this.parseTypedef( result ) )
 			{
@@ -641,7 +642,7 @@ public class Parser
 				}
 				else
 				{
-					throw this.parseException( ";", this.currentToken() );
+					this.parseException( ";", this.currentToken() );
 				}
 
 				continue;
@@ -657,11 +658,9 @@ public class Parser
 				if ( c != null )
 				{
 					result.addCommand( c, this );
-					continue;
 				}
 
-				// No type and no command -> done.
-				break;
+				continue;
 			}
 
 			// If this is a new record definition, enter it
@@ -682,7 +681,11 @@ public class Parser
 					}
 					else
 					{
-						throw this.parseException( "main method must appear at top level" );
+						this.mainMethod = f;
+					}
+					else
+					{
+						this.error( f.getDefinitionLocation(), "main method must appear at top level" );
 					}
 				}
 
@@ -697,7 +700,11 @@ public class Parser
 				}
 				else
 				{
-					throw this.parseException( ";", this.currentToken() );
+					this.readToken(); //read ;
+				}
+				else
+				{
+					this.parseException( ";", this.currentToken() );
 				}
 
 				continue;
@@ -710,7 +717,7 @@ public class Parser
 			else
 			{
 				//Found a type but no function or variable to tie it to
-				throw this.parseException( "Type given but not used to declare anything" );
+				this.error( "Type given but not used to declare anything" );
 			}
 		}
 
