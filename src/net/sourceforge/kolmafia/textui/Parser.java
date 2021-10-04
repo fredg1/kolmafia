@@ -592,7 +592,7 @@ public class Parser
 			}
 			else
 			{
-				this.unexpectedTokenError( typeStart, ";", this.currentToken().value );
+				this.unexpectedTokenError( ";", this.currentToken() );
 			}
 		}
 		else
@@ -661,7 +661,7 @@ public class Parser
 				}
 				else
 				{
-					this.unexpectedTokenError( ";", this.currentToken().value );
+					this.unexpectedTokenError( ";", this.currentToken() );
 				}
 
 				continue;
@@ -723,7 +723,7 @@ public class Parser
 				}
 				else
 				{
-					this.unexpectedTokenError( ";", this.currentToken().value );
+					this.unexpectedTokenError( ";", this.currentToken() );
 				}
 
 				continue;
@@ -949,7 +949,7 @@ public class Parser
 			{
 				if ( !parameterError )
 				{
-					this.unexpectedTokenError( parameterStart, ")", this.currentToken().value );
+					this.unexpectedTokenError( ")", this.currentToken() );
 				}
 				functionError = parameterError = true;
 
@@ -988,7 +988,7 @@ public class Parser
 			{
 				if ( !parameterError )
 				{
-					this.unexpectedTokenError( parameterStart, "identifier", this.currentToken().value );
+					this.unexpectedTokenError( "identifier", this.currentToken() );
 				}
 				functionError = parameterError = true;
 
@@ -1021,7 +1021,7 @@ public class Parser
 				{
 					if ( !parameterError )
 					{
-						this.unexpectedTokenError( parameterStart, ",", this.currentToken().value );
+						this.unexpectedTokenError( ",", this.currentToken() );
 					}
 					functionError = parameterError = true;
 				}
@@ -1503,7 +1503,7 @@ public class Parser
 		}
 		else
 		{
-			this.unexpectedTokenError( ";", this.currentToken().value );
+			this.unexpectedTokenError( ";", this.currentToken() );
 		}
 
 		return result;
@@ -1633,7 +1633,7 @@ public class Parser
 
 			if ( this.atEndOfFile() )
 			{
-				this.unexpectedTokenError( keyStart, "}", "end of file" );
+				this.unexpectedTokenError( "}", this.currentToken() );
 				aggregateError = true;
 				break;
 			}
@@ -1702,7 +1702,7 @@ public class Parser
 				}
 				else if ( !aggregateError )
 				{
-					this.unexpectedTokenError( keyStart, ":", this.currentToken().value );
+					this.unexpectedTokenError( ":", this.currentToken() );
 					aggregateError = true;
 				}
 
@@ -2001,7 +2001,7 @@ public class Parser
 			}
 			else
 			{
-				this.unexpectedTokenError( ";", this.currentToken().value );
+				this.unexpectedTokenError( ";", this.currentToken() );
 			}
 		}
 
@@ -2049,7 +2049,7 @@ public class Parser
 		}
 		else
 		{
-			this.unexpectedTokenError( "}", this.currentToken().value );
+			this.unexpectedTokenError( "}", this.currentToken() );
 		}
 
 		return scope;
@@ -2089,7 +2089,7 @@ public class Parser
 		}
 		else if ( !ifError )
 		{
-			this.unexpectedTokenError( ")", this.currentToken().value );
+			this.unexpectedTokenError( ")", this.currentToken() );
 			ifError = true;
 		}
 
@@ -2143,7 +2143,7 @@ public class Parser
 					}
 					else
 					{
-						this.unexpectedTokenError( "(", this.currentToken().value );
+						this.unexpectedTokenError( "(", this.currentToken() );
 						elseError = true;
 					}
 
@@ -2155,7 +2155,7 @@ public class Parser
 					}
 					else
 					{
-						this.unexpectedTokenError( ")", this.currentToken().value );
+						this.unexpectedTokenError( ")", this.currentToken() );
 						elseError = true;
 					}
 
@@ -2209,7 +2209,7 @@ public class Parser
 
 			if ( this.atEndOfFile() )
 			{
-				this.unexpectedTokenError( "}", "end of file" );
+				this.unexpectedTokenError( "}", this.currentToken() );
 				break;
 			}
 
@@ -2277,7 +2277,7 @@ public class Parser
 		}
 		else if ( !whileError )
 		{
-			this.unexpectedTokenError( ")", this.currentToken().value );
+			this.unexpectedTokenError( ")", this.currentToken() );
 			whileError = true;
 		}
 
@@ -2313,7 +2313,7 @@ public class Parser
 		}
 		else
 		{
-			this.unexpectedTokenError( "until", this.currentToken().value );
+			this.unexpectedTokenError( "until", this.currentToken() );
 			repeatError = true;
 		}
 
@@ -2338,7 +2338,7 @@ public class Parser
 		}
 		else if ( !repeatError )
 		{
-			this.unexpectedTokenError( ")", this.currentToken().value );
+			this.unexpectedTokenError( ")", this.currentToken() );
 			repeatError = true;
 		}
 
@@ -2386,7 +2386,7 @@ public class Parser
 			}
 			else if ( !switchError )
 			{
-				this.unexpectedTokenError( ")", this.currentToken().value );
+				this.unexpectedTokenError( ")", this.currentToken() );
 				switchError = true;
 			}
 
@@ -2414,7 +2414,7 @@ public class Parser
 		}
 		else if ( !switchError )
 		{
-			this.unexpectedTokenError( "{", this.currentToken().value );
+			this.unexpectedTokenError( "{", this.currentToken() );
 			switchError = true;
 		}
 
@@ -2467,7 +2467,7 @@ public class Parser
 				{
 					if ( !caseError )
 					{
-						this.unexpectedTokenError( ":", this.currentToken().value );
+						this.unexpectedTokenError( ":", this.currentToken() );
 					}
 					switchError = caseError = true;
 				}
@@ -2584,7 +2584,7 @@ public class Parser
 		}
 		else if ( !switchError )
 		{
-			this.unexpectedTokenError( "}", this.currentToken().value );
+			this.unexpectedTokenError( "}", this.currentToken() );
 			switchError = true;
 		}
 
@@ -2746,7 +2746,7 @@ public class Parser
 		}
 		else
 		{
-			this.unexpectedTokenError( "by", this.currentToken().value );
+			this.unexpectedTokenError( "by", this.currentToken() );
 		}
 
 		// Define key variables of appropriate type
@@ -2844,7 +2844,7 @@ public class Parser
 			}
 			else
 			{
-				this.unexpectedTokenError( "in", this.currentToken().value );
+				this.unexpectedTokenError( "in", this.currentToken() );
 			}
 
 			break;
@@ -2988,7 +2988,7 @@ public class Parser
 		{
 			if ( !forSyntaxError )
 			{
-				this.unexpectedTokenError( "to, upto, or downto", this.currentToken().value );
+				this.unexpectedTokenError( "to, upto, or downto", this.currentToken() );
 			}
 			forError = forSyntaxError = true;
 		}
@@ -3179,7 +3179,7 @@ public class Parser
 		{
 			if ( !javaForSyntaxError )
 			{
-				this.unexpectedTokenError( ";", this.currentToken().value );
+				this.unexpectedTokenError( ";", this.currentToken() );
 			}
 			javaForError = javaForSyntaxError = true;
 		}
@@ -3202,7 +3202,7 @@ public class Parser
 		{
 			if ( !javaForSyntaxError )
 			{
-				this.unexpectedTokenError( ";", this.currentToken().value );
+				this.unexpectedTokenError( ";", this.currentToken() );
 			}
 			javaForError = javaForSyntaxError = true;
 		}
@@ -3286,7 +3286,7 @@ public class Parser
 		{
 			if ( !javaForSyntaxError )
 			{
-				this.unexpectedTokenError( ")", this.currentToken().value );
+				this.unexpectedTokenError( ")", this.currentToken() );
 			}
 			javaForError = javaForSyntaxError = true;
 		}
@@ -3322,7 +3322,7 @@ public class Parser
 			}
 			else
 			{
-				this.unexpectedTokenError( "}", this.currentToken().value );
+				this.unexpectedTokenError( "}", this.currentToken() );
 			}
 		}
 		else
@@ -3341,7 +3341,7 @@ public class Parser
 				}
 				else
 				{
-					this.unexpectedTokenError( ";", this.currentToken().value );
+					this.unexpectedTokenError( ";", this.currentToken() );
 				}
 			}
 			else
@@ -3409,7 +3409,7 @@ public class Parser
 			{
 				if ( this.atEndOfFile() )
 				{
-					this.unexpectedTokenError( ")", "end of file" );
+					this.unexpectedTokenError( ")", this.currentToken() );
 					newRecordError = newRecordSyntaxError = true;
 					break;
 				}
@@ -3572,7 +3572,7 @@ public class Parser
 			{
 				if ( !")".equals( this.currentToken().value ) )
 				{
-					this.unexpectedTokenError( ")", this.currentToken().value );
+					this.unexpectedTokenError( ")", this.currentToken() );
 					break;
 				}
 				continue;
@@ -3587,7 +3587,7 @@ public class Parser
 
 			if ( ")".equals( this.currentToken().value ) )
 			{
-				this.unexpectedTokenError( "parameter", this.currentToken().value );
+				this.unexpectedTokenError( "parameter", this.currentToken() );
 				// we'll break out at the start of the next loop
 			}
 		}
@@ -4084,7 +4084,7 @@ public class Parser
 			}
 			else
 			{
-				this.unexpectedTokenError( ")", this.currentToken().value );
+				this.unexpectedTokenError( ")", this.currentToken() );
 			}
 		}
 
@@ -4156,7 +4156,7 @@ public class Parser
 				}
 				else
 				{
-					this.unexpectedTokenError( "{", this.currentToken().value );
+					this.unexpectedTokenError( "{", this.currentToken() );
 					// don't parse. We don't know if they just didn't put anything.
 
 					result = Value.BAD_VALUE;
@@ -4221,7 +4221,7 @@ public class Parser
 			}
 			else
 			{
-				this.unexpectedTokenError( "numeric value", fraction );
+				this.unexpectedTokenError( "numeric value", this.currentToken() );
 
 				return new Value( (double) 0 );
 			}
@@ -4632,7 +4632,7 @@ public class Parser
 		{
 			if ( !typedConstantSyntaxError )
 			{
-				this.unexpectedTokenError( "[", this.currentToken().value );
+				this.unexpectedTokenError( "[", this.currentToken() );
 			}
 
 			return Value.BAD_VALUE;
@@ -5878,14 +5878,16 @@ public class Parser
 		}
 	}
 
-	private void unexpectedTokenError( final String expected, final String actual )
+	private void unexpectedTokenError( final String expected, final Token found )
 	{
-		this.error( this.make0WidthLocation(), "Expected " + expected + ", found " + actual );
-	}
+		String foundString = found.value;
 
-	private void unexpectedTokenError( final Position start, final String expected, final String actual )
-	{
-		this.error( start, "Expected " + expected + ", found " + actual );
+		if ( found.getLine().content == null )
+		{
+			foundString = "end of file";
+		}
+
+		this.error( found, "Expected " + expected + ", found " + foundString );
 	}
 
 	private void multiplyDefinedFunctionError( final Position start, final Function f )
