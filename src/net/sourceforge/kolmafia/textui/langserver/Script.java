@@ -182,7 +182,7 @@ class Script
 
 				final List<Diagnostic> diagnostics = new ArrayList<>();
 
-				for ( final AshDiagnostic diagnostic : parser.diagnostics )
+				for ( final AshDiagnostic diagnostic : parser.getDiagnostics() )
 				{
 					if ( diagnostic.originatesFrom( parser ) )
 					{

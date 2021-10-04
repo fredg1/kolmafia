@@ -270,10 +270,9 @@ public class Parser
 	private Token currentToken;
 
 	private final Map<File, Parser> imports;
+	private final List<AshDiagnostic> diagnostics = new ArrayList<>();
 	private Function mainMethod = null;
 	private String notifyRecipient = null;
-
-	public final List<AshDiagnostic> diagnostics = new ArrayList<>();
 
 	public Parser()
 	{
@@ -405,6 +404,11 @@ public class Parser
 	public Map<File, Parser> getImports()
 	{
 		return this.imports;
+	}
+
+	public List<AshDiagnostic> getDiagnostics()
+	{
+		return this.diagnostics;
 	}
 
 	public long getModificationDate()
@@ -4067,7 +4071,7 @@ public class Parser
 
 		if ( !"=".equals( operStr ) )
 		{
-			op = new Operator( this.makeLocation( this.makeInlineRange( operToken.range.getStart(), operStr.length() - 1 ) ),
+			op = new Operator( this.makeLocation( this.makeInlineRange( operToken.getStart(), operStr.length() - 1 ) ),
 			                   operStr.substring( 0, operStr.length() - 1 ), this );
 		}
 
@@ -6145,6 +6149,7 @@ public class Parser
 		}
 
 		public class Token
+			extends Range
 		{
 			final int offset;
 			final String content;
@@ -6536,26 +6541,6 @@ public class Parser
 		this.error( this.rangeToHere( start ), msg1, msg2 );
 	}
 
-	public final void error( final Token token, final String msg )
-	{
-		this.error( token, msg, "" );
-	}
-
-	public final void error( final Token token, final String msg1, final String msg2 )
-	{
-		this.error( token.range, msg1, msg2 );
-	}
-
-	public final void error( final Token start, final Token end, final String msg )
-	{
-		this.error( start, end, msg, "" );
-	}
-
-	public final void error( final Token start, final Token end, final String msg1, final String msg2 )
-	{
-		this.error( this.makeRange( start, end ), msg1, msg2 );
-	}
-
 	public final void error( final Range range, final String msg )
 	{
 		this.error( range, msg, "" );
@@ -6564,6 +6549,16 @@ public class Parser
 	public final void error( final Range range, final String msg1, final String msg2 )
 	{
 		this.error( this.makeLocation( range ), msg1, msg2 );
+	}
+
+	public final void error( final Range start, final Range end, final String msg )
+	{
+		this.error( start, end, msg, "" );
+	}
+
+	public final void error( final Range start, final Range end, final String msg1, final String msg2 )
+	{
+		this.error( this.makeRange( start, end ), msg1, msg2 );
 	}
 
 	public final void error( final Location location, final String msg )
@@ -6596,26 +6591,6 @@ public class Parser
 		this.warning( this.rangeToHere( start ), msg1, msg2 );
 	}
 
-	public final void warning( final Token token, final String msg )
-	{
-		this.warning( token, msg, "" );
-	}
-
-	public final void warning( final Token token, final String msg1, final String msg2 )
-	{
-		this.warning( token.range, msg1, msg2 );
-	}
-
-	public final void warning( final Token start, final Token end, final String msg )
-	{
-		this.warning( start, end, msg, "" );
-	}
-
-	public final void warning( final Token start, final Token end, final String msg1, final String msg2 )
-	{
-		this.warning( this.makeRange( start, end ), msg1, msg2 );
-	}
-
 	public final void warning( final Range range, final String msg )
 	{
 		this.warning( range, msg, "" );
@@ -6624,6 +6599,16 @@ public class Parser
 	public final void warning( final Range range, final String msg1, final String msg2 )
 	{
 		this.warning( this.makeLocation( range ), msg1, msg2 );
+	}
+
+	public final void warning( final Range start, final Range end, final String msg )
+	{
+		this.warning( start, end, msg, "" );
+	}
+
+	public final void warning( final Range start, final Range end, final String msg1, final String msg2 )
+	{
+		this.warning( this.makeRange( start, end ), msg1, msg2 );
 	}
 
 	public final void warning( final Location location, final String msg )
