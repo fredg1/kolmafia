@@ -76,14 +76,4 @@ public abstract class ParseTreeNode
 	// There is no need for a corresponding check for CONTINUE statements.
 	// Since they can only branch back to already-executed code, they have
 	// no effect on code reachability.
-
-
-	/** For error propagation only */
-	public static interface BadNode
-	{}
-
-	public boolean isBad()
-	{
-		return this instanceof BadNode;
-	}
 }
