@@ -4316,7 +4316,7 @@ public class Parser
 			// Handle escape sequences
 			if ( ch == '\\' )
 			{
-				i = this.parseEscapeSequence( resultString, i );
+				i = this.parseEscapeSequence( resultString, ++i );
 				continue;
 			}
 
@@ -4766,7 +4766,7 @@ public class Parser
 			// Handle escape sequences
 			if ( ch == '\\' )
 			{
-				i = this.parseEscapeSequence( resultString, i );
+				i = this.parseEscapeSequence( resultString, ++i );
 				continue;
 			}
 
