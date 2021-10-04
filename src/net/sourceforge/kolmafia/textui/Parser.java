@@ -3119,9 +3119,12 @@ public class Parser
 		if ( current.equals( "(" ) )
 		{
 			name = this.parseExpression( scope );
-			if ( name == null || !name.getType().equals( DataTypes.STRING_TYPE ) )
+
+			if ( name == null || !name.getType().equals( DataTypes.STRING_TYPE ) && name.getType() != Type.BAD_TYPE )
 			{
-				throw this.parseException( "String expression expected for function name" );
+				this.error( "String expression expected for function name" );
+
+				name = Value.BAD_VALUE;
 			}
 		}
 		else
@@ -3130,7 +3133,9 @@ public class Parser
 
 			if ( !( name instanceof VariableReference ) )
 			{
-				throw this.parseException( "Variable reference expected for function name" );
+				this.error( "Variable reference expected for function name" );
+
+				name = VariableReference.BAD_VARIABLE_REFERENCE;
 			}
 		}
 
