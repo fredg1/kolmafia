@@ -740,7 +740,7 @@ public class Parser
 
 			this.readToken(); // read name
 
-			recordDefinition = this.makeSymbolLocation( recordStart );
+			recordDefinition = this.makeLocation( recordStart );
 		}
 
 		if ( this.currentToken().equals( "{" ) )
@@ -893,7 +893,7 @@ public class Parser
 
 				this.readToken(); //read ...
 
-				paramType.getReferenceLocations().add( this.makeSymbolLocation( varargStart ) );
+				paramType.getReferenceLocations().add( this.makeLocation( varargStart ) );
 
 				// Only one vararg is allowed
 				vararg = true;
@@ -1026,7 +1026,7 @@ public class Parser
 		this.readToken(); // If parsing of Identifier succeeded, go to next token.
 		// If we are parsing a parameter declaration, we are done
 
-		Variable result = new Variable( variableName, t, this.makeSymbolLocation( start ) );
+		Variable result = new Variable( variableName, t, this.makeLocation( start ) );
 
 		if ( scope == null )
 		{
@@ -1118,7 +1118,7 @@ public class Parser
 			Function target = scope.findFunction( name, params, MatchType.EXACT );
 			if ( target != null && target.getType().equals( ltype ) )
 			{
-				target.addReference( this.make0WidthSymbolLocation() );
+				target.addReference( this.make0WidthLocation() );
 
 				return new FunctionCall( target, params, this );
 			}
@@ -1134,7 +1134,7 @@ public class Parser
 			Function target = scope.findFunction( name, params, MatchType.EXACT );
 			if ( target != null && target.getType().equals( ltype ) )
 			{
-				target.addReference( this.make0WidthSymbolLocation() );
+				target.addReference( this.make0WidthLocation() );
 
 				return new FunctionCall( target, params, this );
 			}
@@ -2484,7 +2484,7 @@ public class Parser
 				type = null;
 			}
 
-			Variable keyvar = new Variable( name, itype, makeSymbolLocation( start ) );
+			Variable keyvar = new Variable( name, itype, makeLocation( start ) );
 			varList.add( keyvar );
 			variableReferences.add( new VariableReference( keyvar ) );
 		}
@@ -2862,7 +2862,7 @@ public class Parser
 
 		if ( type != null )
 		{
-			type.addReference( this.makeSymbolLocation( start ) );
+			type.addReference( this.makeLocation( start ) );
 		}
 
 		if ( !( type instanceof RecordType ) )
@@ -2975,7 +2975,7 @@ public class Parser
 		Token name = this.currentToken();
 		this.readToken(); //name
 
-		Location nameLocation = this.makeSymbolLocation( start );
+		Location nameLocation = this.makeLocation( start );
 
 		List<Value> params = this.parseParameters( scope, firstParam );
 		Function target = scope.findFunction( name.content, params );
