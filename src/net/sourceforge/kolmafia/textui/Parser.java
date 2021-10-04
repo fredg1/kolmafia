@@ -46,13 +46,16 @@ import java.util.stream.Collectors;
 
 import net.java.dev.spellcast.utilities.DataUtilities;
 
+import org.eclipse.lsp4j.Diagnostic;
+import org.eclipse.lsp4j.DiagnosticRelatedInformation;
+import org.eclipse.lsp4j.DiagnosticSeverity;
+import static org.eclipse.lsp4j.DiagnosticSeverity.*;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 
 import net.sourceforge.kolmafia.KoLConstants;
 import net.sourceforge.kolmafia.KoLmafiaCLI;
-import net.sourceforge.kolmafia.RequestLogger;
 import net.sourceforge.kolmafia.StaticEntity;
 
 import net.sourceforge.kolmafia.objectpool.IntegerPool;
@@ -99,6 +102,7 @@ import net.sourceforge.kolmafia.textui.parsetree.RecordType;
 import net.sourceforge.kolmafia.textui.parsetree.RepeatUntilLoop;
 import net.sourceforge.kolmafia.textui.parsetree.Scope;
 import net.sourceforge.kolmafia.textui.parsetree.ScriptExit;
+import net.sourceforge.kolmafia.textui.parsetree.ScriptState;
 import net.sourceforge.kolmafia.textui.parsetree.SortBy;
 import net.sourceforge.kolmafia.textui.parsetree.StaticScope;
 import net.sourceforge.kolmafia.textui.parsetree.Switch;
@@ -255,6 +259,8 @@ public class Parser
 	private final Map<File, Long> imports;
 	private Function mainMethod = null;
 	private String notifyRecipient = null;
+
+	final List<AshDiagnostic> diagnostics = new ArrayList<>();
 
 	public Parser()
 	{
@@ -588,21 +594,21 @@ public class Parser
 	}
 
 	private Scope parseScope( final Scope startScope,
-				  final Type expectedType,
-				  final VariableList variables,
-				  final BasicScope parentScope,
-				  final boolean allowBreak,
-				  final boolean allowContinue )
+	                          final Type expectedType,
+	                          final VariableList variables,
+	                          final BasicScope parentScope,
+	                          final boolean allowBreak,
+	                          final boolean allowContinue )
 	{
 		Scope result = startScope == null ? new Scope( variables, parentScope ) : startScope;
 		return this.parseScope( result, expectedType, parentScope, allowBreak, allowContinue );
 	}
 
 	private Scope parseScope( Scope result,
-				  final Type expectedType,
-				  final BasicScope parentScope,
-				  final boolean allowBreak,
-				  final boolean allowContinue )
+	                          final Type expectedType,
+	                          final BasicScope parentScope,
+	                          final boolean allowBreak,
+	                          final boolean allowContinue )
 	{
 		String importString;
 
@@ -1092,7 +1098,7 @@ public class Parser
 		return result;
 	}
 
-	private Value autoCoerceValue( Type ltype, Value rhs, final BasicScope scope )
+	private Value autoCoerceValue( final Type ltype, final Value rhs, final BasicScope scope )
 	{
 		// DataTypes.TYPE_ANY has no name
 		if ( ltype == null || ltype.getName() == null )
@@ -1144,7 +1150,7 @@ public class Parser
 		return rhs;
 	}
 
-	private List<Value> autoCoerceParameters( Function target, List<Value> params, BasicScope scope )
+	private List<Value> autoCoerceParameters( final Function target, final List<Value> params, final BasicScope scope )
 	{
 		ListIterator<VariableReference> refIterator = target.getVariableReferences().listIterator();
 		ListIterator<Value> valIterator = params.listIterator();
@@ -1233,7 +1239,11 @@ public class Parser
 		return true;
 	}
 
-	private ParseTreeNode parseCommand( final Type functionType, final BasicScope scope, final boolean noElse, boolean allowBreak, boolean allowContinue )
+	private ParseTreeNode parseCommand( final Type functionType,
+	                                    final BasicScope scope,
+	                                    final boolean noElse,
+	                                    final boolean allowBreak,
+	                                    final boolean allowContinue )
 	{
 		ParseTreeNode result;
 
@@ -1753,11 +1763,11 @@ public class Parser
 	}
 
 	private Scope parseBlockOrSingleCommand( final Type functionType,
-						 final VariableList variables,
-						 final BasicScope parentScope,
-						 final boolean noElse,
-						 boolean allowBreak,
-						 boolean allowContinue )
+	                                         final VariableList variables,
+	                                         final BasicScope parentScope,
+	                                         final boolean noElse,
+	                                         final boolean allowBreak,
+	                                         final boolean allowContinue )
 	{
 		Scope scope = this.parseBlock( functionType, variables, parentScope, noElse, allowBreak, allowContinue );
 		if ( scope != null )
@@ -1768,11 +1778,11 @@ public class Parser
 	}
 
 	private Scope parseBlock( final Type functionType,
-				  final VariableList variables,
-				  final BasicScope parentScope,
-				  final boolean noElse,
-				  final boolean allowBreak,
-				  final boolean allowContinue )
+	                          final VariableList variables,
+	                          final BasicScope parentScope,
+	                          final boolean noElse,
+	                          final boolean allowBreak,
+	                          final boolean allowContinue )
 	{
 		if ( !this.currentToken().equals( "{" ) )
 		{
@@ -1796,10 +1806,10 @@ public class Parser
 	}
 
 	private Conditional parseConditional( final Type functionType,
-					      final BasicScope parentScope,
-					      boolean noElse,
-					      final boolean allowBreak,
-					      final boolean allowContinue )
+	                                      final BasicScope parentScope,
+	                                      final boolean noElse,
+	                                      final boolean allowBreak,
+	                                      final boolean allowContinue )
 	{
 		if ( !this.currentToken().equalsIgnoreCase( "if" ) )
 		{
@@ -2240,11 +2250,11 @@ public class Parser
 		}
 
 		return new Switch( condition, tests, indices, defaultIndex, scope,
-				   constantLabels ? labels : null );
+		                   constantLabels ? labels : null );
 	}
 
 	private Try parseTry( final Type functionType, final BasicScope parentScope,
-			      final boolean allowBreak, final boolean allowContinue )
+	                      final boolean allowBreak, final boolean allowContinue )
 	{
 		if ( !this.currentToken().equalsIgnoreCase( "try" ) )
 		{
@@ -2275,7 +2285,7 @@ public class Parser
 	}
 
 	private Catch parseCatch( final Type functionType, final BasicScope parentScope,
-				  final boolean allowBreak, final boolean allowContinue )
+	                          final boolean allowBreak, final boolean allowContinue )
 	{
 		if ( !this.currentToken().equalsIgnoreCase( "catch" ) )
 		{
@@ -2987,7 +2997,7 @@ public class Parser
 		Token name = this.currentToken();
 		this.readToken(); //name
 
-		Location nameLocation = this.makeLocation( start );
+		Location nameLocation = this.makeLocation( nameStart );
 
 		List<Value> params = this.parseParameters( scope, firstParam );
 		Function target = scope.findFunction( name.content, params );
@@ -3070,7 +3080,7 @@ public class Parser
 		return params;
 	}
 
-	private Value parsePostCall( final BasicScope scope, FunctionCall call )
+	private Value parsePostCall( final BasicScope scope, final FunctionCall call )
 	{
 		Value result = call;
 		while ( result != null && this.currentToken().equals( "." ) )
@@ -3869,7 +3879,7 @@ public class Parser
 		return i;
 	}
 
-	private Value parseLiteral( Type type, String element )
+	private Value parseLiteral( final Type type, final String element )
 	{
 		Value value = DataTypes.parseValue( type, element, false );
 		if ( value == null )
@@ -3973,7 +3983,7 @@ public class Parser
 			{
 				StringBuilder buf = new StringBuilder( name );
 				int length = name.length();
-	
+
 				if ( name.endsWith( "ies" ) )
 				{
 					buf.delete( length - 3, length );
@@ -4081,7 +4091,7 @@ public class Parser
 				}
 				this.readToken(); // read ]
 				String input = resultString.toString().trim();
-				return parseLiteral( type, input );
+				return this.parseLiteral( type, input );
 			}
 			else
 			{
@@ -4803,6 +4813,13 @@ public class Parser
 		return this.currentLine == null;
 	}
 
+	private boolean madeProgress( final Position previousPosition, final Position currentPosition )
+	{
+		return previousPosition == null ||
+		       previousPosition.getLine() < currentPosition.getLine() ||
+		       previousPosition.getCharacter() < currentPosition.getCharacter();
+	}
+
 	/**
 	 * Returns the content of {@link #currentLine} starting at {@link #currentIndex}.
 	 */
@@ -5084,48 +5101,126 @@ public class Parser
 		return this.parseException( "Expected " + expected + ", found " + foundString );
 	}
 
-	private ScriptException parseException( final String message )
-	{
-		return new ScriptException( message + " " + this.getLineAndFile() );
+		private AshDiagnostic( final Location location, final DiagnosticSeverity severity, final String message )
+		{
+			this( location, severity, message, "" );
+		}
+
+		private AshDiagnostic( final Location location, final DiagnosticSeverity severity, final String message1, final String message2 )
+		{
+			this.sourceUri = location.getUri();
+			this.range = location.getRange();
+			this.severity = severity;
+			this.message1 = message1;
+			this.message2 = message2;
+		}
+
+		public String toString()
+		{
+			StringBuilder result = new StringBuilder();
+
+			result.append( this.message1 );
+			result.append( " (" );
+
+			if ( Parser.this.shortFileName == null )
+			{
+				result.append( Preferences.getString( "commandLineNamespace" ) );
+			}
+			else
+			{
+				result.append( Parser.this.shortFileName );
+				result.append( ", line " + ( this.range.getStart().getLine() + 1 ) );
+			}
+
+			result.append( ", char " + ( this.range.getStart().getCharacter() + 1 ) );
+
+			if ( !this.range.getStart().equals( this.range.getEnd() ) )
+			{
+				result.append( " to " );
+
+				if ( this.range.getStart().getLine() < this.range.getEnd().getLine() )
+				{
+					result.append( "line " + ( this.range.getEnd().getLine() + 1 ) );
+
+					if ( this.range.getEnd().getCharacter() > 0 )
+					{
+						result.append( ", " );
+					}
+				}
+
+				if ( this.range.getStart().getCharacter() < this.range.getEnd().getCharacter() )
+				{
+					result.append( "char " + ( this.range.getEnd().getCharacter() + 1 ) );
+				}
+			}
+
+			result.append( ")" );
+
+			if ( this.message2 != null && this.message2.length() > 0 )
+			{
+				result.append( " " + message2 );
+			}
+
+			return result.toString();
+		}
+
+		public Diagnostic toLspDiagnostic()
+		{
+			String message = this.message1;
+
+			if ( message2 != null && message2.length() > 0 )
+			{
+				message += KoLConstants.LINE_BREAK + message2;
+			}
+
+			Diagnostic diagnostic = new Diagnostic( this.range, message, this.severity, StaticEntity.getVersion() );
+
+			if ( this.relatedInformation != null )
+			{
+				diagnostic.setRelatedInformation( relatedInformation );
+			}
+
+			return diagnostic;
+		}
 	}
 
-	private ScriptException parseException2( final String message1, final String message2 )
+	private void parseException( final String expected, final String actual )
 	{
-		return new ScriptException( message1 + " " + this.getLineAndFile() + " " + message2 );
+		this.error( this.make0WidthLocation(), "Expected " + expected + ", found " + actual );
 	}
 
-	private ScriptException undefinedFunctionException( final String name, final List<Value> params )
+	private void parseException( final Position start, final String expected, final String actual )
 	{
-		return this.parseException( Parser.undefinedFunctionMessage( name, params ) );
+		this.error( start, "Expected " + expected + ", found " + actual );
 	}
 
-	private ScriptException multiplyDefinedFunctionException( final Function f )
+	private void multiplyDefinedFunctionError( final Position start, final Function f )
 	{
 		String buffer = "Function '" +
 				f.getSignature() +
 				"' defined multiple times.";
-		return this.parseException( buffer );
+		this.error( start, buffer );
 	}
 
-	private ScriptException overridesLibraryFunctionException( final Function f )
+	private void overridesLibraryFunctionError( final Position start, final Function f )
 	{
 		String buffer = "Function '" +
 				f.getSignature() +
 				"' overrides a library function.";
-		return this.parseException( buffer );
+		this.error( start, buffer );
 	}
 
-	private ScriptException varargClashException( final Function f, final Function clash )
+	private void varargClashError( final Position start, final Function f, final Function clash )
 	{
 		String buffer = "Function '" +
 				f.getSignature() +
 				"' clashes with existing function '" +
 				clash.getSignature() +
 				"'.";
-		return this.parseException( buffer );
+		this.error( start, buffer );
 	}
 
-	public final ScriptException sinceException( String current, String target, boolean targetIsRevision )
+	public final void sinceError( final String current, final String target, final Range directiveRange, final boolean targetIsRevision )
 	{
 		String template;
 		if ( targetIsRevision )
@@ -5137,7 +5232,7 @@ public class Parser
 			template = "'%s' requires version %s of kolmafia or higher (current: %s).  Up-to-date builds can be found at https://ci.kolmafia.us/.";
 		}
 
-		return new ScriptException( String.format( template, this.shortFileName, target, current ) );
+		this.error( this.makeLocation( directiveRange ), String.format( template, this.shortFileName, target, current ) );
 	}
 
 	public static String undefinedFunctionMessage( final String name, final List<Value> params )
@@ -5149,7 +5244,7 @@ public class Parser
 		return buffer.toString();
 	}
 
-	private void enforceSince( String revision )
+	private void enforceSince( String revision, final Range directiveRange )
 	{
 		try
 		{
@@ -5160,7 +5255,8 @@ public class Parser
 				int currentRevision = StaticEntity.getRevision();
 				if ( currentRevision < targetRevision )
 				{
-					throw this.sinceException( String.valueOf( currentRevision ), revision, true );
+					this.sinceError( String.valueOf( currentRevision ), revision, directiveRange, true );
+					return;
 				}
 			}
 			else // version (or syntax error)
@@ -5168,7 +5264,8 @@ public class Parser
 				String [] target = revision.split( "\\." );
 				if ( target.length != 2 )
 				{
-					throw this.parseException( "invalid 'since' format" );
+					this.error( "invalid 'since' format" );
+					return;
 				}
 
 				int targetMajor = Integer.parseInt( target[ 0 ] );
@@ -5191,19 +5288,65 @@ public class Parser
 
 				if ( targetMajor > currentMajor || ( targetMajor == currentMajor && targetMinor > currentMinor ) )
 				{
-					throw this.sinceException( currentVersion, revision, false );
+					this.sinceError( currentVersion, revision, directiveRange, false );
+					return;
 				}
 			}
 		}
 		catch ( NumberFormatException e )
 		{
-			throw this.parseException( "invalid 'since' format" );
+			this.error( "invalid 'since' format" );
 		}
+	}
+
+	public final void error( final String msg )
+	{
+		this.error( msg, "" );
+	}
+
+	public final void error( final String msg1, final String msg2 )
+	{
+		this.error( this.make0WidthLocation(), msg1, msg2 );
+	}
+
+	public final void error( final Position start, final String msg )
+	{
+		this.error( start, msg, "" );
+	}
+
+	public final void error( final Position start, final String msg1, final String msg2 )
+	{
+		this.error( this.makeLocation( start ), msg1, msg2 );
+	}
+
+	public final void error( final Location location, final String msg )
+	{
+		this.error( location, msg, "" );
+	}
+
+	public final void error( final Location location, final String msg1, final String msg2 )
+	{
+		this.diagnostics.add( new AshDiagnostic( location != null ? location : this.make0WidthLocation(), Error, msg1, msg2 ) );
 	}
 
 	public final void warning( final String msg )
 	{
-		RequestLogger.printLine( "WARNING: " + msg + " " + this.getLineAndFile() );
+		this.warning( msg, "" );
+	}
+
+	public final void warning( final String msg1, final String msg2 )
+	{
+		this.warning( this.make0WidthLocation(), msg1, msg2 );
+	}
+
+	public final void warning( final Location location, final String msg )
+	{
+		this.warning( location, msg, "" );
+	}
+
+	public final void warning( final Location location, final String msg1, final String msg2 )
+	{
+		this.diagnostics.add( new AshDiagnostic( location, Warning, msg1, msg2 ) );
 	}
 
 	private static void appendFunctionCall( final StringBuilder buffer, final String name, final List<Value> params )
@@ -5220,11 +5363,6 @@ public class Parser
 		}
 
 		buffer.append( " )" );
-	}
-
-	private String getLineAndFile()
-	{
-		return Parser.getLineAndFile( this.shortFileName, this.getLineNumber() );
 	}
 
 	public static String getLineAndFile( final String fileName, final int lineNumber )
