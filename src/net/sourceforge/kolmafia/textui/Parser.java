@@ -3059,7 +3059,8 @@ public class Parser
 			{
 				if ( !")".equals( this.currentToken() ) )
 				{
-					throw this.parseException( ")", this.currentToken() );
+					this.parseException( ")", this.currentToken() );
+					break;
 				}
 				continue;
 			}
@@ -3073,7 +3074,8 @@ public class Parser
 
 			if ( ")".equals( this.currentToken() ) )
 			{
-				throw this.parseException( "parameter", this.currentToken() );
+				this.parseException( "parameter", this.currentToken() );
+				// we'll break out at the start of the next loop
 			}
 		}
 
