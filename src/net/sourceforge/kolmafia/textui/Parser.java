@@ -426,6 +426,13 @@ public class Parser
 		return this.notifyRecipient;
 	}
 
+	public List<Token> getTokens( final Range range )
+	{
+		// Done this way simply as to not encumber this section,
+		// since that method is a bit bulky.
+		return this.getTokensInRange( range );
+	}
+
 	public static Scope getExistingFunctionScope()
 	{
 		return new Scope( RuntimeLibrary.functions.clone(), null, DataTypes.simpleTypes.clone() );

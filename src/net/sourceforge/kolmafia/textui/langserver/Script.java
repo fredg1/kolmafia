@@ -91,16 +91,16 @@ class Script
 	 * <p>
 	 * All files imported by this script should also be handled by this object
 	 */
-	class Handler
+	public class Handler
 	{
 		Parser parser;
 		Scope scope;
 		Map<File, Parser> imports;
 
-		Thread parserThread;
+		private Thread parserThread;
 
 		private final Object parserSwapLock = new Object();
-		final Object parserThreadWaitingLock = new Object();
+		private final Object parserThreadWaitingLock = new Object();
 
 		void refreshParsing()
 		{
@@ -197,6 +197,56 @@ class Script
 			}
 
 			Thread.currentThread().setName( previousThreadName );
+		}
+
+		public Parser getParser()
+		{
+			this.waitForParsing();
+
+			if ( Thread.interrupted() )
+			{
+				return null;
+			}
+
+			if ( Script.this.handler != this )
+			{
+				// We've been kicked out
+				if ( Script.this.handler != null )
+				{
+					return Script.this.handler.getParser();
+				}
+				else
+				{
+					return null;
+				}
+			}
+
+			return this.parser;
+		}
+
+		public Scope getScope()
+		{
+			this.waitForParsing();
+
+			if ( Thread.interrupted() )
+			{
+				return null;
+			}
+
+			if ( Script.this.handler != this )
+			{
+				// We've been kicked out
+				if ( Script.this.handler != null )
+				{
+					return Script.this.handler.getScope();
+				}
+				else
+				{
+					return null;
+				}
+			}
+
+			return this.scope;
 		}
 
 		void close()

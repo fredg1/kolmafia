@@ -33,14 +33,30 @@
 
 package net.sourceforge.kolmafia.textui.langserver.textdocumentservice;
 
+import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.SemanticTokenModifiers;
+import org.eclipse.lsp4j.SemanticTokens;
 import org.eclipse.lsp4j.SemanticTokenTypes;
+import org.eclipse.lsp4j.SemanticTokensCapabilities;
+import org.eclipse.lsp4j.SemanticTokensLegend;
+import org.eclipse.lsp4j.SemanticTokensServerFull;
+import org.eclipse.lsp4j.SemanticTokensWithRegistrationOptions;
+import org.eclipse.lsp4j.ServerCapabilities;
+import org.eclipse.lsp4j.TokenFormat;
+
+import net.sourceforge.kolmafia.textui.Parser;
+import net.sourceforge.kolmafia.textui.Parser.Line.Token;
+
+import net.sourceforge.kolmafia.textui.langserver.AshLanguageServer;
 
 /**
  * Semantic tokens, i.e. "telling the client what everything 'is' so
@@ -48,7 +64,7 @@ import org.eclipse.lsp4j.SemanticTokenTypes;
  */
 class SemanticTokensHandler
 {
-	static final List<String> TYPES =
+	private static final List<String> TYPES =
 		Collections.unmodifiableList(
 			Arrays.asList(
 				SemanticTokenTypes.Type,
@@ -78,7 +94,7 @@ class SemanticTokensHandler
 				 */
 			) );
 
-	static final Map<String, Integer> TYPES_INVERTED = 
+	private static final Map<String, Integer> TYPES_INVERTED = 
 		Collections.unmodifiableMap(
 			new HashMap<>()
 			{{
@@ -89,7 +105,7 @@ class SemanticTokensHandler
 			}}
 		);
 
-	static final List<String> MODIFIERS =
+	private static final List<String> MODIFIERS =
 		Collections.unmodifiableList(
 			Arrays.asList(
 				SemanticTokenModifiers.Declaration, // we allow this with functions. Also for record fields
@@ -107,7 +123,7 @@ class SemanticTokensHandler
 				 */
 			) );
 
-	static final Map<String, Integer> MODIFIERS_INVERTED = 
+	private static final Map<String, Integer> MODIFIERS_INVERTED = 
 		Collections.unmodifiableMap(
 			new HashMap<>()
 			{{
@@ -118,7 +134,7 @@ class SemanticTokensHandler
 			}}
 		);
 
-	static int getType( final String type )
+	private static int getType( final String type )
 	{
 		if ( !SemanticTokensHandler.TYPES_INVERTED.containsKey( type ) )
 		{
@@ -128,7 +144,7 @@ class SemanticTokensHandler
 		return SemanticTokensHandler.TYPES_INVERTED.get( type );
 	}
 
-	static int getModifier( final String modifier )
+	private static int getModifier( final String modifier )
 	{
 		if ( !SemanticTokensHandler.MODIFIERS_INVERTED.containsKey( modifier ) )
 		{
@@ -136,5 +152,152 @@ class SemanticTokensHandler
 		}
 
 		return SemanticTokensHandler.MODIFIERS_INVERTED.get( modifier );
+	}
+
+	final AshLanguageServer parent;
+
+	private SemanticTokensCapabilities clientCapabilities;
+	private boolean relativeFormat = false;
+
+	SemanticTokensHandler( final AshTextDocumentService immediateParent )
+	{
+		this.parent = immediateParent.parent;
+	}
+
+	void setCapabilities( final ServerCapabilities capabilities )
+	{
+		if ( this.parent.clientCapabilities != null &&
+		     this.parent.clientCapabilities.getTextDocument() != null )
+		{
+			this.clientCapabilities = this.parent.clientCapabilities.getTextDocument().getSemanticTokens();
+		}
+
+		if ( this.clientCapabilities != null )
+		{
+			this.relativeFormat = this.clientCapabilities.getFormats().contains( TokenFormat.Relative );
+		}
+
+		final SemanticTokensWithRegistrationOptions registrationOptions =
+			new SemanticTokensWithRegistrationOptions(
+				new SemanticTokensLegend(
+					SemanticTokensHandler.TYPES,
+					SemanticTokensHandler.MODIFIERS ) );
+
+		if ( this.clientCapabilities != null &&
+		     this.clientCapabilities.getRequests() != null &&
+		     this.clientCapabilities.getRequests().getFull() != null &&
+		     this.clientCapabilities.getRequests().getFull().getRight() != null )
+		{
+			registrationOptions.setFull( new SemanticTokensServerFull( false ) );
+		}
+		else
+		{
+			registrationOptions.setFull( true );
+		}
+
+		registrationOptions.setRange( true );
+
+		capabilities.setSemanticTokensProvider( registrationOptions );
+	}
+
+	SemanticTokens getSemanticTokens( final File file, final Range range )
+	{
+		final List<Token> tokens;
+		final Parser parser =
+			this.parent.monitor.findOrMakeHandler( file )
+				.get( 0 ).getParser();
+		if ( parser != null )
+		{
+			tokens = parser.getTokens( range );
+		}
+		else
+		{
+			tokens = Collections.emptyList();
+		}
+
+		final List<Integer> data = new ArrayList<>( tokens.size() * 5 );
+
+		Position previousTokenStart = new Position( 0, 0 );
+		for ( final Token token : tokens )
+		{
+			final List<Integer> group = new ArrayList<>( 5 );
+
+			// 0 = line
+			// 1 = start character
+			if ( !this.relativeFormat )
+			{
+				group.set( 0, token.getStart().getLine() );
+				group.set( 1, token.getStart().getCharacter() );
+			}
+			else if ( previousTokenStart.getLine() == token.getStart().getLine() )
+			{
+				group.set( 0, 0 );
+				group.set( 1, token.getStart().getCharacter() -
+				              previousTokenStart.getCharacter() );
+			}
+			else
+			{
+				group.set( 0, token.getStart().getLine() -
+				              previousTokenStart.getLine() );
+				group.set( 1, token.getStart().getCharacter() );
+			}
+
+			// 2 = length
+			group.set( 2, token.getEnd().getCharacter() -
+			              token.getStart().getCharacter() );
+
+			try
+			{
+				// 3 = type
+				String type = token.getSemanticType();
+
+				if ( this.clientCapabilities.getTokenTypes() != null &&
+				     !this.clientCapabilities.getTokenTypes().contains( type ) )
+				{
+					if ( SemanticTokenTypes.Enum.equals( type ) ||
+					     SemanticTokenTypes.Struct.equals( type ) )
+					{
+						type = SemanticTokenTypes.Type;
+					}
+					else if ( SemanticTokenTypes.Property.equals( type ) ||
+					          SemanticTokenTypes.EnumMember.equals( type ) )
+					{
+						type = SemanticTokenTypes.Variable;
+					}
+					else if ( SemanticTokenTypes.Macro.equals( type ) )
+					{
+						type = SemanticTokenTypes.String;
+					}
+					else
+					{
+						// *shrug*
+					}
+				}
+
+				group.set( 3, SemanticTokensHandler.getType( type ) );
+
+				// 4 = modifiers
+				int mask = 0;
+
+				for ( final String modifier : token.getSemanticModifiers() )
+				{
+					mask |= 1 << SemanticTokensHandler.getModifier( modifier );
+				}
+
+				group.set( 4, mask );
+			}
+			catch ( RuntimeException e )
+			{
+				// someone put an unregistered (i.e. not in the maps above)
+				// token type/modifier in Parser.java
+				// (just at it to the corresponding map to fix this)
+				continue;
+			}
+
+			previousTokenStart = token.getStart();
+			data.addAll( group );
+		}
+
+		return new SemanticTokens( data );
 	}
 }

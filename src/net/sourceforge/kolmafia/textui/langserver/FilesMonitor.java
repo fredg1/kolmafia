@@ -94,7 +94,7 @@ public class FilesMonitor
 	}
 
 	/** Fetches or makes a Script for the given file. */
-	Script getScript( final File file )
+	private Script getScript( final File file )
 	{
 		synchronized ( this.parent.scripts )
 		{
@@ -129,7 +129,7 @@ public class FilesMonitor
 		return handlers;
 	}
 
-	List<Script.Handler> findOrMakeHandler( final File file )
+	public List<Script.Handler> findOrMakeHandler( final File file )
 	{
 		final List<Script.Handler> handlers;
 

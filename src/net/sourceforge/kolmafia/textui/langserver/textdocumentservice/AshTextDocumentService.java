@@ -36,12 +36,17 @@ package net.sourceforge.kolmafia.textui.langserver.textdocumentservice;
 import java.io.File;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.lsp4j.DidChangeTextDocumentParams;
 import org.eclipse.lsp4j.DidCloseTextDocumentParams;
 import org.eclipse.lsp4j.DidOpenTextDocumentParams;
 import org.eclipse.lsp4j.DidSaveTextDocumentParams;
+import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.SaveOptions;
+import org.eclipse.lsp4j.SemanticTokens;
+import org.eclipse.lsp4j.SemanticTokensParams;
+import org.eclipse.lsp4j.SemanticTokensRangeParams;
 import org.eclipse.lsp4j.ServerCapabilities;
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
@@ -58,6 +63,8 @@ public abstract class AshTextDocumentService
 	implements TextDocumentService
 {
 	protected final AshLanguageServer parent;
+
+	private final SemanticTokensHandler semanticHandler = new SemanticTokensHandler( this );
 
 	public AshTextDocumentService( final AshLanguageServer parent )
 	{
@@ -129,7 +136,7 @@ public abstract class AshTextDocumentService
 
 		// callHierarchyProvider
 
-		// semanticTokensProvider
+		this.semanticHandler.setCapabilities( capabilities );
 
 		// monikerProvider
 		// not even sure what that it? Looking into the docs,
@@ -191,5 +198,30 @@ public abstract class AshTextDocumentService
 	{
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	public CompletableFuture<SemanticTokens> semanticTokensFull( SemanticTokensParams params )
+	{
+		return CompletableFuture.supplyAsync( () -> {
+			TextDocumentIdentifier document = params.getTextDocument();
+
+			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
+
+			return this.semanticHandler.getSemanticTokens( file, null );
+		}, this.parent.executor );
+	}
+
+	@Override
+	public CompletableFuture<SemanticTokens> semanticTokensRange( SemanticTokensRangeParams params )
+	{
+		return CompletableFuture.supplyAsync( () -> {
+			TextDocumentIdentifier document = params.getTextDocument();
+			Range range = params.getRange();
+
+			File file = new File( FilesMonitor.sanitizeURI( document.getUri() ) );
+
+			return this.semanticHandler.getSemanticTokens( file, range );
+		}, this.parent.executor );
 	}
 }
