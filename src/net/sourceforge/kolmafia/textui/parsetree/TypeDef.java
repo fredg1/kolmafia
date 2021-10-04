@@ -46,7 +46,6 @@ public class TypeDef
 	{
 		super( name, DataTypes.TYPE_TYPEDEF, location );
 		this.base = base;
-		this.references = DataTypes.TYPEDEF_TYPE.references;
 	}
 
 	@Override
