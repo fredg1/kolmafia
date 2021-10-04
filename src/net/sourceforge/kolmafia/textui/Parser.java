@@ -2069,6 +2069,8 @@ public class Parser
 
 		this.readToken(); // repeat
 
+		boolean repeatError = false;
+
 		Scope scope = this.parseLoopScope( functionType, null, parentScope );
 
 		if ( this.currentToken().equalsIgnoreCase( "until" ) )
@@ -2077,7 +2079,8 @@ public class Parser
 		}
 		else
 		{
-			throw this.parseException( "until", this.currentToken() );
+			this.parseException( "until", this.currentToken() );
+			repeatError = true;
 		}
 
 		if ( this.currentToken().equals( "(" ) )
@@ -2097,13 +2100,21 @@ public class Parser
 		}
 		else
 		{
-			throw this.parseException( ")", this.currentToken() );
+			this.readToken(); // )
+		}
+		else if ( !repeatError )
+		{
+			this.parseException( ")", this.currentToken() );
+			repeatError = true;
 		}
 
 		if ( condition == null || condition.getType() != DataTypes.BOOLEAN_TYPE )
 		{
-			throw this.parseException( "\"repeat\" requires a boolean conditional expression" );
-		}
+			if ( !repeatError )
+			{
+				this.error( conditionLocation, "\"repeat\" requires a boolean conditional expression" );
+				repeatError = true;
+			}
 
 		return new RepeatUntilLoop( scope, condition );
 	}
