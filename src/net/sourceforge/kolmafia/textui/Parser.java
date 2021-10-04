@@ -5295,7 +5295,7 @@ public class Parser
 			{
 				Position currentElementEndPosition =
 					new Position(
-						this.currentLine.lineNumber,
+						this.getLineNumber(),
 						this.currentIndex + i - 1 );
 				Location currentElementLocation = this.makeLocation( new Range( currentElementStartPosition, currentElementEndPosition ) );
 				currentElementStartPosition = currentElementEndPosition;
