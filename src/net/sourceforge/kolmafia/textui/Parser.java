@@ -2878,18 +2878,28 @@ public class Parser
 		String name = this.currentToken().content;
 		Type type = scope.findType( name );
 
-		Position start = this.here();
+		Position nameStart = this.here();
+		boolean newRecordError = false, newRecordSyntaxError = false;
 
 		this.readToken(); //name
 
 		if ( type != null )
 		{
-			type.addReference( this.makeLocation( start ) );
+			type.addReference( this.makeLocation( nameStart ) );
 		}
 
 		if ( !( type instanceof RecordType ) )
 		{
-			throw this.parseException( "'" + name + "' is not a record type" );
+			if ( type.getBaseType() != Type.BAD_TYPE )
+			{
+				if ( !newRecordSyntaxError )
+				{
+					this.error( nameStart, "'" + name + "' is not a record type" );
+				}
+				newRecordError = newRecordSyntaxError = true;
+			}
+
+			type = RecordType.BAD_RECORD;
 		}
 
 		RecordType target = (RecordType) type;
@@ -2907,7 +2917,15 @@ public class Parser
 			{
 				if ( this.atEndOfFile() )
 				{
-					throw this.parseException( ")", this.currentToken() );
+					this.parseException( ")", "end of file" );
+					newRecordError = newRecordSyntaxError = true;
+					break;
+				}
+
+				if ( ")".equals( this.currentToken() ) )
+				{
+					this.readToken(); // )
+					break;
 				}
 
 				if ( this.currentToken().equals( ")" ) )
@@ -2936,7 +2954,7 @@ public class Parser
 				{
 					val = DataTypes.VOID_VALUE;
 				}
-				else if ( "{".equals( this.currentToken() ) && expected instanceof AggregateType )
+				else if ( "{".equals( this.currentToken() ) )
 				{
 					val = this.parseAggregateLiteral( scope, (AggregateType) expected );
 				}
