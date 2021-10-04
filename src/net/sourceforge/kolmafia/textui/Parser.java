@@ -2278,7 +2278,8 @@ public class Parser
 		else
 		{
 			// this would not be an error if at least one catch was present
-			throw this.parseException( "\"try\" without \"finally\" is pointless" );
+			this.error( "\"try\" without \"finally\" is pointless" );
+			finalClause = new Scope( body );
 		}
 
 		return new Try( body, finalClause );
