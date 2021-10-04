@@ -3332,6 +3332,8 @@ public class Parser
 			Token name = this.currentToken();
 			Variable variable;
 
+			Variable variable;
+
 			if ( !this.parseIdentifier( name.content ) || Parser.isReservedWord( name.content ) )
 			{
 				if ( !javaForSyntaxError )
@@ -3340,8 +3342,6 @@ public class Parser
 				}
 				javaForError = javaForSyntaxError = variableNameError = true;
 			}
-
-			VariableReference lhs;
 
 			// If there is no data type, it is using an existing variable
 			if ( t == null )
@@ -3356,7 +3356,6 @@ public class Parser
 					}
 
 					variable = new BadVariable( name.content, new BadType( null, null ), this.makeLocation( name ) );
-					lhs = new VariableReference( variable );
 				}
 
 				t = variable.getType();
@@ -3372,8 +3371,6 @@ public class Parser
 						scope.addVariable( variable );
 					}
 
-					lhs = new VariableReference( variable );
-
 					name.addModifier( SemanticTokenModifiers.Declaration );
 				}
 				else
@@ -3385,8 +3382,6 @@ public class Parser
 					}
 
 					parentScope.addReference( variable, this.makeLocation( name ) );
-
-					lhs = new VariableReference( variable );
 				}
 
 				// Create variable and add it to the scope
