@@ -592,7 +592,7 @@ public class Parser
 			}
 			else
 			{
-				this.parseException( typeStart, ";", this.currentToken() );
+				this.parseException( typeStart, ";", this.currentToken().value );
 			}
 		}
 		else
@@ -661,7 +661,7 @@ public class Parser
 				}
 				else
 				{
-					this.parseException( ";", this.currentToken() );
+					this.parseException( ";", this.currentToken().value );
 				}
 
 				continue;
@@ -723,7 +723,7 @@ public class Parser
 				}
 				else
 				{
-					this.parseException( ";", this.currentToken() );
+					this.parseException( ";", this.currentToken().value );
 				}
 
 				continue;
@@ -949,7 +949,7 @@ public class Parser
 			{
 				if ( !parameterError )
 				{
-					this.parseException( parameterStart, ")", this.currentToken() );
+					this.parseException( parameterStart, ")", this.currentToken().value );
 				}
 				functionError = parameterError = true;
 
@@ -988,7 +988,7 @@ public class Parser
 			{
 				if ( !parameterError )
 				{
-					this.parseException( parameterStart, "identifier", this.currentToken() );
+					this.parseException( parameterStart, "identifier", this.currentToken().value );
 				}
 				functionError = parameterError = true;
 
@@ -1021,7 +1021,7 @@ public class Parser
 				{
 					if ( !parameterError )
 					{
-						this.parseException( parameterStart, ",", this.currentToken() );
+						this.parseException( parameterStart, ",", this.currentToken().value );
 					}
 					functionError = parameterError = true;
 				}
@@ -1399,7 +1399,7 @@ public class Parser
 			this.readToken(); //break
 		}
 
-		else if ( "continue".equalsIgnoreCase( this.currentToken() ) )
+		else if ( "continue".equalsIgnoreCase( this.currentToken().value ) )
 		{
 			if ( allowContinue )
 			{
@@ -1416,7 +1416,7 @@ public class Parser
 			this.readToken(); //continue
 		}
 
-		else if ( "exit".equalsIgnoreCase( this.currentToken() ) )
+		else if ( "exit".equalsIgnoreCase( this.currentToken().value ) )
 		{
 			result = new ScriptExit();
 			this.readToken(); //exit
@@ -1503,7 +1503,7 @@ public class Parser
 		}
 		else
 		{
-			this.parseException( ";", this.currentToken() );
+			this.parseException( ";", this.currentToken().value );
 		}
 
 		return result;
@@ -1536,13 +1536,13 @@ public class Parser
 				return valType;
 			}
 		}
-		else if ( ( valType = scope.findType( this.currentToken() ) ) != null )
+		else if ( ( valType = scope.findType( this.currentToken().value ) ) != null )
 		{
 			this.readToken();
 		}
 		// We can safely assume that two non-reserved identifiers in a row
 		// are a type-variable pair.
-		else if ( !Parser.isReservedWord( this.currentToken() ) &&
+		else if ( !Parser.isReservedWord( this.currentToken().value ) &&
 		          this.parseIdentifier( this.nextToken() ) &&
 		          !Parser.isReservedWord( this.nextToken() ) &&
 		          //FIXME
@@ -1555,7 +1555,7 @@ public class Parser
 		          // may become available again once we are able to get rid of the 'replaceToken' in 'parseValue'
 		          false )
 		{
-			this.error( typeStart, "Unknown type " + this.currentToken() );
+			this.error( typeStart, "Unknown type " + this.currentToken().value );
 
 			valType = Type.BAD_TYPE;
 			this.readToken();
@@ -1638,7 +1638,7 @@ public class Parser
 				break;
 			}
 
-			if ( "}".equals( this.currentToken() ) )
+			if ( "}".equals( this.currentToken().value ) )
 			{
 				this.readToken(); // read }
 				break;
@@ -1702,7 +1702,7 @@ public class Parser
 				}
 				else if ( !aggregateError )
 				{
-					this.parseException( keyStart, ":", this.currentToken() );
+					this.parseException( keyStart, ":", this.currentToken().value );
 					aggregateError = true;
 				}
 
@@ -2001,7 +2001,7 @@ public class Parser
 			}
 			else
 			{
-				this.parseException( ";", this.currentToken() );
+				this.parseException( ";", this.currentToken().value );
 			}
 		}
 
@@ -2049,7 +2049,7 @@ public class Parser
 		}
 		else
 		{
-			this.parseException( "}", this.currentToken() );
+			this.parseException( "}", this.currentToken().value );
 		}
 
 		return scope;
@@ -2089,7 +2089,7 @@ public class Parser
 		}
 		else if ( !ifError )
 		{
-			this.parseException( ")", this.currentToken() );
+			this.parseException( ")", this.currentToken().value );
 			ifError = true;
 		}
 
@@ -2143,7 +2143,7 @@ public class Parser
 					}
 					else
 					{
-						this.parseException( "(", this.currentToken() );
+						this.parseException( "(", this.currentToken().value );
 						elseError = true;
 					}
 
@@ -2155,7 +2155,7 @@ public class Parser
 					}
 					else
 					{
-						this.parseException( ")", this.currentToken() );
+						this.parseException( ")", this.currentToken().value );
 						elseError = true;
 					}
 
@@ -2201,7 +2201,7 @@ public class Parser
 
 		while ( true )
 		{
-			if ( "}".equals( this.currentToken() ) )
+			if ( "}".equals( this.currentToken().value ) )
 			{
 				this.readToken(); // }
 				break;
@@ -2277,7 +2277,7 @@ public class Parser
 		}
 		else if ( !whileError )
 		{
-			this.parseException( ")", this.currentToken() );
+			this.parseException( ")", this.currentToken().value );
 			whileError = true;
 		}
 
@@ -2313,7 +2313,7 @@ public class Parser
 		}
 		else
 		{
-			this.parseException( "until", this.currentToken() );
+			this.parseException( "until", this.currentToken().value );
 			repeatError = true;
 		}
 
@@ -2338,7 +2338,7 @@ public class Parser
 		}
 		else if ( !repeatError )
 		{
-			this.parseException( ")", this.currentToken() );
+			this.parseException( ")", this.currentToken().value );
 			repeatError = true;
 		}
 
@@ -2386,7 +2386,7 @@ public class Parser
 			}
 			else if ( !switchError )
 			{
-				this.parseException( ")", this.currentToken() );
+				this.parseException( ")", this.currentToken().value );
 				switchError = true;
 			}
 
@@ -2414,7 +2414,7 @@ public class Parser
 		}
 		else if ( !switchError )
 		{
-			this.parseException( "{", this.currentToken() );
+			this.parseException( "{", this.currentToken().value );
 			switchError = true;
 		}
 
@@ -2459,7 +2459,7 @@ public class Parser
 					test = Value.BAD_VALUE;
 				}
 
-				if ( ":".equals( this.currentToken() ) )
+				if ( ":".equals( this.currentToken().value ) )
 				{
 					this.readToken(); // :
 				}
@@ -2467,7 +2467,7 @@ public class Parser
 				{
 					if ( !caseError )
 					{
-						this.parseException( ":", this.currentToken() );
+						this.parseException( ":", this.currentToken().value );
 					}
 					switchError = caseError = true;
 				}
@@ -2584,7 +2584,7 @@ public class Parser
 		}
 		else if ( !switchError )
 		{
-			this.parseException( "}", this.currentToken() );
+			this.parseException( "}", this.currentToken().value );
 			switchError = true;
 		}
 
@@ -2746,7 +2746,7 @@ public class Parser
 		}
 		else
 		{
-			this.parseException( "by", this.currentToken() );
+			this.parseException( "by", this.currentToken().value );
 		}
 
 		// Define key variables of appropriate type
@@ -2844,7 +2844,7 @@ public class Parser
 			}
 			else
 			{
-				this.parseException( "in", this.currentToken() );
+				this.parseException( "in", this.currentToken().value );
 			}
 
 			break;
@@ -2988,7 +2988,7 @@ public class Parser
 		{
 			if ( !forSyntaxError )
 			{
-				this.parseException( "to, upto, or downto", this.currentToken() );
+				this.parseException( "to, upto, or downto", this.currentToken().value );
 			}
 			forError = forSyntaxError = true;
 		}
@@ -3179,7 +3179,7 @@ public class Parser
 		{
 			if ( !javaForSyntaxError )
 			{
-				this.parseException( ";", this.currentToken() );
+				this.parseException( ";", this.currentToken().value );
 			}
 			javaForError = javaForSyntaxError = true;
 		}
@@ -3202,7 +3202,7 @@ public class Parser
 		{
 			if ( !javaForSyntaxError )
 			{
-				this.parseException( ";", this.currentToken() );
+				this.parseException( ";", this.currentToken().value );
 			}
 			javaForError = javaForSyntaxError = true;
 		}
@@ -3286,7 +3286,7 @@ public class Parser
 		{
 			if ( !javaForSyntaxError )
 			{
-				this.parseException( ")", this.currentToken() );
+				this.parseException( ")", this.currentToken().value );
 			}
 			javaForError = javaForSyntaxError = true;
 		}
@@ -3322,7 +3322,7 @@ public class Parser
 			}
 			else
 			{
-				this.parseException( "}", this.currentToken() );
+				this.parseException( "}", this.currentToken().value );
 			}
 		}
 		else
@@ -3341,7 +3341,7 @@ public class Parser
 				}
 				else
 				{
-					this.parseException( ";", this.currentToken() );
+					this.parseException( ";", this.currentToken().value );
 				}
 			}
 			else
@@ -3414,7 +3414,7 @@ public class Parser
 					break;
 				}
 
-				if ( ")".equals( this.currentToken() ) )
+				if ( ")".equals( this.currentToken().value ) )
 				{
 					this.readToken(); // )
 					break;
@@ -3442,11 +3442,11 @@ public class Parser
 				Type expected = currentType.getBaseType();
 				Value val;
 
-				if ( ",".equals( this.currentToken() ) )
+				if ( ",".equals( this.currentToken().value ) )
 				{
 					val = DataTypes.VOID_VALUE;
 				}
-				else if ( "{".equals( this.currentToken() ) )
+				else if ( "{".equals( this.currentToken().value ) )
 				{
 					val = this.parseAggregateLiteral( scope, (AggregateType) expected );
 				}
@@ -3568,11 +3568,11 @@ public class Parser
 				throw this.parseException( ")", this.currentToken() );
 			}
 
-			if ( !",".equals( this.currentToken() ) )
+			if ( !",".equals( this.currentToken().value ) )
 			{
-				if ( !")".equals( this.currentToken() ) )
+				if ( !")".equals( this.currentToken().value ) )
 				{
-					this.parseException( ")", this.currentToken() );
+					this.parseException( ")", this.currentToken().value );
 					break;
 				}
 				continue;
@@ -3585,9 +3585,9 @@ public class Parser
 				throw this.parseException( "parameter", this.currentToken() );
 			}
 
-			if ( ")".equals( this.currentToken() ) )
+			if ( ")".equals( this.currentToken().value ) )
 			{
-				this.parseException( "parameter", this.currentToken() );
+				this.parseException( "parameter", this.currentToken().value );
 				// we'll break out at the start of the next loop
 			}
 		}
@@ -3816,13 +3816,13 @@ public class Parser
 		// [VariableReference]++
 		// [VariableReference]--
 
-		if ( !"++".equals( this.currentToken() ) &&
-		     !"--".equals( this.currentToken() ) )
+		if ( !"++".equals( this.currentToken().value ) &&
+		     !"--".equals( this.currentToken().value ) )
 		{
 			return lhs;
 		}
 
-		String operStr = "++".equals( this.currentToken() ) ? Parser.POST_INCREMENT : Parser.POST_DECREMENT;
+		String operStr = "++".equals( this.currentToken().value ) ? Parser.POST_INCREMENT : Parser.POST_DECREMENT;
 
 		this.readToken(); // oper
 
@@ -3928,7 +3928,7 @@ public class Parser
 		Position previousPosition = null;
 		while ( this.madeProgress( previousPosition, previousPosition = this.here() ) )
 		{
-			oper = this.parseOperator( this.currentToken() );
+			oper = this.parseOperator( this.currentToken().value );
 
 			if ( oper == null )
 			{
@@ -3940,12 +3940,12 @@ public class Parser
 				return lhs;
 			}
 
-			if ( ":".equals( this.currentToken() ) )
+			if ( ":".equals( this.currentToken().value ) )
 			{
 				return lhs;
 			}
 
-			if ( "?".equals( this.currentToken() ) )
+			if ( "?".equals( this.currentToken().value ) )
 			{
 				this.readToken(); // ?
 
@@ -4069,7 +4069,7 @@ public class Parser
 		Value result = null;
 
 		// Parse parenthesized expressions
-		if ( "(".equals( this.currentToken() ) )
+		if ( "(".equals( this.currentToken().value ) )
 		{
 			this.readToken(); // (
 
@@ -4084,26 +4084,26 @@ public class Parser
 			}
 			else
 			{
-				this.parseException( ")", this.currentToken() );
+				this.parseException( ")", this.currentToken().value );
 			}
 		}
 
 		// Parse constant values
 		// true and false are reserved words
 
-		else if ( "true".equalsIgnoreCase( this.currentToken() ) )
+		else if ( "true".equalsIgnoreCase( this.currentToken().value ) )
 		{
 			this.readToken();
 			result = DataTypes.TRUE_VALUE;
 		}
 
-		else if ( "false".equalsIgnoreCase( this.currentToken() ) )
+		else if ( "false".equalsIgnoreCase( this.currentToken().value ) )
 		{
 			this.readToken();
 			result = DataTypes.FALSE_VALUE;
 		}
 
-		else if ( "__FILE__".equals( this.currentToken() ) )
+		else if ( "__FILE__".equals( this.currentToken().value ) )
 		{
 			this.readToken();
 			result = new Value( String.valueOf( this.shortFileName ) );
@@ -4156,7 +4156,7 @@ public class Parser
 				}
 				else
 				{
-					this.parseException( "{", this.currentToken() );
+					this.parseException( "{", this.currentToken().value );
 					// don't parse. We don't know if they just didn't put anything.
 
 					result = Value.BAD_VALUE;
@@ -4196,7 +4196,7 @@ public class Parser
 	{
 		int sign = 1;
 
-		if ( "-".equals( this.currentToken() ) )
+		if ( "-".equals( this.currentToken().value ) )
 		{
 			String next = this.nextToken();
 
@@ -4210,7 +4210,7 @@ public class Parser
 			this.readToken(); // Read -
 		}
 
-		if ( ".".equals( this.currentToken() ) )
+		if ( ".".equals( this.currentToken().value ) )
 		{
 			this.readToken();
 			Token fraction = this.currentToken();
@@ -4237,7 +4237,7 @@ public class Parser
 
 		this.readToken(); // integer
 
-		if ( ".".equals( this.currentToken() ) )
+		if ( ".".equals( this.currentToken().value ) )
 		{
 			String fraction = this.nextToken();
 			if ( !this.readIntegerToken( fraction ) )
@@ -4632,7 +4632,7 @@ public class Parser
 		{
 			if ( !typedConstantSyntaxError )
 			{
-				this.parseException( "[", this.currentToken() );
+				this.parseException( "[", this.currentToken().value );
 			}
 
 			return Value.BAD_VALUE;
@@ -4668,8 +4668,11 @@ public class Parser
 
 			if ( i == line.length() )
 			{
-				this.currentLine = this.currentLine.clear();
-				this.currentToken = null;
+				if ( i > 0 )
+				{
+					this.currentLine.makeToken( i );
+					this.currentIndex += i;
+				}
 
 				if ( !typedConstantError )
 				{
@@ -4921,7 +4924,7 @@ public class Parser
 		Type type = var.getType();
 		List<Value> indices = new ArrayList<Value>();
 
-		boolean parseAggregate = "[".equals( this.currentToken() );
+		boolean parseAggregate = "[".equals( this.currentToken().value );
 		boolean variableReferenceError = false, variableReferenceSyntaxError = false;
 
 		while ( this.currentToken().equals( "[" ) ||
@@ -4932,7 +4935,7 @@ public class Parser
 
 			type = type.getBaseType();
 
-			if ( "[".equals( this.currentToken() ) || ",".equals( this.currentToken() ) )
+			if ( "[".equals( this.currentToken().value ) || ",".equals( this.currentToken().value ) )
 			{
 				this.readToken(); // read [ or ,
 				parseAggregate = true;
@@ -5486,11 +5489,16 @@ public class Parser
 		return Parser.multiCharTokens.contains( s );
 	}
 
+	private String restOfLine()
+	{
+		return this.currentLine.substring( this.currentIndex );
+	}
+
 	private boolean atEndOfFile()
 	{
 		this.currentToken();
 
-		return this.currentLine == null;
+		return this.currentLine.content == null;
 	}
 
 	private boolean madeProgress( final Position previousPosition, final Position currentPosition )
@@ -5597,6 +5605,12 @@ public class Parser
 				final int ltrim = line.indexOf( trimmed.charAt( 0 ) );
 				offset += ltrim;
 			}
+			else
+			{
+				// We are the "end of file"
+				// (or there was an IOException when reading)
+				this.lineNumber = this.previousLine != null ? this.previousLine.lineNumber : 0;
+				this.offset = this.previousLine != null ? this.previousLine.offset : 0;
 
 			line = trimmed;
 
