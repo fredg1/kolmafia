@@ -49,8 +49,16 @@ public abstract class CompositeType
 		this.primitive = false;
 	}
 
+	/**
+	 * Returns the Type of the keys used in this composite type.
+	 */
 	public abstract Type getIndexType();
 
+	/**
+	 * For {@link AggregateType}, returns the type of the values of this composite type.
+	 * 
+	 * <p>For {@link RecordType}, use {@link CompositeType#getDataType(Object)}.
+	 */
 	public abstract Type getDataType();
 
 	public abstract Type getDataType( final Value key );
