@@ -562,6 +562,8 @@ public class Parser
 
 	private Scope parseCommandOrDeclaration( final Scope result, final Type expectedType )
 	{
+		Position typeStart = this.here();
+
 		Type t = this.parseType( result, true );
 
 		// If there is no data type, it's a command of some sort
@@ -574,7 +576,11 @@ public class Parser
 			}
 			else
 			{
-				throw this.parseException( "command or declaration required" );
+				result.addCommand( c, this );
+			}
+			else
+			{
+				this.error( "command or declaration required" );
 			}
 		}
 		else if ( this.parseVariables( t, result ) )
@@ -585,7 +591,7 @@ public class Parser
 			}
 			else
 			{
-				throw this.parseException( ";", this.currentToken() );
+				this.parseException( typeStart, ";", this.currentToken() );
 			}
 		}
 		else
