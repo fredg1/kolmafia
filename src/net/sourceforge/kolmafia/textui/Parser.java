@@ -3504,7 +3504,11 @@ public class Parser
 			}
 			else
 			{
-				throw this.parseException( ")", this.currentToken() );
+				this.readToken(); // )
+			}
+			else
+			{
+				this.parseException( ")", this.currentToken() );
 			}
 		}
 
@@ -3576,7 +3580,10 @@ public class Parser
 				}
 				else
 				{
-					throw this.parseException( "{", this.currentToken() );
+					this.parseException( "{", this.currentToken() );
+					// don't parse. We don't know if they just didn't put anything.
+
+					result = Value.BAD_VALUE;
 				}
 			}
 			else
