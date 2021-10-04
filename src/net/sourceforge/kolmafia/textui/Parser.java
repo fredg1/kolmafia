@@ -4327,7 +4327,7 @@ public class Parser
 
 			lhs = this.autoCoerceValue( DataTypes.BOOLEAN_TYPE, lhs, scope );
 			lhs = new Operation( lhs, new Operator( operator.content, this ) );
-			if ( lhs.getType() != DataTypes.BOOLEAN_TYPE )
+			if ( !lhs.getType().equals( DataTypes.BOOLEAN_TYPE ) )
 			{
 				this.error( lhs.location, "\"!\" operator requires a boolean value" );
 			}
@@ -4345,7 +4345,7 @@ public class Parser
 			}
 
 			lhs = new Operation( lhs, new Operator( operator.content, this ) );
-			if ( lhs.getType() != DataTypes.INT_TYPE && lhs.getType() != DataTypes.BOOLEAN_TYPE )
+			if ( !lhs.getType().equals( DataTypes.INT_TYPE ) && !lhs.getType().equals( DataTypes.BOOLEAN_TYPE ) )
 			{
 				this.error( lhs.location, "\"~\" operator requires an integer or boolean value" );
 			}
@@ -6594,7 +6594,9 @@ public class Parser
 				revision = revision.substring( 1 );
 				int targetRevision = Integer.parseInt( revision );
 				int currentRevision = StaticEntity.getRevision();
-				if ( currentRevision < targetRevision )
+				// A revision of zero means you're probably running in a debugger, in which
+				// case you should be able to run anything.
+				if ( currentRevision != 0 && currentRevision < targetRevision )
 				{
 					this.sinceError( String.valueOf( currentRevision ), revision, directiveRange, true );
 					return;
@@ -6612,22 +6614,7 @@ public class Parser
 				int targetMajor = Integer.parseInt( target[ 0 ] );
 				int targetMinor = Integer.parseInt( target[ 1 ] );
 
-				// strip "KoLMafia v" from the front
-				String currentVersion = StaticEntity.getVersion();
-				currentVersion = currentVersion.substring( currentVersion.indexOf( "v" ) + 1 );
-
-				// Strip " rxxxx" from end
-				int rindex = currentVersion.indexOf( " r" );
-				if ( rindex != -1 )
-				{
-					currentVersion = currentVersion.substring( 0, rindex );
-				}
-
-				String [] current = currentVersion.split( "\\." );
-				int currentMajor = Integer.parseInt( current[ 0 ] );
-				int currentMinor = Integer.parseInt( current[ 1 ] );
-
-				if ( targetMajor > currentMajor || ( targetMajor == currentMajor && targetMinor > currentMinor ) )
+				if ( targetMajor > 21 || targetMajor == 21 && targetMinor > 9 )
 				{
 					this.sinceError( currentVersion, revision, directiveRange, false );
 					return;
