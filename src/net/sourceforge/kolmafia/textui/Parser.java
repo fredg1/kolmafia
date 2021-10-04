@@ -628,6 +628,8 @@ public class Parser
 	private Scope parseCommandOrDeclaration( final Scope result, final Type expectedType )
 		throws InterruptedException
 	{
+		final ErrorManager commandOrDeclarationErrors = new ErrorManager();
+
 		Type t = this.parseType( result, true );
 
 		// If there is no data type, it's a command of some sort
@@ -655,7 +657,9 @@ public class Parser
 			}
 			else
 			{
-				this.unexpectedTokenError( ";", this.currentToken() );
+				commandOrDeclarationErrors.submitSyntaxError( () -> {
+					this.unexpectedTokenError( ";", this.currentToken() );
+				} );
 			}
 		}
 		else
@@ -829,6 +833,8 @@ public class Parser
 			return null;
 		}
 
+		final ErrorManager recordErrors = new ErrorManager();
+
 		Token recordStartToken = this.currentToken();
 		recordStartToken.setType( SemanticTokenTypes.Keyword );
 
@@ -836,16 +842,15 @@ public class Parser
 
 		if ( this.currentToken().equals( ";" ) )
 		{
-			this.error( this.currentToken(), "Record name expected" );
+			recordErrors.submitSyntaxError( () -> {
+				this.error( this.currentToken(), "Record name expected" );
+			} );
 
 			return new BadRecordType( null, this.makeLocation( recordStartToken ) );
 		}
 
 		// Allow anonymous records
 		String recordName = null;
-
-		boolean recordError = false;
-		boolean recordSyntaxError = false;
 
 		if ( !this.currentToken().equals( "{" ) )
 		{
@@ -869,8 +874,9 @@ public class Parser
 			}
 			else if ( parentScope.findType( recordName ) != null )
 			{
-				this.error( this.currentToken(), "Record name '" + recordName + "' is already defined" );
-				recordError = true;
+				recordErrors.submitError( () -> {
+					this.error( this.currentToken(), "Record name '" + this.currentToken() + "' is already defined" );
+				} );
 
 				recordName = null;
 			}
@@ -917,11 +923,9 @@ public class Parser
 			Type fieldType = this.parseType( parentScope, true );
 			if ( fieldType == null )
 			{
-				if ( !fieldSyntaxError )
-				{
+				fieldErrors.submitSyntaxError( () -> {
 					this.error( this.currentToken(), "Type name expected" );
-				}
-				recordError = recordSyntaxError = fieldError = fieldSyntaxError = true;
+				} );
 			}
 
 			if ( fieldType.getBaseType().equals( DataTypes.VOID_TYPE ) )
@@ -941,11 +945,9 @@ public class Parser
 			}
 			else if ( Parser.isReservedWord( fieldName.content ) )
 			{
-				if ( !fieldError )
-				{
+				fieldErrors.submitError( () -> {
 					this.error( fieldName, "Reserved word '" + fieldName + "' cannot be used as a field name" );
-				}
-				recordError = fieldError = fieldNameError = true;
+				} );
 
 				fieldName.setType( SemanticTokenTypes.Property );
 				fieldName.addModifier( SemanticTokenModifiers.Declaration );
@@ -1008,12 +1010,15 @@ public class Parser
 			return null;
 		}
 
+		final ErrorManager functionErrors = new ErrorManager();
+
 		Token functionName = this.currentToken();
 
 		if ( Parser.isReservedWord( functionName.content ) )
 		{
-			this.error( functionName, "Reserved word '" + functionName + "' cannot be used as a function name" );
-			functionError = true;
+			functionErrors.submitError( () -> {
+				this.error( functionName, "Reserved word '" + functionName + "' cannot be used as a function name" );
+			} );
 		}
 
 		this.readToken(); //read Function name
@@ -1033,12 +1038,9 @@ public class Parser
 			Type paramType = this.parseType( parentScope, false );
 			if ( paramType == null )
 			{
-				if ( !parameterError )
-				{
+				parameterErrors.submitError( () -> {
 					this.unexpectedTokenError( ")", this.currentToken() );
-				}
-				functionError = parameterError = true;
-
+				} );
 				break;
 			}
 
@@ -1054,34 +1056,28 @@ public class Parser
 			Variable param = this.parseVariable( paramType, parentScope, false );
 			if ( param == null )
 			{
-				if ( !parameterError )
-				{
+				parameterErrors.submitSyntaxError( () -> {
 					this.unexpectedTokenError( "identifier", this.currentToken() );
-				}
-				functionError = parameterError = true;
-
+				} );
 				continue;
 			}
 
 			if ( vararg )
 			{
-				if ( !functionError )
-				{
-					if ( paramType instanceof TypeReference &&
-					     ((TypeReference) paramType).getTarget() instanceof VarArgType )
+				final Type finalParamType = paramType; // Needed for the functional interface.
+				parameterErrors.submitError( () -> {
+					if ( finalParamType instanceof TypeReference &&
+					     ((TypeReference) finalParamType).getTarget() instanceof VarArgType )
 					{
 						// We can only have a single vararg parameter
-						this.error( paramType.getLocation(), "Only one vararg parameter is allowed" );
+						this.error( finalParamType.getLocation(), "Only one vararg parameter is allowed" );
 					}
 					else
 					{
 						// The single vararg parameter must be the last one
-						this.error( paramType.getLocation(), "The vararg parameter must be the last one" );
+						this.error( finalParamType.getLocation(), "The vararg parameter must be the last one" );
 					}
-					// The check uses functionError, but we set parameterError to true anyway.
-					// This is not a mistake.
-					functionError = parameterError = true;
-				}
+				} );
 			}
 			else if ( !paramList.add( param ) )
 			{
@@ -1111,8 +1107,7 @@ public class Parser
 					if ( !parameterError )
 					{
 						this.unexpectedTokenError( ",", this.currentToken() );
-					}
-					functionError = parameterError = true;
+					} );
 				}
 			}
 		}
@@ -1122,34 +1117,41 @@ public class Parser
 
 		UserDefinedFunction f = new UserDefinedFunction( functionName.content, functionType, variableReferences );
 
-		if ( !functionError && f.overridesLibraryFunction() )
+		if ( f.overridesLibraryFunction() )
 		{
-			this.overridesLibraryFunctionError( functionLocation, f );
-			functionError = true;
+			functionErrors.submitError( () -> {
+				this.overridesLibraryFunctionError( functionLocation, f );
+			} );
 		}
 
 		UserDefinedFunction existing = parentScope.findFunction( f );
 
-		if ( !functionError && existing != null && existing.getScope() != null )
+		if ( existing != null && existing.getScope() != null )
 		{
-			this.multiplyDefinedFunctionError( functionLocation, f );
-			functionError = true;
+			functionErrors.submitError( () -> {
+				this.multiplyDefinedFunctionError( functionLocation, f );
+			} );
 		}
 
-		if ( !functionError && vararg )
+		if ( vararg )
 		{
 			Function clash = parentScope.findVarargClash( f );
 
 			if ( clash != null )
 			{
-				this.varargClashError( functionLocation, f, clash );
-				functionError = true;
+				functionErrors.submitError( () -> {
+					this.varargClashError( functionLocation, f, clash );
+				} );
 			}
 		}
 
 		// Add new function or replace existing forward reference
 
-		UserDefinedFunction result = functionError ? f : parentScope.replaceFunction( existing, f );
+		UserDefinedFunction result = f;
+		if ( !functionErrors.sawError() )
+		{
+			result = parentScope.replaceFunction( existing, f );
+		}
 
 		if ( this.currentToken().equals( ";" ) )
 		{
@@ -1169,7 +1171,9 @@ public class Parser
 		result.setScope( scope );
 		if ( !result.assertBarrier() && !functionType.equals( DataTypes.TYPE_VOID ) )
 		{
-			this.error( functionLocation, "Missing return value" );
+			functionErrors.submitSyntaxError( () -> {
+				this.error( functionLocation, "Missing return value" );
+			} );
 		}
 
 		return result;
@@ -1204,6 +1208,8 @@ public class Parser
 			return null;
 		}
 
+		final ErrorManager variableErrors = new ErrorManager();
+
 		Token variableName = this.currentToken();
 		Variable result;
 
@@ -1227,15 +1233,19 @@ public class Parser
 
 		if ( Parser.isReservedWord( variableName.content ) )
 		{
-			this.error( variableName, "Reserved word '" + variableName + "' cannot be a variable name" );
+			variableErrors.submitError( () -> {
+				this.error( variableName, "Reserved word '" + variableName + "' cannot be a variable name" );
+			} );
+
 			result = new BadVariable( variableName.content, t, this.makeLocation( variableName ) );
-			variableError = true;
 		}
 		else if ( allowInitialization && scope.findVariable( variableName.content ) != null )
 		{
-			this.error( variableName, "Variable " + variableName + " is already defined" );
+			variableErrors.submitError( () -> {
+				this.error( variableName, "Variable " + variableName + " is already defined" );
+			} );
+
 			result = new BadVariable( variableName.content, t, this.makeLocation( variableName ) );
-			variableError = true;
 		}
 		else
 		{
@@ -1280,13 +1290,14 @@ public class Parser
 			{
 				rhs = this.parseAggregateLiteral( scope, new BadAggregateType() );
 
-				if ( !variableError && allowInitialization && !ltype.isBad() )
+				if ( allowInitialization && !ltype.isBad() )
 				{
 					Location errorLocation = rhs != null ? rhs.location :
 						this.makeLocation( this.peekLastToken() );
 
-					this.error( errorLocation, "Cannot initialize " + variableName + " of type " + t + " with an aggregate literal" );
-					variableError = true;
+					variableErrors.submitError( () -> {
+						this.error( errorLocation, "Cannot initialize " + variableName + " of type " + t + " with an aggregate literal" );
+					} );
 				}
 			}
 		}
@@ -1428,20 +1439,19 @@ public class Parser
 			return false;
 		}
 
+		final ErrorManager typedefErrors = new ErrorManager();
+
 		Token typedefToken = this.currentToken();
 		typedefToken.setType( SemanticTokenTypes.Keyword );
-		boolean typedefError = false;
 
 		this.readToken(); // read typedef
 
 		Type t = this.parseType( parentScope, true );
 		if ( t == null )
 		{
-			if ( !typedefError )
-			{
+			typedefErrors.submitSyntaxError( () -> {
 				this.error( typedefToken, this.currentToken(), "Missing data type for typedef" );
-				typedefError = true;
-			}
+			} );
 
 			t = new BadType( null, null );
 		}
@@ -1454,13 +1464,10 @@ public class Parser
 		}
 		else if ( !this.parseIdentifier( typeName.content ) )
 		{
-			if ( !typedefError )
-			{
+			typedefErrors.submitSyntaxError( () -> {
 				this.error( typeToken, "Invalid type name '" + typeToken + "'" );
-				typedefError = true;
-			}
+			} );
 
-			typedefTypeError = true;
 			// don't read
 		}
 		else if ( Parser.isReservedWord( typeName.content ) )
@@ -1472,7 +1479,6 @@ public class Parser
 			typeToken.setType( SemanticTokenTypes.Type );
 			typeToken.addModifier( SemanticTokenModifiers.Definition );
 			this.readToken(); // read name
-		}
 
 		Type existingType = parentScope.findType( typeName.content );
 		if ( existingType != null )
@@ -1480,8 +1486,16 @@ public class Parser
 			if ( existingType.getBaseType().equals( t ) ||
 			     existingType.isBad() )
 			{
-				// It is OK to redefine a typedef with an equivalent type
-				return true;
+				if ( existingType.getBaseType().equals( t ) ||
+				     existingType.isBad() )
+				{
+					// It is OK to redefine a typedef with an equivalent type
+					return true;
+				}
+	
+				typedefErrors.submitError( () -> {
+					this.error( typeToken, "Type name '" + typeToken + "' is already defined" );
+				} );
 			}
 				
 			throw this.parseException( "Type name '" + typeName + "' is already defined" );
@@ -1503,6 +1517,8 @@ public class Parser
 	                              final boolean allowContinue )
 		throws InterruptedException
 	{
+		final ErrorManager commandErrors = new ErrorManager();
+
 		Command result;
 
 		if ( this.currentToken().equalsIgnoreCase( "break" ) )
@@ -1633,7 +1649,9 @@ public class Parser
 		}
 		else
 		{
-			this.unexpectedTokenError( ";", this.currentToken() );
+			commandErrors.submitSyntaxError( () -> {
+				this.unexpectedTokenError( ";", this.currentToken() );
+			} );
 		}
 
 		return result;
@@ -1702,7 +1720,9 @@ public class Parser
 		          // may become available again once we are able to get rid of the 'replaceToken' in 'parseValue'
 		          false )
 		{
-			this.error( this.currentToken(), "Unknown type " + this.currentToken().content );
+			typeErrors.submitError( () -> {
+				this.error( this.currentToken(), "Unknown type " + this.currentToken().content );
+			} );
 
 			valType = new BadType( this.currentToken().content, this.makeLocation( this.currentToken() ) );
 			this.currentToken().setType( SemanticTokenTypes.Type );
@@ -1747,8 +1767,6 @@ public class Parser
 
 		List<Value> keys = new ArrayList<Value>();
 		List<Value> values = new ArrayList<Value>();
-
-		boolean aggregateError = false;
 
 		// If index type is an int, it could be an array or a map
 		boolean arrayAllowed = index.equals( DataTypes.INT_TYPE );
@@ -1803,11 +1821,9 @@ public class Parser
 			{
 				Location errorLocation = this.makeLocation( this.currentToken() );
 
-				if ( !aggregateError )
-				{
+				aggregateErrors.submitSyntaxError( () -> {
 					this.error( errorLocation, "Script parsing error; couldn't figure out value of aggregage key" );
-					aggregateError = true;
-				}
+				} );
 
 				lhs = Value.BAD_VALUE.wrap( errorLocation );
 			}
@@ -1833,21 +1849,24 @@ public class Parser
 				{
 					// The value must have the correct data type
 					lhs = this.autoCoerceValue( data, lhs, scope );
-					if ( !aggregateError && !Operator.validCoercion( dataType, lhs.value.getType(), "assign" ) )
+					if ( !Operator.validCoercion( dataType, lhs.value.getType(), "assign" ) )
 					{
-						this.error( lhs.location, "Invalid array literal; cannot assign type " +
-							dataType.toString() +
-								" to type " +
-							lhs.value.getType().toString() );
-						aggregateError = true;
+						final LocatedValue finalLhs = lhs; // Needed for the functional interface.
+						aggregateErrors.submitError( () -> {
+							this.error( finalLhs.location, "Invalid array literal; cannot assign type " +
+								dataType.toString() +
+									" to type " +
+								finalLhs.value.getType().toString() );
+						} );
 					}
 
 					values.add( lhs.value );
 				}
-				else if ( !aggregateError )
+				else
 				{
-					this.unexpectedTokenError( ":", delim );
-					aggregateError = true;
+					aggregateErrors.submitSyntaxError( () -> {
+						this.unexpectedTokenError( ":", delim );
+					} );
 				}
 
 				// Move on to the next value
@@ -1859,6 +1878,12 @@ public class Parser
 				{
 					throw this.parseException( "}", delim );
 				}
+				else if ( !delim.equals( "}" ) )
+				{
+					aggregateErrors.submitSyntaxError( () -> {
+						this.unexpectedTokenError( "}", delim );
+					} );
+				}
 
 				continue;
 			}
@@ -1866,13 +1891,15 @@ public class Parser
 			// We are parsing a MapLiteral
 			this.readToken(); // read :
 
-			if ( isArray && !aggregateError )
+			if ( isArray )
 			{
 				// not really correct since, to get here, what we got so far must have matched
 				// the value's datatype, but we can't tell what they put after the :, so just assume
 				// it's a key:value pair anyway
-				this.error( lhs.location, "Cannot include keys when making an array literal" );
-				aggregateError = true;
+				final LocatedValue finalLhs = lhs; // Needed for the functional interface.
+				aggregateErrors.submitError( () -> {
+					this.error( finalLhs.location, "Cannot include keys when making an array literal" );
+				} );
 			}
 
 			Value rhs;
@@ -1889,11 +1916,9 @@ public class Parser
 			{
 				Location errorLocation = this.makeLocation( this.currentToken() );
 
-				if ( !aggregateError )
-				{
+				aggregateErrors.submitSyntaxError( () -> {
 					this.error( errorLocation, "Script parsing error; couldn't figure out value of aggregage value" );
-					aggregateError = true;
-				}
+				} );
 
 				rhs = Value.BAD_VALUE.wrap( errorLocation );
 			}
@@ -1901,25 +1926,27 @@ public class Parser
 			// Check that each type is valid via validCoercion
 			lhs = this.autoCoerceValue( index, lhs, scope );
 			rhs = this.autoCoerceValue( data, rhs, scope );
-			if ( !aggregateError )
-			{
-				if ( !Operator.validCoercion( index, lhs.value.getType(), "assign" ) )
-				{
-					this.error( lhs.location, "Invalid map literal; cannot assign type " +
-							dataType.toString() +
-							" to key of type " +
-							lhs.value.getType().toString() );
-					aggregateError = true;
-				}
 
-				if ( !Operator.validCoercion( data, rhs.value.getType(), "assign" ) )
-				{
-					this.error( rhs.location, "Invalid map literal; cannot assign type " +
-							dataType.toString() +
+			if ( !Operator.validCoercion( index, lhs.value.getType(), "assign" ) )
+			{
+				final LocatedValue finalLhs = lhs;
+				aggregateErrors.submitError( () -> {
+					this.error( finalLhs.location, "Invalid map literal; cannot assign type " +
+						dataType.toString() +
+							" to key of type " +
+						finalLhs.value.getType().toString() );
+				} );
+			}
+
+			if ( !Operator.validCoercion( data, rhs.value.getType(), "assign" ) )
+			{
+				final LocatedValue finalRhs = rhs;
+				aggregateErrors.submitError( () -> {
+					this.error( finalRhs.location, "Invalid map literal; cannot assign type " +
+						dataType.toString() +
 							" to value of type " +
-							rhs.value.getType().toString() );
-					aggregateError = true;
-				}
+						finalRhs.value.getType().toString() );
+				} );
 			}
 
 			keys.add( lhs.value );
@@ -1941,14 +1968,15 @@ public class Parser
 		if ( isArray )
 		{
 			int size = aggr.getSize();
-			if ( !aggregateError && size > 0 && size < values.size() )
+			if ( size > 0 && size < values.size() )
 			{
-				this.error( aggregateLiteralLocation, "Array has " + size + " elements but " + values.size() + " initializers." );
-				aggregateError = true;
+				aggregateErrors.submitError( () -> {
+					this.error( aggregateLiteralLocation, "Array has " + size + " elements but " + values.size() + " initializers." );
+				} );
 			}
 		}
 
-		Value result = aggregateError ? Value.BAD_VALUE :
+		Value result = aggregateErrors.sawError() ? Value.BAD_VALUE :
 		               isArray ? new ArrayLiteral( aggr, values ) :
 		               new MapLiteral( aggr, keys, values );
 
@@ -1958,6 +1986,8 @@ public class Parser
 	private Type parseAggregateType( Type dataType, final BasicScope scope )
 		throws InterruptedException
 	{
+		final ErrorManager aggregateTypeErrors = new ErrorManager();
+
 		Token separatorToken = this.currentToken();
 
 		this.readToken(); // [ or ,
@@ -2079,6 +2109,8 @@ public class Parser
 			return null;
 		}
 
+		final ErrorManager returnErrors = new ErrorManager();
+
 		Token returnStartToken = this.currentToken();
 		returnStartToken.setType( SemanticTokenTypes.Keyword );
 
@@ -2122,11 +2154,17 @@ public class Parser
 		}
 		else if ( expectedType.equals( DataTypes.TYPE_VOID ) )
 		{
-			this.error( value.location, "Cannot return a value from a void function" );
+			final LocatedValue finalValue = value; // Needed for the functional interfaces.
+			returnErrors.submitError( () -> {
+				this.error( finalValue.location, "Cannot return a value from a void function" );
+			} );
 		}
 		else if ( !Operator.validCoercion( expectedType, value.value.getType(), "return" ) )
 		{
-			this.error( value.location, "Cannot return " + value.value.getType() + " value from " + expectedType + " function" );
+			final LocatedValue finalValue = value; // Needed for the functional interfaces.
+			returnErrors.submitError( () -> {
+				this.error( finalValue.location, "Cannot return " + finalValue.value.getType() + " value from " + expectedType + " function" );
+			} );
 		}
 
 		Location returnLocation = this.makeLocation( returnStartToken, this.peekPreviousToken() );
@@ -2195,6 +2233,8 @@ public class Parser
 			return null;
 		}
 
+		final ErrorManager blockErrors = new ErrorManager();
+
 		Token blockStartToken = this.currentToken();
 
 		this.readToken(); // {
@@ -2232,6 +2272,8 @@ public class Parser
 			return null;
 		}
 
+		final ErrorManager conditionalErrors = new ErrorManager();
+
 		Token conditionalStartToken = this.currentToken();
 		conditionalStartToken.setType( SemanticTokenTypes.Keyword );
 
@@ -2258,22 +2300,29 @@ public class Parser
 		}
 		else if ( !ifError )
 		{
-			this.unexpectedTokenError( ")", this.currentToken() );
-			ifError = true;
+			conditionalErrors.submitSyntaxError( () -> {
+				this.unexpectedTokenError( ")", this.currentToken() );
+			} );
 		}
 
-		if ( condition == null ||
-		     !condition.value.getType().isBad() &&
-		     !condition.value.getType().equals( DataTypes.BOOLEAN_TYPE ) )
+		if ( condition == null )
 		{
-			Location errorLocation = condition != null ? condition.location :
-				this.makeLocation( this.currentToken() );
+			Location errorLocation = this.makeLocation( this.currentToken() );
 
-			if ( !ifError )
-			{
+			conditionalErrors.submitSyntaxError( () -> {
+				this.error( errorLocation, "Expression expected" );
+			} );
+
+			condition = Value.BAD_VALUE.wrap( errorLocation );
+		}
+		else if ( !condition.value.getType().equals( DataTypes.BOOLEAN_TYPE ) &&
+		          !condition.value.getType().isBad() )
+		{
+			Location errorLocation = condition.location;
+
+			conditionalErrors.submitError( () -> {
 				this.error( errorLocation, "\"if\" requires a boolean conditional expression" );
-				ifError = true;
-			}
+			} );
 
 		If result = null;
 		boolean elseFound = false;
@@ -2281,7 +2330,7 @@ public class Parser
 
 		do
 		{
-			boolean elseError = false;
+			final ErrorManager elseErrors = conditionalErrors.makeChild();
 
 			Scope scope = parseBlockOrSingleCommand( functionType, null, parentScope, !elseFound, allowBreak, allowContinue );
 
@@ -2305,10 +2354,11 @@ public class Parser
 				conditionalStartToken = this.currentToken();
 				conditionalStartToken.setType( SemanticTokenTypes.Keyword );
 
-				if ( finalElse && !elseError )
+				if ( finalElse )
 				{
-					this.error( conditionalStartToken, "Else without if" );
-					elseError = true;
+					elseErrors.submitError( () -> {
+						this.error( this.currentToken(), "Else without if" );
+					} );
 				}
 
 				this.readToken(); //else
@@ -2322,8 +2372,9 @@ public class Parser
 					}
 					else
 					{
-						this.unexpectedTokenError( "(", this.currentToken() );
-						elseError = true;
+						elseErrors.submitSyntaxError( () -> {
+							this.unexpectedTokenError( "(", this.currentToken() );
+						} );
 					}
 
 					condition = this.parseExpression( parentScope );
@@ -2334,13 +2385,12 @@ public class Parser
 					}
 					else
 					{
-						this.unexpectedTokenError( ")", this.currentToken() );
-						elseError = true;
+						elseErrors.submitSyntaxError( () -> {
+							this.unexpectedTokenError( ")", this.currentToken() );
+						} );
 					}
 
-					if ( condition == null ||
-					     !condition.value.getType().isBad() &&
-					     !condition.value.getType().equals( DataTypes.BOOLEAN_TYPE ) )
+					if ( condition == null )
 					{
 						throw this.parseException( "\"if\" requires a boolean conditional expression" );
 					}
@@ -2376,6 +2426,8 @@ public class Parser
 			return null;
 		}
 
+		final ErrorManager basicScriptErrors = new ErrorManager();
+
 		Token basicScriptStartToken = this.currentToken();
 		basicScriptStartToken.setType( SemanticTokenTypes.Keyword );
 
@@ -2388,7 +2440,9 @@ public class Parser
 		{
 			if ( this.atEndOfFile() )
 			{
-				this.unexpectedTokenError( "}", this.currentToken() );
+				basicScriptErrors.submitSyntaxError( () -> {
+					this.unexpectedTokenError( "}", this.currentToken() );
+				} );
 				break;
 			}
 
@@ -2442,6 +2496,8 @@ public class Parser
 			return null;
 		}
 
+		final ErrorManager whileErrors = new ErrorManager();
+
 		Token whileStartToken = this.currentToken();
 		whileStartToken.setType( SemanticTokenTypes.Keyword );
 
@@ -2468,22 +2524,29 @@ public class Parser
 		}
 		else if ( !whileError )
 		{
-			this.unexpectedTokenError( ")", this.currentToken() );
-			whileError = true;
+			whileErrors.submitSyntaxError( () -> {
+				this.unexpectedTokenError( ")", this.currentToken() );
+			} );
 		}
 
-		if ( condition == null ||
-		     !condition.value.getType().isBad() &&
-		     !condition.value.getType().equals( DataTypes.BOOLEAN_TYPE ) )
+		if ( condition == null )
 		{
-			Location errorLocation = condition != null ? condition.location :
-				this.makeLocation( this.currentToken() );
+			Location errorLocation = this.makeLocation( this.currentToken() );
 
-			if ( !whileError )
-			{
+			whileErrors.submitSyntaxError( () -> {
+				this.error( errorLocation, "Expression expected" );
+			} );
+
+			condition = Value.BAD_VALUE.wrap( errorLocation );
+		}
+		else if ( !condition.value.getType().equals( DataTypes.BOOLEAN_TYPE ) &&
+		          !condition.value.getType().isBad() )
+		{
+			Location errorLocation = condition.location;
+
+			whileErrors.submitError( () -> {
 				this.error( errorLocation, "\"while\" requires a boolean conditional expression" );
-				whileError = true;
-			}
+			} );
 
 		Scope scope = this.parseLoopScope( functionType, null, parentScope );
 
