@@ -43,15 +43,6 @@ import net.sourceforge.kolmafia.textui.ScriptException;
 public class RecordType
 	extends CompositeType
 {
-	public static final RecordType BAD_RECORD = new RecordType( null, new String[] {}, new Type[] {} )
-	{
-		@Override
-		public Type simpleType()
-		{
-			return Type.BAD_TYPE;
-		}
-	};
-
 	private final String[] fieldNames;
 	private final Type[] fieldTypes;
 	private final Value[] fieldIndices;
@@ -242,5 +233,18 @@ public class RecordType
 			values += value;
 		}
 		return values;
+	}
+
+	public static class BadRecordType
+		extends RecordType
+		implements BadNode
+	{
+		public BadRecordType( final String name, final Location location )
+		{
+			super( name, new String[] {}, new Type[] {}, location );
+		}
+
+		// Don't override isBad(). The fields don't affect whether or not
+		// the record itself is recognized.
 	}
 }

@@ -33,19 +33,19 @@
 
 package net.sourceforge.kolmafia.textui.parsetree;
 
+import org.eclipse.lsp4j.Location;
+
 import net.sourceforge.kolmafia.textui.DataTypes;
 
 public class AggregateType
 	extends CompositeType
 {
-	public static final AggregateType BAD_AGGREGATE = new AggregateType( Type.BAD_TYPE, Type.BAD_TYPE );
-
 	protected final Type dataType;
 	protected final Type indexType;
 	protected final boolean caseInsensitive;
 	protected int size;
 
-	public AggregateType( final String name, final Type dataType, final Type indexType, final int size, final boolean caseInsensitive )
+	private AggregateType( final String name, final Type dataType, final Type indexType, final int size, final boolean caseInsensitive )
 	{
 		super( name, DataTypes.TYPE_AGGREGATE );
 		this.dataType = dataType;
@@ -175,5 +175,22 @@ public class AggregateType
 			return -1;
 		}
 		return this.size * values;
+	}
+
+	@Override
+	public boolean isBad()
+	{
+		return this.getIndexType().isBad() || this.getDataType().isBad();
+	}
+
+	public static class BadAggregateType
+		extends AggregateType
+		implements BadNode
+	{
+		/** More of a shortcut method than an actual class with a purpose... */
+		public BadAggregateType( final Location location )
+		{
+			super( new BadType( null, null ), new BadType( null, null ) );
+		}
 	}
 }

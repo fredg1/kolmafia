@@ -45,12 +45,11 @@ import org.eclipse.lsp4j.Location;
 import net.sourceforge.kolmafia.RequestLogger;
 
 import net.sourceforge.kolmafia.textui.AshRuntime;
+import net.sourceforge.kolmafia.textui.parsetree.Type.BadType;
 
 public abstract class Function
 	extends Symbol
 {
-	public static final Function BAD_FUNCTION = new UserDefinedFunction( null, Type.BAD_TYPE, null, new ArrayList<>() );
-
 	protected Type type;
 	protected List<VariableReference> variableReferences;
 	private String signature;
@@ -477,6 +476,16 @@ public abstract class Function
 		for ( VariableReference current : this.variableReferences )
 		{
 			current.print( stream, indent + 1 );
+		}
+	}
+
+	public static class BadFunction
+		extends UserDefinedFunction
+		implements BadNode
+	{
+		public BadFunction( final String name )
+		{
+			super( name, new BadType( null, null ), null, new ArrayList<>() );
 		}
 	}
 }

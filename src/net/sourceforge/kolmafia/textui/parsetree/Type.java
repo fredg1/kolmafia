@@ -70,8 +70,6 @@ import net.sourceforge.kolmafia.utilities.StringUtilities;
 public class Type
 	extends Symbol
 {
-	public static final Type BAD_TYPE = new Type( null, DataTypes.TYPE_ANY );
-
 	public boolean primitive;
 	private final int type;
 	private Value allValues = null;
@@ -123,7 +121,7 @@ public class Type
 	{
 		return this;
 	}
-	
+
 	public Type asProxy()
 	{
 		if ( this == DataTypes.CLASS_TYPE )
@@ -555,7 +553,7 @@ public class Type
 		this.allValues = new PluralValue( this, list );
 		return this.allValues;
 	}
-	
+
 	private void addValues( List<Value> results, String[] values )
 	{
 		this.addValues( results, values, 0, -1 );
@@ -601,7 +599,7 @@ public class Type
 	{
 		return 1;
 	}
-	
+
 	@Override
 	public Value execute( final AshRuntime interpreter )
 	{
@@ -613,5 +611,165 @@ public class Type
 	{
 		AshRuntime.indentLine( stream, indent );
 		stream.println( "<TYPE " + this.name + ">" );
+	}
+
+	public static class BadType
+		extends Type
+		implements BadNode
+	{
+		public BadType( final String name, final Location location )
+		{
+			super( name, DataTypes.TYPE_ANY, location );
+		}
+	}
+
+	public static class TypeReference
+		extends Type
+	{
+		private final Type target;
+
+		public TypeReference( final Type target, final Location location )
+		{
+			super( target.name, target.type, location );
+			this.target = target;
+			this.addReference( location );
+		}
+
+		public Type getTarget()
+		{
+			return this.target;
+		}
+
+		@Override
+		public Location getDefinitionLocation()
+		{
+			return this.target.getDefinitionLocation();
+		}
+
+		@Override
+		public List<Location> getReferenceLocations()
+		{
+			return this.target.getReferenceLocations();
+		}
+
+		@Override
+		public void addReference( final Location location )
+		{
+			this.target.addReference( location );
+		}
+
+		@Override
+		public int getType()
+		{
+			return this.target.getType();
+		}
+
+		@Override
+		public Type getBaseType()
+		{
+			return this.target.getBaseType();
+		}
+
+		@Override
+		public boolean isPrimitive()
+		{
+			return this.target.isPrimitive();
+		}
+
+		@Override
+		public boolean equals( final Type type )
+		{
+			return this.target.equals( type );
+		}
+
+		@Override
+		public boolean equals( final int type )
+		{
+			return this.target.equals( type );
+		}
+
+		@Override
+		public String toString()
+		{
+			return this.target.toString();
+		}
+
+		@Override
+		public Type simpleType()
+		{
+			return this.target.simpleType();
+		}
+
+		@Override
+		public Type asProxy()
+		{
+			return this.target.asProxy();
+		}
+
+		@Override
+		public Value initialValue()
+		{
+			return this.target.initialValue();
+		}
+
+		@Override
+		public Value parseValue( final String name, final boolean returnDefault )
+		{
+			return this.target.parseValue( name, returnDefault );
+		}
+
+		@Override
+		public Value makeValue( final Integer idval, final boolean returnDefault )
+		{
+			return this.target.makeValue( idval, returnDefault );
+		}
+
+		@Override
+		public List<String> getAmbiguousNames( final String s1, final Value value, final boolean quote )
+		{
+			return this.target.getAmbiguousNames( s1, value, quote );
+		}
+
+		@Override
+		public void validateValue( final ScriptRuntime controller, final String s1, final Value value )
+		{
+			this.target.validateValue( controller, s1, value );
+		}
+
+		@Override
+		public Value coerceValue( final Object object, final boolean returnDefault )
+		{
+			return this.target.coerceValue( object, returnDefault );
+		}
+
+		@Override
+		public Value allValues()
+		{
+			return this.target.allValues();
+		}
+
+		@Override
+		public Value initialValueExpression()
+		{
+			return this.target.initialValueExpression();
+		}
+
+		@Override
+		public int dataValues()
+		{
+			return this.target.dataValues();
+		}
+
+		@Override
+		public boolean isBad()
+		{
+			return this.target.isBad();
+		}
+
+		@Override
+		public void print( final PrintStream stream, final int indent )
+		{
+			this.target.print( stream, indent );
+		}
 	}
 }

@@ -41,7 +41,7 @@ public abstract class ParseTreeNode
 {
 	public abstract Value execute( final AshRuntime interpreter );
 	public abstract void print( final PrintStream stream, final int indent );
-	
+
 	// A barrier is any code construct that is fundamentally incapable of
 	// completing normally; any subsequent code in the same scope is
 	// therefore dead code (exception: case labels can make code live again).
@@ -63,7 +63,7 @@ public abstract class ParseTreeNode
 	{
 		return false;
 	}
-	
+
 	// A breakable code construct is a BREAK statement, or any compound
 	// statement that can possibly execute a BREAK that isn't caught internally.
 	// Looping statements are therefore not considered breakable, since they
@@ -72,8 +72,18 @@ public abstract class ParseTreeNode
 	{
 		return false;
 	}
-	
+
 	// There is no need for a corresponding check for CONTINUE statements.
 	// Since they can only branch back to already-executed code, they have
 	// no effect on code reachability.
+
+
+	/** For error propagation only */
+	public static interface BadNode
+	{}
+
+	public boolean isBad()
+	{
+		return this instanceof BadNode;
+	}
 }
