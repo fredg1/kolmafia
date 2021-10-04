@@ -658,7 +658,7 @@ public class Parser
 			Function f = this.parseFunction( t, result );
 			if ( f != null )
 			{
-				if ( f.getName().equalsIgnoreCase( "main" ) )
+				if ( "main".equalsIgnoreCase( f.getName() ) )
 				{
 					if ( parentScope.getParentScope() == null )
 					{
@@ -1030,7 +1030,7 @@ public class Parser
 
 		if ( scope == null )
 		{
-			if ( this.currentToken().equals( "=" ) )
+			if ( "=".equals( this.currentToken() ) )
 			{
 				throw this.parseException( "Cannot initialize parameter " + variableName );
 			}
@@ -1250,7 +1250,7 @@ public class Parser
 			this.readToken(); //break
 		}
 
-		else if ( this.currentToken().equalsIgnoreCase( "continue" ) )
+		else if ( "continue".equalsIgnoreCase( this.currentToken() ) )
 		{
 			if ( allowContinue )
 			{
@@ -1264,7 +1264,7 @@ public class Parser
 			this.readToken(); //continue
 		}
 
-		else if ( this.currentToken().equalsIgnoreCase( "exit" ) )
+		else if ( "exit".equalsIgnoreCase( this.currentToken() ) )
 		{
 			result = new ScriptExit();
 			this.readToken(); //exit
@@ -1367,7 +1367,7 @@ public class Parser
 		Type valType = scope.findType( this.currentToken().content );
 		if ( valType == null )
 		{
-			if ( records && this.currentToken().equalsIgnoreCase( "record" ) )
+			if ( records && "record".equalsIgnoreCase( this.currentToken() ) )
 			{
 				valType = this.parseRecord( scope );
 
@@ -1459,7 +1459,7 @@ public class Parser
 			// parse as an ArrayLiteral
 			if ( arrayAllowed )
 			{
-				if ( delim.equals( "," ) || delim.equals( "}" ) )
+				if ( ",".equals( delim ) || "}".equals( delim ) )
 				{
 					isArray = true;
 				}
@@ -1492,7 +1492,7 @@ public class Parser
 			}
 
 			// We are parsing a MapLiteral
-			if ( !delim.equals( ":" ) )
+			if ( !":".equals( delim ) )
 			{
 				throw this.parseException( ":", this.currentToken() );
 			}
@@ -1539,7 +1539,7 @@ public class Parser
 
 		if ( isArray )
 		{
-			int size = aggr.getSize ();
+			int size = aggr.getSize();
 			if ( size > 0 && size < values.size() )
 			{
 				throw this.parseException( "Array has " + size + " elements but " + values.size() + " initializers." );
@@ -2347,8 +2347,8 @@ public class Parser
 		}
 
 		if ( this.nextToken() == null ||
-		     this.nextToken().equals( "(" ) ||
-		     this.nextToken().equals( "=" ) )
+		     "(".equals( this.nextToken() ) ||
+		     "=".equals( this.nextToken() ) )
 		{	// it's a call to a function named sort(), or an assigment to
 			// a variable named sort, not the sort statement.
 			return null;
@@ -2910,11 +2910,11 @@ public class Parser
 				Type expected = currentType.getBaseType();
 				Value val;
 
-				if ( this.currentToken().equals( "," ) )
+				if ( ",".equals( this.currentToken() ) )
 				{
 					val = DataTypes.VOID_VALUE;
 				}
-				else if ( this.currentToken().equals( "{" ) && expected instanceof AggregateType )
+				else if ( "{".equals( this.currentToken() ) && expected instanceof AggregateType )
 				{
 					val = this.parseAggregateLiteral( scope, (AggregateType) expected );
 				}
@@ -3033,9 +3033,9 @@ public class Parser
 				throw this.parseException( ")", this.currentToken() );
 			}
 
-			if ( !this.currentToken().equals( "," ) )
+			if ( !",".equals( this.currentToken() ) )
 			{
-				if ( !this.currentToken().equals( ")" ) )
+				if ( !")".equals( this.currentToken() ) )
 				{
 					throw this.parseException( ")", this.currentToken() );
 				}
@@ -3049,7 +3049,7 @@ public class Parser
 				throw this.parseException( "parameter", this.currentToken() );
 			}
 
-			if ( this.currentToken().equals( ")" ) )
+			if ( ")".equals( this.currentToken() ) )
 			{
 				throw this.parseException( "parameter", this.currentToken() );
 			}
@@ -3151,7 +3151,7 @@ public class Parser
 		Type ltype = lhs.getType().getBaseType();
 		boolean isAggregate = ( ltype instanceof AggregateType );
 
-		if ( isAggregate && !operStr.equals( "=" ) )
+		if ( isAggregate && !"=".equals( operStr ) )
 		{
 			throw this.parseException( "Cannot use '" + operStr + "' on an aggregate" );
 		}
@@ -3194,7 +3194,7 @@ public class Parser
 			throw this.parseException( error );
 		}
 
-		Operator op = operStr.equals( "=" ) ? null : new Operator( operStr.substring( 0, operStr.length() - 1 ), this );
+		Operator op = "=".equals( operStr ) ? null : new Operator( operStr.substring( 0, operStr.length() - 1 ), this );
 
 		return new Assignment( lhs, rhs, op );
 	}
@@ -3260,13 +3260,13 @@ public class Parser
 		// [VariableReference]++
 		// [VariableReference]--
 
-		if ( !this.currentToken().equals( "++" ) &&
-		     !this.currentToken().equals( "--" ) )
+		if ( !"++".equals( this.currentToken() ) &&
+		     !"--".equals( this.currentToken() ) )
 		{
 			return lhs;
 		}
 
-		String operStr = this.currentToken().equals( "++" ) ? Parser.POST_INCREMENT : Parser.POST_DECREMENT;
+		String operStr = "++".equals( this.currentToken() ) ? Parser.POST_INCREMENT : Parser.POST_DECREMENT;
 
 		int ltype = lhs.getType().getType();
 		if ( ltype != DataTypes.TYPE_INT && ltype != DataTypes.TYPE_FLOAT )
@@ -3373,12 +3373,12 @@ public class Parser
 				return lhs;
 			}
 
-			if ( this.currentToken().equals( ":" ) )
+			if ( ":".equals( this.currentToken() ) )
 			{
 				return lhs;
 			}
 
-			if ( this.currentToken().equals( "?" ) )
+			if ( "?".equals( this.currentToken() ) )
 			{
 				this.readToken(); // ?
 
@@ -3474,7 +3474,7 @@ public class Parser
 		Value result = null;
 
 		// Parse parenthesized expressions
-		if ( this.currentToken().equals( "(" ) )
+		if ( "(".equals( this.currentToken() ) )
 		{
 			this.readToken(); // (
 
@@ -3492,19 +3492,19 @@ public class Parser
 		// Parse constant values
 		// true and false are reserved words
 
-		else if ( this.currentToken().equalsIgnoreCase( "true" ) )
+		else if ( "true".equalsIgnoreCase( this.currentToken() ) )
 		{
 			this.readToken();
 			result = DataTypes.TRUE_VALUE;
 		}
 
-		else if ( this.currentToken().equalsIgnoreCase( "false" ) )
+		else if ( "false".equalsIgnoreCase( this.currentToken() ) )
 		{
 			this.readToken();
 			result = DataTypes.FALSE_VALUE;
 		}
 
-		else if ( this.currentToken().equals( "__FILE__" ) )
+		else if ( "__FILE__".equals( this.currentToken() ) )
 		{
 			this.readToken();
 			result = new Value( String.valueOf( this.shortFileName ) );
@@ -3594,16 +3594,11 @@ public class Parser
 	{
 		int sign = 1;
 
-		if ( this.currentToken().equals( "-" ) )
+		if ( "-".equals( this.currentToken() ) )
 		{
 			String next = this.nextToken();
 
-			if ( next == null )
-			{
-				return null;
-			}
-
-			if ( !next.equals( "." ) && !this.readIntegerToken( next ) )
+			if ( !".".equals( next ) && !this.readIntegerToken( next ) )
 			{
 				// Unary minus
 				return null;
@@ -3613,7 +3608,7 @@ public class Parser
 			this.readToken(); // Read -
 		}
 
-		if ( this.currentToken().equals( "." ) )
+		if ( ".".equals( this.currentToken() ) )
 		{
 			this.readToken();
 			Token fraction = this.currentToken();
@@ -3638,7 +3633,7 @@ public class Parser
 
 		this.readToken(); // integer
 
-		if ( this.currentToken().equals( "." ) )
+		if ( ".".equals( this.currentToken() ) )
 		{
 			String fraction = this.nextToken();
 			if ( !this.readIntegerToken( fraction ) )
@@ -3878,8 +3873,8 @@ public class Parser
 			String fullName = value.toString();
 			if ( !element.equalsIgnoreCase( fullName ) )
 			{
-				String s1 = CharacterEntities.escape( StringUtilities.globalStringReplace( element, ",", "\\," ).replaceAll("(?<= ) ", "\\\\ " ) );
-				String s2 = CharacterEntities.escape( StringUtilities.globalStringReplace( fullName, ",", "\\," ).replaceAll("(?<= ) ", "\\\\ " ) );
+				String s1 = CharacterEntities.escape( StringUtilities.globalStringReplace( element, ",", "\\," ).replaceAll( "(?<= ) ", "\\\\ " ) );
+				String s2 = CharacterEntities.escape( StringUtilities.globalStringReplace( fullName, ",", "\\," ).replaceAll( "(?<= ) ", "\\\\ " ) );
 				List<String> names = new ArrayList<String>();
 				if ( type == DataTypes.ITEM_TYPE )
 				{
@@ -4210,33 +4205,33 @@ public class Parser
 
 	private boolean isOperator( final String oper )
 	{
-		return oper.equals( "!" ) ||
-			oper.equals( "?" ) ||
-			oper.equals( ":" ) ||
-			oper.equals( "*" ) ||
-			oper.equals( "**" ) ||
-			oper.equals( "/" ) ||
-			oper.equals( "%" ) ||
-			oper.equals( "+" ) ||
-			oper.equals( "-" ) ||
-			oper.equals( "&" ) ||
-			oper.equals( "^" ) ||
-			oper.equals( "|" ) ||
-			oper.equals( "~" ) ||
-			oper.equals( "<<" ) ||
-			oper.equals( ">>" ) ||
-			oper.equals( ">>>" ) ||
-			oper.equals( "<" ) ||
-			oper.equals( ">" ) ||
-			oper.equals( "<=" ) ||
-			oper.equals( ">=" ) ||
-			oper.equals( "==" ) ||
-			oper.equals( Parser.APPROX ) ||
-			oper.equals( "!=" ) ||
-			oper.equals( "||" ) ||
-			oper.equals( "&&" ) ||
-			oper.equals( "contains" ) ||
-			oper.equals( "remove" );
+		return "!".equals( oper ) ||
+		       "?".equals( oper ) ||
+		       ":".equals( oper ) ||
+		       "*".equals( oper ) ||
+		       "**".equals( oper ) ||
+		       "/".equals( oper ) ||
+		       "%".equals( oper ) ||
+		       "+".equals( oper ) ||
+		       "-".equals( oper ) ||
+		       "&".equals( oper ) ||
+		       "^".equals( oper ) ||
+		       "|".equals( oper ) ||
+		       "~".equals( oper ) ||
+		       "<<".equals( oper ) ||
+		       ">>".equals( oper ) ||
+		       ">>>".equals( oper ) ||
+		       "<".equals( oper ) ||
+		       ">".equals( oper ) ||
+		       "<=".equals( oper ) ||
+		       ">=".equals( oper ) ||
+		       "==".equals( oper ) ||
+		       Parser.APPROX.equals( oper ) ||
+		       "!=".equals( oper ) ||
+		       "||".equals( oper ) ||
+		       "&&".equals( oper ) ||
+		       "contains".equals( oper ) ||
+		       "remove".equals( oper );
 	}
 
 	private Value parseVariableReference( final BasicScope scope )
@@ -4277,7 +4272,7 @@ public class Parser
 		Type type = var.getType();
 		List<Value> indices = new ArrayList<Value>();
 
-		boolean parseAggregate = this.currentToken().equals( "[" );
+		boolean parseAggregate = "[".equals( this.currentToken() );
 
 		while ( this.currentToken().equals( "[" ) ||
 		        this.currentToken().equals( "." ) ||
@@ -4287,7 +4282,7 @@ public class Parser
 
 			type = type.getBaseType();
 
-			if ( this.currentToken().equals( "[" ) || this.currentToken().equals( "," ) )
+			if ( "[".equals( this.currentToken() ) || ",".equals( this.currentToken() ) )
 			{
 				this.readToken(); // read [ or ,
 				parseAggregate = true;
@@ -4443,7 +4438,7 @@ public class Parser
 			this.readToken();
 		}
 
-		if ( this.currentToken().equals( ";" ) )
+		if ( ";".equals( this.currentToken() ) )
 		{
 			this.readToken(); //read ;
 		}
