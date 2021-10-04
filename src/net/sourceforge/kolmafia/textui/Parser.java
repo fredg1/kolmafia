@@ -1835,13 +1835,21 @@ public class Parser
 		}
 		else
 		{
-			throw this.parseException( ")", this.currentToken() );
+			this.readToken(); // )
+		}
+		else if ( !ifError )
+		{
+			this.parseException( ")", this.currentToken() );
+			ifError = true;
 		}
 
 		if ( condition == null || condition.getType() != DataTypes.BOOLEAN_TYPE )
 		{
-			throw this.parseException( "\"if\" requires a boolean conditional expression" );
-		}
+			if ( !ifError )
+			{
+				this.error( conditionLocation, "\"if\" requires a boolean conditional expression" );
+				ifError = true;
+			}
 
 		If result = null;
 		boolean elseFound = false;
@@ -1849,6 +1857,8 @@ public class Parser
 
 		do
 		{
+			boolean elseError = false;
+
 			Scope scope = parseBlockOrSingleCommand( functionType, null, parentScope, !elseFound, allowBreak, allowContinue );
 
 			if ( result == null )
@@ -1866,9 +1876,10 @@ public class Parser
 
 			if ( !noElse && this.currentToken().equalsIgnoreCase( "else" ) )
 			{
-				if ( finalElse )
+				if ( finalElse && !elseError )
 				{
-					throw this.parseException( "Else without if" );
+					this.error( "Else without if" );
+					elseError = true;
 				}
 
 				this.readToken(); //else
@@ -1882,7 +1893,8 @@ public class Parser
 					}
 					else
 					{
-						throw this.parseException( "(", this.currentToken() );
+						this.parseException( "(", this.currentToken() );
+						elseError = true;
 					}
 
 					condition = this.parseExpression( parentScope );
@@ -1893,7 +1905,8 @@ public class Parser
 					}
 					else
 					{
-						throw this.parseException( ")", this.currentToken() );
+						this.parseException( ")", this.currentToken() );
+						elseError = true;
 					}
 
 					if ( condition == null || condition.getType() != DataTypes.BOOLEAN_TYPE )
