@@ -3320,7 +3320,12 @@ public class Parser {
 
     List<Command> incrementers = new ArrayList<>();
 
-    while (!this.atEndOfFile() && !this.currentToken().equals(")")) {
+    Position previousPosition = null;
+    while (this.madeProgress(previousPosition, previousPosition = this.getCurrentPosition())) {
+      if (this.atEndOfFile() || this.currentToken().equals(")")) {
+        break;
+      }
+
       LocatedValue value = this.parsePreIncDec(scope);
       if (value != null) {
         incrementers.add(value.value);
