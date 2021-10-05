@@ -371,11 +371,11 @@ public class ParserTest {
           },
           /*
           {
-          	// We ought to check for this case too, but we don't...
-          	"Array literal not enough elements",
-          	"int[10] { 1, 2, 3, 4, 5}",
-          	"Array has 10 elements but 5 initializers.",
-          	null,
+            // We ought to check for this case too, but we don't...
+            "Array literal not enough elements",
+            "int[10] { 1, 2, 3, 4, 5}",
+            "Array has 10 elements but 5 initializers.",
+            null,
           },
           */
           {
@@ -699,10 +699,10 @@ public class ParserTest {
           /*
             There's code for this case, but we encounter a separate error ("Record expected").
           {
-          	"Float literal with no decimal component",
-          	"123.;",
-          	null,
-          	Arrays.asList( "123", ".", ";" ),
+            "Float literal with no decimal component",
+            "123.;",
+            null,
+            Arrays.asList( "123", ".", ";" ),
           },
           */
           {
@@ -1883,10 +1883,10 @@ public class ParserTest {
           },
           /* Currently fails with "Expected ;, found ++" which is asymmetric.
           {
-          	"postincrement requires a variable",
-          	"1++;",
-          	"Variable reference expected",
-          	null,
+            "postincrement requires a variable",
+            "1++;",
+            "Variable reference expected",
+            null,
           },
           */
           {

@@ -228,23 +228,23 @@ public class CompactSidePane extends JPanel implements Runnable {
     this.mcdLabel.setForeground( Color.BLACK );
     for ( int i = 0; i < this.STAT_LABELS ; i++ )
     {
-    	this.statLabel[ i ].setForeground( Color.BLACK );
-    	this.statValueLabel[ i ].setForeground( Color.BLACK );
+      this.statLabel[ i ].setForeground( Color.BLACK );
+      this.statValueLabel[ i ].setForeground( Color.BLACK );
     }
     for ( int i = 0; i < this.STATUS_LABELS ; i++ )
     {
-    	this.statusLabel[ i ].setForeground( Color.BLACK );
-    	this.statusValueLabel[ i ].setForeground( Color.BLACK );
+      this.statusLabel[ i ].setForeground( Color.BLACK );
+      this.statusValueLabel[ i ].setForeground( Color.BLACK );
     }
     for ( int i = 0; i < this.CONSUMPTION_LABELS ; i++ )
     {
-    	this.consumptionLabel[ i ].setForeground( Color.BLACK );
-    	this.consumptionValueLabel[ i ].setForeground( Color.BLACK );
+      this.consumptionLabel[ i ].setForeground( Color.BLACK );
+      this.consumptionValueLabel[ i ].setForeground( Color.BLACK );
     }
     for ( int i = 0; i < this.BONUS_LABELS ; i++ )
     {
-    	this.bonusLabel[ i ].setForeground( Color.BLACK );
-    	this.bonusValueLabel[ i ].setForeground( Color.BLACK );
+      this.bonusLabel[ i ].setForeground( Color.BLACK );
+      this.bonusValueLabel[ i ].setForeground( Color.BLACK );
     }
 
 
