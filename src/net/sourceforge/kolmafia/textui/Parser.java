@@ -68,7 +68,6 @@ import net.sourceforge.kolmafia.textui.parsetree.TernaryExpression;
 import net.sourceforge.kolmafia.textui.parsetree.Try;
 import net.sourceforge.kolmafia.textui.parsetree.Type;
 import net.sourceforge.kolmafia.textui.parsetree.Type.BadType;
-import net.sourceforge.kolmafia.textui.parsetree.Type.TypeReference;
 import net.sourceforge.kolmafia.textui.parsetree.TypeDef;
 import net.sourceforge.kolmafia.textui.parsetree.UserDefinedFunction;
 import net.sourceforge.kolmafia.textui.parsetree.Value;
@@ -953,10 +952,8 @@ public class Parser {
 
       if (this.currentToken().equals("...")) {
         // Make a vararg type out of the previously parsed type.
-        paramType = new VarArgType(paramType);
-        paramType =
-            new TypeReference(
-                paramType, this.makeLocation(paramType.getLocation(), this.currentToken()));
+        paramType = new VarArgType(paramType).reference(
+            this.makeLocation(paramType.getLocation(), this.currentToken()));
 
         this.readToken(); // read ...
       }
@@ -974,8 +971,7 @@ public class Parser {
         final Type finalParamType = paramType; // Needed for the functional interface.
         parameterErrors.submitError(
             () -> {
-              if (finalParamType instanceof TypeReference
-                  && ((TypeReference) finalParamType).getTarget() instanceof VarArgType) {
+              if (finalParamType instanceof VarArgType) {
                 // We can only have a single vararg parameter
                 this.error(finalParamType.getLocation(), "Only one vararg parameter is allowed");
               } else {
@@ -1001,8 +997,7 @@ public class Parser {
             });
       }
 
-      if (paramType instanceof TypeReference
-          && ((TypeReference) paramType).getTarget() instanceof VarArgType) {
+      if (paramType instanceof VarArgType) {
         // Only one vararg is allowed
         vararg = true;
       }
@@ -1225,7 +1220,7 @@ public class Parser {
     return result;
   }
 
-  private LocatedValue autoCoerceValue(Type ltype, final LocatedValue rhs, final BasicScope scope) {
+  private LocatedValue autoCoerceValue(final Type ltype, final LocatedValue rhs, final BasicScope scope) {
     // DataTypes.TYPE_ANY has no name
     if (ltype == null || ltype.getName() == null) {
       return rhs;
@@ -1234,10 +1229,6 @@ public class Parser {
     // Error propagation
     if (ltype.isBad() || rhs.value.getType().isBad()) {
       return Value.BAD_VALUE.wrap(rhs.location);
-    }
-
-    if (ltype instanceof TypeReference) {
-      ltype = ((TypeReference) ltype).getTarget();
     }
 
     // If the types are the same no coercion needed
@@ -1518,7 +1509,7 @@ public class Parser {
       }
 
       scope.addReference(valType, this.makeLocation(this.currentToken()));
-      valType = new TypeReference(valType, this.makeLocation(this.currentToken()));
+      valType = valType.reference(this.makeLocation(this.currentToken()));
       this.readToken();
     }
     // We can safely assume that two non-reserved identifiers in a row
@@ -1881,7 +1872,7 @@ public class Parser {
         }
 
         scope.addReference(indexType, this.makeLocation(indexToken));
-        indexType = new TypeReference(indexType, this.makeLocation(indexToken));
+        indexType = indexType.reference(this.makeLocation(indexToken));
 
         if (!indexType.isPrimitive()) {
           if (!dataType.isBad()) {
@@ -1914,8 +1905,9 @@ public class Parser {
             });
       }
 
-      return new TypeReference(
-          new AggregateType(dataType, new BadType(null, null)),
+      Type type = new AggregateType(dataType, new BadType(null, null));
+
+      return type.reference(
           this.makeLocation(dataType.getLocation(), this.peekPreviousToken()));
     }
 
@@ -1935,10 +1927,11 @@ public class Parser {
           });
     }
 
-    return new TypeReference(
-        indexType != null
-            ? new AggregateType(dataType, indexType)
-            : new AggregateType(dataType, size),
+    Type type = indexType != null
+        ? new AggregateType(dataType, indexType)
+        : new AggregateType(dataType, size);
+
+    return type.reference(
         this.makeLocation(dataType.getLocation(), this.peekPreviousToken()));
   }
 
@@ -2981,10 +2974,6 @@ public class Parser {
         this.error(location, "Too many key variables specified");
 
         break;
-      }
-
-      if (type instanceof TypeReference) {
-        type = ((TypeReference) type).getTarget();
       }
 
       if (type instanceof AggregateType) {
@@ -4755,7 +4744,7 @@ public class Parser {
       type = new BadType(name, this.makeLocation(typedConstantTypeToken));
     } else {
       scope.addReference(type, this.makeLocation(typedConstantTypeToken));
-      type = new TypeReference(type, this.makeLocation(typedConstantTypeToken));
+      type = type.reference(this.makeLocation(typedConstantTypeToken));
     }
 
     if (!type.isPrimitive() && !type.isBad()) {

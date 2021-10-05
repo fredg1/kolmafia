@@ -32,12 +32,24 @@ public class TypeDef extends Type {
   }
 
   @Override
-  public boolean equals(Type o) {
-    if (o instanceof TypeReference) {
-      o = ((TypeReference) o).getTarget();
+  public boolean equals(final Type o) {
+    return o instanceof TypeDef && this.name.equals(o.name);
+  }
+
+  @Override
+  public TypeDef reference(final Location location) {
+    return new TypeDefReference(location);
+  }
+
+  private class TypeDefReference extends TypeDef {
+    public TypeDefReference(final Location location) {
+      super(TypeDef.this.name, TypeDef.this.base, location);
     }
 
-    return o instanceof TypeDef && this.name.equals(o.name);
+    @Override
+    public Location getDefinitionLocation() {
+      return TypeDef.this.getDefinitionLocation();
+    }
   }
 
   @Override
