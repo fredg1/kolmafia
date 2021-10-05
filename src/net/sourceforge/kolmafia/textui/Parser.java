@@ -5722,26 +5722,22 @@ public class Parser {
     }
 
     private Token peekLastToken() {
-      if (this.tokens.isEmpty()) {
-        if (this.previousLine == null) {
-          return null;
+      Line line = this;
+
+      while (line != null) {
+        final Iterator<Token> iter = line.tokens.descendingIterator();
+        while (iter.hasNext()) {
+          final Token token = iter.next();
+
+          if (!(iter instanceof Comment)) {
+            return token;
+          }
         }
 
-        return this.previousLine.peekLastToken();
+        line = this.previousLine;
       }
 
-      final Token lastToken = this.tokens.peekLast();
-
-      if (lastToken instanceof Comment) {
-        // Temporarily remove it before digging deeper
-        this.tokens.removeLast();
-        final Token previousToken = this.peekLastToken();
-        this.tokens.addLast(lastToken);
-
-        return previousToken;
-      }
-
-      return lastToken;
+      return null;
     }
 
     @Override
