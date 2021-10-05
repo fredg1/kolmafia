@@ -2279,7 +2279,7 @@ public class Parser {
         } else
         // else without condition
         {
-          condition = DataTypes.TRUE_VALUE.wrap(this.make0WidthLocation());
+          condition = DataTypes.TRUE_VALUE.wrap(this.makeZeroWidthLocation());
           finalElse = true;
         }
 
@@ -2488,7 +2488,7 @@ public class Parser {
       switchError = true;
     }
 
-    LocatedValue condition = DataTypes.TRUE_VALUE.wrap(this.make0WidthLocation());
+    LocatedValue condition = DataTypes.TRUE_VALUE.wrap(this.makeZeroWidthLocation());
     if (this.currentToken().equals("(")) {
       this.readToken(); // (
 
@@ -2866,9 +2866,9 @@ public class Parser {
 
     // Define key variables of appropriate type
     VariableList varList = new VariableList();
-    Variable valuevar = new Variable("value", type.getDataType(), this.make0WidthLocation());
+    Variable valuevar = new Variable("value", type.getDataType(), this.makeZeroWidthLocation());
     varList.add(valuevar);
-    Variable indexvar = new Variable("index", type.getIndexType(), this.make0WidthLocation());
+    Variable indexvar = new Variable("index", type.getIndexType(), this.makeZeroWidthLocation());
     varList.add(indexvar);
 
     // Parse the key expression in a new scope containing 'index' and 'value'
@@ -3301,7 +3301,7 @@ public class Parser {
 
     LocatedValue condition =
         (this.currentToken().equals(";"))
-            ? DataTypes.TRUE_VALUE.wrap(this.make0WidthLocation())
+            ? DataTypes.TRUE_VALUE.wrap(this.makeZeroWidthLocation())
             : this.parseExpression(scope);
 
     if (this.currentToken().equals(";")) {
@@ -3531,7 +3531,7 @@ public class Parser {
         LocatedValue val;
 
         if (this.currentToken().equals(",")) {
-          val = DataTypes.VOID_VALUE.wrap(this.make0WidthLocation());
+          val = DataTypes.VOID_VALUE.wrap(this.makeZeroWidthLocation());
         } else if (this.currentToken().equals("{")) {
           if (expected instanceof AggregateType) {
             val = this.parseAggregateLiteral(scope, (AggregateType) expected);
@@ -5947,11 +5947,11 @@ public class Parser {
   }
 
   // temporary, we want to not need this
-  private Location make0WidthLocation() {
+  private Location makeZeroWidthLocation() {
     return this.makeLocation(this.getCurrentPosition());
   }
 
-  private Location make0WidthLocation(final Position position) {
+  private Location makeZeroWidthLocation(final Position position) {
     return this.makeLocation(new Range(position, position));
   }
 
@@ -6263,7 +6263,7 @@ public class Parser {
   public final void error(final Location location, final String msg1, final String msg2) {
     this.diagnostics.add(
         new AshDiagnostic(
-            location != null ? location : this.make0WidthLocation(), Error, msg1, msg2));
+            location != null ? location : this.makeZeroWidthLocation(), Error, msg1, msg2));
   }
 
   public final void warning(final String msg) {
@@ -6306,7 +6306,7 @@ public class Parser {
   public final void warning(final Location location, final String msg1, final String msg2) {
     this.diagnostics.add(
         new AshDiagnostic(
-            location != null ? location : this.make0WidthLocation(), Warning, msg1, msg2));
+            location != null ? location : this.makeZeroWidthLocation(), Warning, msg1, msg2));
   }
 
   private static void appendFunctionCall(
