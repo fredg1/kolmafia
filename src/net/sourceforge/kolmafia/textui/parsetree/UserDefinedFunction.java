@@ -16,12 +16,12 @@ public class UserDefinedFunction extends Function {
   public UserDefinedFunction(
       final String name,
       final Type type,
-      final Location location,
-      final List<VariableReference> variableReferences) {
-    super(name, type, location, variableReferences);
+      final List<VariableReference> variableReferences,
+      final Location location) {
+    super(name, type, variableReferences, location);
 
     this.scope = null;
-    this.callStack = new Stack<ArrayList<Value>>();
+    this.callStack = new Stack<>();
   }
 
   public void setScope(final Scope s) {
@@ -37,7 +37,7 @@ public class UserDefinedFunction extends Function {
       return;
     }
 
-    ArrayList<Value> values = new ArrayList<Value>();
+    ArrayList<Value> values = new ArrayList<>();
 
     for (BasicScope next : this.scope.getScopes()) {
       for (Variable current : next.getVariables()) {

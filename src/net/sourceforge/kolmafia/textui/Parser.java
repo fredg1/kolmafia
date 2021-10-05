@@ -516,8 +516,8 @@ public class Parser {
                   + "@"
                   + parser.getScriptName().replace(".ash", "").replaceAll("[^a-zA-Z0-9]", "_"),
               parser.mainMethod.getType(),
-              parser.mainMethod.getDefinitionLocation(),
-              parser.mainMethod.getVariableReferences());
+              parser.mainMethod.getVariableReferences(),
+              parser.mainMethod.getDefinitionLocation());
       f.setScope(((UserDefinedFunction) parser.mainMethod).getScope());
       f.setVariableReferences(parser.mainMethod.getVariableReferences());
       result.addFunction(f);
@@ -1026,7 +1026,7 @@ public class Parser {
 
     UserDefinedFunction f =
         new UserDefinedFunction(
-            functionName.content, functionType, functionLocation, variableReferences);
+            functionName.content, functionType, variableReferences, functionLocation);
 
     if (f.overridesLibraryFunction()) {
       functionErrors.submitError(

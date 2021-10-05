@@ -18,15 +18,15 @@ public abstract class Function extends Symbol {
   public Function(
       final String name,
       final Type type,
-      final Location location,
-      final List<VariableReference> variableReferences) {
+      final List<VariableReference> variableReferences,
+      final Location location) {
     super(name, location);
     this.type = type;
     this.variableReferences = variableReferences;
   }
 
   public Function(final String name, final Type type) {
-    this(name, type, null, new ArrayList<VariableReference>());
+    this(name, type, new ArrayList<>(), null);
   }
 
   public Type getType() {
@@ -377,7 +377,7 @@ public abstract class Function extends Symbol {
 
   public static class BadFunction extends UserDefinedFunction implements BadNode {
     public BadFunction(final String name) {
-      super(name, new BadType(null, null), null, new ArrayList<>());
+      super(name, new BadType(null, null), new ArrayList<>(), null);
     }
   }
 }
