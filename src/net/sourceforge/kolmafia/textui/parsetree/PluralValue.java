@@ -1,119 +1,70 @@
-/*
- * Copyright (c) 2005-2021, KoLmafia development team
- * http://kolmafia.sourceforge.net/
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- *  [1] Redistributions of source code must retain the above copyright
- *      notice, this list of conditions and the following disclaimer.
- *  [2] Redistributions in binary form must reproduce the above copyright
- *      notice, this list of conditions and the following disclaimer in
- *      the documentation and/or other materials provided with the
- *      distribution.
- *  [3] Neither the name "KoLmafia" nor the names of its contributors may
- *      be used to endorse or promote products derived from this software
- *      without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION ) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE ) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
 package net.sourceforge.kolmafia.textui.parsetree;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.TreeSet;
-
-import net.sourceforge.kolmafia.textui.DataTypes;
 import net.sourceforge.kolmafia.textui.AshRuntime;
-
+import net.sourceforge.kolmafia.textui.DataTypes;
 import org.json.JSONArray;
 import org.json.JSONException;
 
-public class PluralValue
-	extends AggregateValue
-{
-	private TreeSet<Value> lookup;
-	
-	public PluralValue( final Type type, List<Value> values )
-	{
-		super( new AggregateType( DataTypes.BOOLEAN_TYPE, type ) );
+public class PluralValue extends AggregateValue {
+  private TreeSet<Value> lookup;
 
-		this.content = values.toArray( new Value[ 0 ] );
-	}
+  public PluralValue(final Type type, List<Value> values) {
+    super(new AggregateType(DataTypes.BOOLEAN_TYPE, type));
 
-	@Override
-	public Value aref( final Value key, final AshRuntime interpreter )
-	{
-		return DataTypes.makeBooleanValue( this.contains( key ) );
-	}
+    this.content = values.toArray(new Value[0]);
+  }
 
-	@Override
-	public void aset( final Value key, final Value val, final AshRuntime interpreter )
-	{
-		throw interpreter.runtimeException( "Cannot modify constant value" );
-	}
+  @Override
+  public Value aref(final Value key, final AshRuntime interpreter) {
+    return DataTypes.makeBooleanValue(this.contains(key));
+  }
 
-	@Override
-	public Value remove( final Value key, final AshRuntime interpreter )
-	{
-		throw interpreter.runtimeException( "Cannot modify constant value" );
-	}
+  @Override
+  public void aset(final Value key, final Value val, final AshRuntime interpreter) {
+    throw interpreter.runtimeException("Cannot modify constant value");
+  }
 
-	@Override
-	public void clear()
-	{
-	}
+  @Override
+  public Value remove(final Value key, final AshRuntime interpreter) {
+    throw interpreter.runtimeException("Cannot modify constant value");
+  }
 
-	@Override
-	public int count()
-	{
-		Value[] array = (Value[]) this.content;
-		return array.length;
-	}
+  @Override
+  public void clear() {}
 
-	@Override
-	public boolean contains( final Value key )
-	{
-		if ( this.lookup == null )
-		{
-			this.lookup = new TreeSet<Value>();
-			this.lookup.addAll( Arrays.asList( (Value[]) this.content ) );
-		}
-		return this.lookup.contains( key );
-	}
+  @Override
+  public int count() {
+    Value[] array = (Value[]) this.content;
+    return array.length;
+  }
 
-	@Override
-	public Value[] keys()
-	{
-		return (Value[]) this.content;
-	}
+  @Override
+  public boolean contains(final Value key) {
+    if (this.lookup == null) {
+      this.lookup = new TreeSet<Value>();
+      this.lookup.addAll(Arrays.asList((Value[]) this.content));
+    }
+    return this.lookup.contains(key);
+  }
 
-	@Override
-	public Object toJSON() throws JSONException
-	{
-		JSONArray obj = new JSONArray();
+  @Override
+  public Value[] keys() {
+    return (Value[]) this.content;
+  }
 
-		Value[] array = this.keys();
+  @Override
+  public Object toJSON() throws JSONException {
+    JSONArray obj = new JSONArray();
 
-		for ( int i = 0; i < array.length; ++i )
-		{
-			obj.put( array[ i ].toJSON() );
-		}
+    Value[] array = this.keys();
 
-		return obj;
-	}
+    for (int i = 0; i < array.length; ++i) {
+      obj.put(array[i].toJSON());
+    }
+
+    return obj;
+  }
 }

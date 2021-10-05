@@ -1,168 +1,109 @@
-/*
- * Copyright (c) 2005-2021, KoLmafia development team
- * http://kolmafia.sourceforge.net/
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- *  [1] Redistributions of source code must retain the above copyright
- *      notice, this list of conditions and the following disclaimer.
- *  [2] Redistributions in binary form must reproduce the above copyright
- *      notice, this list of conditions and the following disclaimer in
- *      the documentation and/or other materials provided with the
- *      distribution.
- *  [3] Neither the name "KoLmafia" nor the names of its contributors may
- *      be used to endorse or promote products derived from this software
- *      without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION ) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE ) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
 package net.sourceforge.kolmafia.textui.parsetree;
 
 import java.io.PrintStream;
-
+import net.sourceforge.kolmafia.KoLmafia;
+import net.sourceforge.kolmafia.textui.AshRuntime;
+import net.sourceforge.kolmafia.textui.DataTypes;
+import net.sourceforge.kolmafia.textui.ScriptRuntime;
 import org.eclipse.lsp4j.Location;
 
-import net.sourceforge.kolmafia.KoLmafia;
+public class FunctionReturn extends Command {
+  private final Value returnValue;
+  private final Type expectedType;
 
-import net.sourceforge.kolmafia.textui.DataTypes;
-import net.sourceforge.kolmafia.textui.AshRuntime;
-import net.sourceforge.kolmafia.textui.ScriptRuntime;
+  public FunctionReturn(final Location location, final Value returnValue, final Type expectedType) {
+    super(location);
+    this.returnValue = returnValue;
+    this.expectedType = expectedType;
+  }
 
-public class FunctionReturn
-	extends Command
-{
-	private final Value returnValue;
-	private final Type expectedType;
+  public Type getType() {
+    if (this.expectedType != null) {
+      return this.expectedType;
+    }
 
-	public FunctionReturn( final Location location, final Value returnValue, final Type expectedType )
-	{
-		super( location );
-		this.returnValue = returnValue;
-		this.expectedType = expectedType;
-	}
+    if (this.returnValue == null) {
+      return DataTypes.VOID_TYPE;
+    }
 
-	public Type getType()
-	{
-		if ( this.expectedType != null )
-		{
-			return this.expectedType;
-		}
+    return this.returnValue.getType();
+  }
 
-		if ( this.returnValue == null )
-		{
-			return DataTypes.VOID_TYPE;
-		}
+  public Value getExpression() {
+    return this.returnValue;
+  }
 
-		return this.returnValue.getType();
-	}
+  @Override
+  public Value execute(final AshRuntime interpreter) {
+    if (!KoLmafia.permitsContinue()) {
+      interpreter.setState(ScriptRuntime.State.EXIT);
+    }
 
-	public Value getExpression()
-	{
-		return this.returnValue;
-	}
+    if (interpreter.getState() == ScriptRuntime.State.EXIT) {
+      return null;
+    }
 
-	@Override
-	public Value execute( final AshRuntime interpreter )
-	{
-		if ( !KoLmafia.permitsContinue() )
-		{
-			interpreter.setState( ScriptRuntime.State.EXIT );
-		}
+    if (this.returnValue == null) {
+      interpreter.setState(ScriptRuntime.State.RETURN);
+      return null;
+    }
 
-		if ( interpreter.getState() == ScriptRuntime.State.EXIT )
-		{
-			return null;
-		}
+    interpreter.traceIndent();
+    if (ScriptRuntime.isTracing()) {
+      interpreter.trace("Eval: " + this.returnValue);
+    }
 
-		if ( this.returnValue == null )
-		{
-			interpreter.setState( ScriptRuntime.State.RETURN );
-			return null;
-		}
+    Value result = this.returnValue.execute(interpreter);
+    interpreter.captureValue(result);
 
-		interpreter.traceIndent();
-		if ( ScriptRuntime.isTracing() )
-		{
-			interpreter.trace( "Eval: " + this.returnValue );
-		}
+    if (ScriptRuntime.isTracing()) {
+      interpreter.trace("Returning: " + result);
+    }
+    interpreter.traceUnindent();
 
-		Value result = this.returnValue.execute( interpreter );
-		interpreter.captureValue( result );
+    if (result == null) {
+      return null;
+    }
 
-		if ( ScriptRuntime.isTracing() )
-		{
-			interpreter.trace( "Returning: " + result );
-		}
-		interpreter.traceUnindent();
+    if (interpreter.getState() != ScriptRuntime.State.EXIT) {
+      interpreter.setState(ScriptRuntime.State.RETURN);
+    }
 
-		if ( result == null )
-		{
-			return null;
-		}
+    if (this.expectedType == null) {
+      return result;
+    }
 
-		if ( interpreter.getState() != ScriptRuntime.State.EXIT )
-		{
-			interpreter.setState( ScriptRuntime.State.RETURN );
-		}
+    if (this.expectedType.equals(DataTypes.TYPE_STRING)) {
+      return result.toStringValue();
+    }
 
-		if ( this.expectedType == null )
-		{
-			return result;
-		}
+    if (this.expectedType.equals(DataTypes.TYPE_FLOAT)) {
+      return result.toFloatValue();
+    }
 
-		if ( this.expectedType.equals( DataTypes.TYPE_STRING ) )
-		{
-			return result.toStringValue();
-		}
+    if (this.expectedType.equals(DataTypes.TYPE_INT)) {
+      return result.toIntValue();
+    }
 
-		if ( this.expectedType.equals( DataTypes.TYPE_FLOAT ) )
-		{
-			return result.toFloatValue();
-		}
+    return result;
+  }
 
-		if ( this.expectedType.equals( DataTypes.TYPE_INT ) )
-		{
-			return result.toIntValue();
-		}
+  @Override
+  public String toString() {
+    return "return " + this.returnValue;
+  }
 
-		return result;
-	}
+  @Override
+  public void print(final PrintStream stream, final int indent) {
+    AshRuntime.indentLine(stream, indent);
+    stream.println("<RETURN " + this.getType() + ">");
+    if (!this.getType().equals(DataTypes.TYPE_VOID)) {
+      this.returnValue.print(stream, indent + 1);
+    }
+  }
 
-	@Override
-	public String toString()
-	{
-		return "return " + this.returnValue;
-	}
-
-	@Override
-	public void print( final PrintStream stream, final int indent )
-	{
-		AshRuntime.indentLine( stream, indent );
-		stream.println( "<RETURN " + this.getType() + ">" );
-		if ( !this.getType().equals( DataTypes.TYPE_VOID ) )
-		{
-			this.returnValue.print( stream, indent + 1 );
-		}
-	}
-
-	@Override
-	public boolean assertBarrier()
-	{
-		return true;
-	}
+  @Override
+  public boolean assertBarrier() {
+    return true;
+  }
 }

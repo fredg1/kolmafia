@@ -96,7 +96,7 @@ class SemanticTokensHandler
 
 	private static final Map<String, Integer> TYPES_INVERTED = 
 		Collections.unmodifiableMap(
-			new HashMap<>()
+			new HashMap<String, Integer>()
 			{{
 				for ( int i = 0; i < TYPES.size(); ++i )
 				{
@@ -125,7 +125,7 @@ class SemanticTokensHandler
 
 	private static final Map<String, Integer> MODIFIERS_INVERTED = 
 		Collections.unmodifiableMap(
-			new HashMap<>()
+			new HashMap<String, Integer>()
 			{{
 				for ( int i = 0; i < MODIFIERS.size(); ++i )
 				{

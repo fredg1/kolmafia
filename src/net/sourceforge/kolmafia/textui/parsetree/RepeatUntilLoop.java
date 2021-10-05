@@ -1,142 +1,88 @@
-/*
- * Copyright (c) 2005-2021, KoLmafia development team
- * http://kolmafia.sourceforge.net/
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- *  [1] Redistributions of source code must retain the above copyright
- *      notice, this list of conditions and the following disclaimer.
- *  [2] Redistributions in binary form must reproduce the above copyright
- *      notice, this list of conditions and the following disclaimer in
- *      the documentation and/or other materials provided with the
- *      distribution.
- *  [3] Neither the name "KoLmafia" nor the names of its contributors may
- *      be used to endorse or promote products derived from this software
- *      without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION ) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE ) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
 package net.sourceforge.kolmafia.textui.parsetree;
 
 import java.io.PrintStream;
-
+import net.sourceforge.kolmafia.KoLmafia;
+import net.sourceforge.kolmafia.textui.AshRuntime;
+import net.sourceforge.kolmafia.textui.DataTypes;
+import net.sourceforge.kolmafia.textui.ScriptRuntime;
 import org.eclipse.lsp4j.Location;
 
-import net.sourceforge.kolmafia.KoLmafia;
+public class RepeatUntilLoop extends Loop {
+  private final Value condition;
 
-import net.sourceforge.kolmafia.textui.DataTypes;
-import net.sourceforge.kolmafia.textui.AshRuntime;
-import net.sourceforge.kolmafia.textui.ScriptRuntime;
+  public RepeatUntilLoop(final Location location, final Scope scope, final Value condition) {
+    super(location, scope);
+    this.condition = condition;
+  }
 
-public class RepeatUntilLoop
-	extends Loop
-{
-	private final Value condition;
+  public Value getCondition() {
+    return this.condition;
+  }
 
-	public RepeatUntilLoop( final Location location, final Scope scope, final Value condition )
-	{
-		super( location, scope );
-		this.condition = condition;
-	}
+  @Override
+  public Value execute(final AshRuntime interpreter) {
+    if (!KoLmafia.permitsContinue()) {
+      interpreter.setState(ScriptRuntime.State.EXIT);
+      return null;
+    }
 
-	public Value getCondition()
-	{
-		return this.condition;
-	}
+    interpreter.traceIndent();
+    if (ScriptRuntime.isTracing()) {
+      interpreter.trace(this.toString());
+    }
 
-	@Override
-	public Value execute( final AshRuntime interpreter )
-	{
-		if ( !KoLmafia.permitsContinue() )
-		{
-			interpreter.setState( ScriptRuntime.State.EXIT );
-			return null;
-		}
+    Value conditionResult;
 
-		interpreter.traceIndent();
-		if ( ScriptRuntime.isTracing() )
-		{
-			interpreter.trace( this.toString() );
-		}
+    do {
+      Value result = super.execute(interpreter);
 
-		Value conditionResult;
+      if (interpreter.getState() == ScriptRuntime.State.BREAK) {
+        interpreter.setState(ScriptRuntime.State.NORMAL);
+        interpreter.traceUnindent();
+        return DataTypes.VOID_VALUE;
+      }
 
-		do
-		{
-			Value result = super.execute( interpreter );
+      if (interpreter.getState() != ScriptRuntime.State.NORMAL) {
+        interpreter.traceUnindent();
+        return result;
+      }
 
-			if ( interpreter.getState() == ScriptRuntime.State.BREAK )
-			{
-				interpreter.setState( ScriptRuntime.State.NORMAL );
-				interpreter.traceUnindent();
-				return DataTypes.VOID_VALUE;
-			}
+      if (ScriptRuntime.isTracing()) {
+        interpreter.trace("Test: " + this.condition);
+      }
 
-			if ( interpreter.getState() != ScriptRuntime.State.NORMAL )
-			{
-				interpreter.traceUnindent();
-				return result;
-			}
+      conditionResult = this.condition.execute(interpreter);
+      interpreter.captureValue(conditionResult);
 
-			if ( ScriptRuntime.isTracing() )
-			{
-				interpreter.trace( "Test: " + this.condition );
-			}
+      if (ScriptRuntime.isTracing()) {
+        interpreter.trace("[" + interpreter.getState() + "] <- " + conditionResult);
+      }
 
-			conditionResult = this.condition.execute( interpreter );
-			interpreter.captureValue( conditionResult );
+      if (conditionResult == null) {
+        interpreter.traceUnindent();
+        return null;
+      }
+    } while (conditionResult.intValue() != 1);
 
-			if ( ScriptRuntime.isTracing() )
-			{
-				interpreter.trace( "[" + interpreter.getState() + "] <- " + conditionResult );
-			}
+    interpreter.traceUnindent();
+    return DataTypes.VOID_VALUE;
+  }
 
-			if ( conditionResult == null )
-			{
-				interpreter.traceUnindent();
-				return null;
-			}
-		}
-		while ( conditionResult.intValue() != 1 );
+  @Override
+  public boolean assertBarrier() {
+    return this.condition == DataTypes.FALSE_VALUE && !this.getScope().assertBreakable();
+  }
 
-		interpreter.traceUnindent();
-		return DataTypes.VOID_VALUE;
-	}
-	
-	@Override
-	public boolean assertBarrier()
-	{
-		return this.condition == DataTypes.FALSE_VALUE &&
-			!this.getScope().assertBreakable();
-	}
+  @Override
+  public String toString() {
+    return "repeat";
+  }
 
-	@Override
-	public String toString()
-	{
-		return "repeat";
-	}
-
-	@Override
-	public void print( final PrintStream stream, final int indent )
-	{
-		AshRuntime.indentLine( stream, indent );
-		stream.println( "<REPEAT>" );
-		this.getScope().print( stream, indent + 1 );
-		this.getCondition().print( stream, indent + 1 );
-	}
+  @Override
+  public void print(final PrintStream stream, final int indent) {
+    AshRuntime.indentLine(stream, indent);
+    stream.println("<REPEAT>");
+    this.getScope().print(stream, indent + 1);
+    this.getCondition().print(stream, indent + 1);
+  }
 }
