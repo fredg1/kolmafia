@@ -469,8 +469,18 @@ public class Value extends Command implements Comparable<Value> {
     }
   }
 
-  public final LocatedValue wrap(final Location location) {
-    return new LocatedValue(location);
+  /**
+   * Returns a {@link LocatedValue} holding {@code value} and {@code location}.
+   *
+   * <p>If {@code value} is {@code null}, returns {@code null}.
+   */
+  public static final <V extends Value> LocatedValue<V> wrap(
+      final V value, final Location location) {
+    if (value == null) {
+      return null;
+    }
+
+    return new LocatedValue<>(value, location);
   }
 
   /**
@@ -479,14 +489,25 @@ public class Value extends Command implements Comparable<Value> {
    * without imposing an useless burden on the rest of KoLmafia, and tons of null checks.
    *
    * <p>So instead, we use this class to pass around locations throughout {@link Parser}.
+   *
+   * <p>{@link #value} is never {@code null}.
+   *
+   * <p>It is recommended to store this type's generic with the {@code ? extends} capture group,
+   * regardless of if you are certain of the content's datatype, to allow type casting to be as easy
+   * as casting the type of {@link #value} itself.
    */
-  public final class LocatedValue {
-    public final Value value;
+  public static final class LocatedValue<V extends Value> {
+    public final V value;
     public final Location location;
 
-    private LocatedValue(final Location location) {
-      this.value = Value.this;
+    private LocatedValue(final V value, final Location location) {
+      this.value = value;
       this.location = location;
+    }
+
+    @Override
+    public String toString() {
+      return this.value.toString();
     }
   }
 }

@@ -503,6 +503,7 @@ public class Type extends Symbol {
 
   /**
    * Creates a copy of the current Type with {@code location} as its Location.
+   *
    * @param location the location of the reference
    */
   public Type reference(final Location location) {
