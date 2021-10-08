@@ -805,9 +805,7 @@ public class Parser {
             () -> {
               this.error(this.currentToken(), "Type name expected");
             });
-      }
-
-      if (fieldType.getBaseType().equals(DataTypes.VOID_TYPE)) {
+      } else if (fieldType.getBaseType().equals(DataTypes.VOID_TYPE)) {
         recordErrors.submitError(
             () -> {
               this.error(this.currentToken(), "Non-void field type expected");
