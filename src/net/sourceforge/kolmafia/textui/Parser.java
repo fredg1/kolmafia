@@ -5750,7 +5750,7 @@ public class Parser {
         while (iter.hasNext()) {
           final Token token = iter.next();
 
-          if (!(iter instanceof Comment)) {
+          if (!(token instanceof Comment)) {
             return token;
           }
         }
