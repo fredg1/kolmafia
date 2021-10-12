@@ -2582,7 +2582,7 @@ public class Parser {
         if (test.value.getClass() == Value.class) {
           if (labels.get(test.value) != null) {
             if (!caseError) {
-              this.error(test.location, "Duplicate case label: " + test.value);
+              this.error(test.location, "Duplicate case label: " + test);
             }
             switchError = caseError = true;
           } else if (test.value != Value.BAD_VALUE) {
@@ -2768,9 +2768,9 @@ public class Parser {
 
     Command body = this.parseBlock(null, null, parentScope, true, false, false);
     if (body == null) {
-      LocatedValue<? extends Value> expr = this.parseExpression(parentScope);
-      if (expr != null) {
-        body = expr.value;
+      LocatedValue<? extends Value> value = this.parseExpression(parentScope);
+      if (value != null) {
+        body = value.value;
       } else {
         this.error(this.currentToken(), "\"catch\" requires a block or an expression");
         body = Value.BAD_VALUE;
@@ -3366,7 +3366,7 @@ public class Parser {
           } else if (!javaForError) {
             this.error(
                 value.location,
-                "Variable '" + ((VariableReference) value.value).getName() + "' not incremented");
+                "Variable '" + ref.value.getName() + "' not incremented");
             javaForError = true;
           }
         } else {
@@ -3399,10 +3399,9 @@ public class Parser {
     this.parseLoopScope(scope, functionType, parentScope);
 
     Location loopScopeLocation = this.makeLocation(loopScopeStartToken, this.peekPreviousToken());
-    Location javaForLocation = this.makeLocation(javaForStartToken, this.peekPreviousToken());
-
     scope.setScopeLocation(loopScopeLocation);
 
+    Location javaForLocation = this.makeLocation(javaForStartToken, this.peekPreviousToken());
     return new JavaForLoop(javaForLocation, scope, initializers, condition.value, incrementers);
   }
 
@@ -4066,7 +4065,7 @@ public class Parser {
                 new Operation(lhs.value, oper),
                 this.makeLocation(oper.getLocation(), lhs.location));
       }
-    } else if (operator.equalsIgnoreCase("remove")) {
+    } else if (operator.equals("remove")) {
       oper = new Operator(this.makeLocation(operator), operator.content, this);
       operator.setType(SemanticTokenTypes.Keyword); // not reaaaally an operator...
       this.readToken(); // remove
@@ -4126,14 +4125,14 @@ public class Parser {
           this.error(
               conditional.location,
               "Non-boolean expression "
-                  + conditional.value
+                  + conditional
                   + " ("
                   + conditional.value.getType()
                   + ")");
           expressionError = true;
         }
 
-        if ((lhs = this.parseExpression(scope, null)) == null) {
+        if ((lhs = this.parseExpression(scope)) == null) {
           Location errorLocation = this.makeLocation(this.currentToken());
 
           if (!expressionSyntaxError) {
@@ -4154,7 +4153,7 @@ public class Parser {
           expressionError = expressionSyntaxError = true;
         }
 
-        if ((rhs = this.parseExpression(scope, null)) == null) {
+        if ((rhs = this.parseExpression(scope)) == null) {
           Location errorLocation = this.makeLocation(this.currentToken());
 
           if (!expressionSyntaxError) {
@@ -4169,11 +4168,11 @@ public class Parser {
           this.error(
               this.makeLocation(lhs.location, rhs.location),
               "Cannot choose between "
-                  + lhs.value
+                  + lhs
                   + " ("
                   + lhs.value.getType()
                   + ") and "
-                  + rhs.value
+                  + rhs
                   + " ("
                   + rhs.value.getType()
                   + ")");
@@ -4230,11 +4229,11 @@ public class Parser {
                 "Cannot apply operator "
                     + oper
                     + " to "
-                    + lhs.value
+                    + lhs
                     + " ("
                     + lhs.value.getType()
                     + ") and "
-                    + rhs.value
+                    + rhs
                     + " ("
                     + rhs.value.getType()
                     + ")");
@@ -4276,6 +4275,7 @@ public class Parser {
       }
 
       if (result != null) {
+        // re-wrap with the parenthesis
         result =
             Value.wrap(result.value, this.makeLocation(valueStartToken, this.peekPreviousToken()));
       }
@@ -5176,31 +5176,30 @@ public class Parser {
 
         RecordType rtype = (RecordType) type;
 
-        Token fieldToken = this.currentToken();
-        if (this.parseIdentifier(fieldToken.content)) {
-          fieldToken.setType(SemanticTokenTypes.Property);
+        Token field = this.currentToken();
+        if (this.parseIdentifier(field.content)) {
+          field.setType(SemanticTokenTypes.Property);
           if (readOnly) {
-            fieldToken.addModifier(SemanticTokenModifiers.Readonly);
+            field.addModifier(SemanticTokenModifiers.Readonly);
           }
           this.readToken(); // read name
         } else {
           if (!variableReferenceSyntaxError) {
-            this.error(fieldToken, "Field name expected");
+            this.error(field, "Field name expected");
           }
           variableReferenceError = variableReferenceSyntaxError = true;
         }
 
-        Value fieldIndex = rtype.getFieldIndex(fieldToken.content);
-        index = fieldIndex != null ? Value.wrap(fieldIndex, this.makeLocation(fieldToken)) : null;
+        index = Value.wrap(rtype.getFieldIndex(field.content), this.makeLocation(field));
         if (index != null) {
           type = rtype.getDataType(index.value);
         } else {
           if (!variableReferenceError) {
-            this.error(fieldToken, "Invalid field name '" + fieldToken.content + "'");
+            this.error(field, "Invalid field name '" + field + "'");
             variableReferenceError = true;
           }
 
-          index = Value.wrap(Value.BAD_VALUE, this.makeLocation(fieldToken));
+          index = Value.wrap(Value.BAD_VALUE, this.makeLocation(field));
           type = new BadType(null, null);
         }
       }
@@ -5212,10 +5211,11 @@ public class Parser {
         parseAggregate = false;
       }
 
-      Location currentLocation = this.makeLocation(current.location, this.peekPreviousToken());
       // TODO gather references to record fields
       current =
-          Value.wrap(new CompositeReference(current.value.target, indices, this), currentLocation);
+          Value.wrap(
+              new CompositeReference(current.value.target, indices, this),
+              this.makeLocation(current.location, this.peekPreviousToken()));
     }
 
     if (parseAggregate && !variableReferenceSyntaxError) {
