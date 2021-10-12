@@ -216,7 +216,7 @@ public class Parser {
 
   private final String fileName;
   private final String shortFileName;
-  private final URI fileURI;
+  private final URI fileUri;
   private final long modificationDate;
   private String scriptName;
   private final InputStream istream;
@@ -249,7 +249,7 @@ public class Parser {
     if (scriptFile != null) {
       this.fileName = scriptFile.getPath();
       this.shortFileName = this.fileName.substring(this.fileName.lastIndexOf(File.separator) + 1);
-      this.fileURI = scriptFile.toURI();
+      this.fileUri = scriptFile.toURI();
       this.modificationDate = scriptFile.lastModified();
 
       if (this.imports.isEmpty()) {
@@ -258,7 +258,7 @@ public class Parser {
     } else {
       this.fileName = null;
       this.shortFileName = null;
-      this.fileURI = null;
+      this.fileUri = null;
       this.modificationDate = 0L;
     }
 
@@ -318,7 +318,7 @@ public class Parser {
   }
 
   public URI getUri() {
-    return this.fileURI;
+    return this.fileUri;
   }
 
   public String getScriptName() {
@@ -5959,7 +5959,7 @@ public class Parser {
   }
 
   private Location makeLocation(final Range range) {
-    String uri = this.fileURI != null ? this.fileURI.toString() : this.istream.toString();
+    String uri = this.fileUri != null ? this.fileUri.toString() : this.istream.toString();
     return new Location(uri, range);
   }
 
