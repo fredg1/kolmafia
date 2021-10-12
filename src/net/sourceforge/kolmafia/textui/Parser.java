@@ -359,8 +359,8 @@ public class Parser {
 
   // **************** Parser *****************
 
-  private static final HashSet<String> multiCharTokens = new HashSet<String>();
-  private static final HashSet<String> reservedWords = new HashSet<String>();
+  private static final HashSet<String> multiCharTokens = new HashSet<>();
+  private static final HashSet<String> reservedWords = new HashSet<>();
 
   static {
     // Tokens
@@ -771,8 +771,8 @@ public class Parser {
     }
 
     // Loop collecting fields
-    List<Type> fieldTypes = new ArrayList<Type>();
-    List<String> fieldNames = new ArrayList<String>();
+    List<Type> fieldTypes = new ArrayList<>();
+    List<String> fieldNames = new ArrayList<>();
 
     Position previousPosition = null;
     while (this.madeProgress(previousPosition, previousPosition = this.getCurrentPosition())) {
@@ -920,7 +920,7 @@ public class Parser {
     this.readToken(); // read (
 
     VariableList paramList = new VariableList();
-    List<VariableReference> variableReferences = new ArrayList<VariableReference>();
+    List<VariableReference> variableReferences = new ArrayList<>();
     boolean vararg = false;
 
     Position previousPosition = null;
@@ -1578,8 +1578,8 @@ public class Parser {
     Type index = aggr.getIndexType();
     Type data = aggr.getDataType();
 
-    List<Value> keys = new ArrayList<Value>();
-    List<Value> values = new ArrayList<Value>();
+    List<Value> keys = new ArrayList<>();
+    List<Value> values = new ArrayList<>();
 
     // If index type is an int, it could be an array or a map
     boolean arrayAllowed = index.equals(DataTypes.INT_TYPE);
@@ -2521,8 +2521,8 @@ public class Parser {
       switchError = true;
     }
 
-    List<Value> tests = new ArrayList<Value>();
-    List<Integer> indices = new ArrayList<Integer>();
+    List<Value> tests = new ArrayList<>();
+    List<Integer> indices = new ArrayList<>();
     int defaultIndex = -1;
 
     SwitchScope scope = new SwitchScope(parentScope);
@@ -2909,9 +2909,8 @@ public class Parser {
       Token name = this.currentToken();
 
       if (!this.parseIdentifier(name.content)
-          ||
           // "foreach in aggregate" (i.e. no key)
-          name.equalsIgnoreCase("in")
+          || name.equalsIgnoreCase("in")
               && !"in".equalsIgnoreCase(this.nextToken())
               && !",".equals(this.nextToken())) {
         this.error(name, "Key variable name expected");
@@ -4672,7 +4671,7 @@ public class Parser {
             CharacterEntities.escape(
                 StringUtilities.globalStringReplace(fullName, ",", "\\,")
                     .replaceAll("(?<= ) ", "\\\\ "));
-        List<String> names = new ArrayList<String>();
+        List<String> names = new ArrayList<>();
         if (type.equals(DataTypes.ITEM_TYPE)) {
           int itemId = (int) value.contentLong;
           String name = ItemDatabase.getItemName(itemId);
