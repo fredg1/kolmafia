@@ -2825,7 +2825,7 @@ public class Parser {
     if (this.nextToken() == null
         || this.nextToken().equals("(")
         || this.nextToken()
-            .equals("=")) { // it's a call to a function named sort(), or an assigment to
+            .equals("=")) { // it's a call to a function named sort(), or an assignment to
       // a variable named sort, not the sort statement.
       return null;
     }
