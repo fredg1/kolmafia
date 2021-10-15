@@ -1,5 +1,6 @@
 package net.sourceforge.kolmafia.textui;
 
+import static org.eclipse.lsp4j.DiagnosticSeverity.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -1695,14 +1696,21 @@ public class ParserTest {
         new ByteArrayInputStream(script.getBytes(StandardCharsets.UTF_8));
     Parser p = new Parser(/*scriptFile=*/ null, /*stream=*/ istream, /*imports=*/ null);
 
+    try {
+      p.parse();
+    } catch (InterruptedException e) {
+    }
+
     if (errorText != null) {
-      ScriptException e = assertThrows(ScriptException.class, p::parse, desc);
-      assertThat(desc, e.getMessage(), containsString(errorText));
+      for (Parser.AshDiagnostic diagnostic : p.getDiagnostics()) {
+        if (diagnostic.severity == Error) {
+          assertThat(desc, diagnostic.toString(), containsString(errorText));
+          break;
+        }
+      }
       return;
     }
 
-    // This will fail if an exception is thrown.
-    p.parse();
-    assertEquals(tokens, p.getTokensContent(), desc);
+    assertEquals(tokens, p.getTokensContent(null), desc);
   }
 }
