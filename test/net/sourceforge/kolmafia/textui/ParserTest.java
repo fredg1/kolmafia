@@ -1106,9 +1106,9 @@ public class ParserTest {
         // if / else-if / else
         Arguments.of("if without condition", "if true", "Expected (, found true", null),
         Arguments.of(
-            "if with empty condition", "if ()", "\"if\" requires a boolean condition", null),
+            "if with empty condition", "if ()", "Expression expected", null),
         Arguments.of(
-            "if with numeric condition", "if (1)", "\"if\" requires a boolean condition", null),
+            "if with incorrect condition", "if (1)", "\"if\" requires a boolean condition", null),
         Arguments.of(
             "if with unclosed condition", "if (true", "Expected ), found end of file", null),
         // These probably shouldn't need to be separate test cases...
@@ -1120,6 +1120,11 @@ public class ParserTest {
         Arguments.of(
             "else if with empty condition",
             "if (false); else if ()",
+            "Expression expected",
+            null),
+        Arguments.of(
+            "else if with incorrect condition",
+            "if (false); else if (2)",
             "\"if\" requires a boolean condition",
             null),
         Arguments.of(
@@ -1132,6 +1137,11 @@ public class ParserTest {
         Arguments.of(
             "while with empty condition",
             "while ()",
+            "Expression expected",
+            null),
+        Arguments.of(
+            "while with incorrect condition",
+            "while (2)",
             "\"while\" requires a boolean condition",
             null),
         Arguments.of(
@@ -1156,6 +1166,11 @@ public class ParserTest {
             "repeat without condition", "repeat {} until true", "Expected (, found true", null),
         Arguments.of(
             "repeat with empty condition",
+            "repeat {} until ()",
+            "Expression expected",
+            null),
+        Arguments.of(
+            "repeat with incorrect condition",
             "repeat {} until ('done')",
             // This should probably read as "'until' requires a
             // boolean condition"...
