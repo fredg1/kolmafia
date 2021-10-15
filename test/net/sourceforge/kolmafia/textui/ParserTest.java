@@ -1105,8 +1105,7 @@ public class ParserTest {
         Arguments.of("unclosed block scope", "{", "Expected }, found end of file", null),
         // if / else-if / else
         Arguments.of("if without condition", "if true", "Expected (, found true", null),
-        Arguments.of(
-            "if with empty condition", "if ()", "Expression expected", null),
+        Arguments.of("if with empty condition", "if ()", "Expression expected", null),
         Arguments.of(
             "if with incorrect condition", "if (1)", "\"if\" requires a boolean condition", null),
         Arguments.of(
@@ -1118,10 +1117,7 @@ public class ParserTest {
             "Expected (, found true",
             null),
         Arguments.of(
-            "else if with empty condition",
-            "if (false); else if ()",
-            "Expression expected",
-            null),
+            "else if with empty condition", "if (false); else if ()", "Expression expected", null),
         Arguments.of(
             "else if with incorrect condition",
             "if (false); else if (2)",
@@ -1134,11 +1130,7 @@ public class ParserTest {
             null),
         // while
         Arguments.of("while without condition", "while true", "Expected (, found true", null),
-        Arguments.of(
-            "while with empty condition",
-            "while ()",
-            "Expression expected",
-            null),
+        Arguments.of("while with empty condition", "while ()", "Expression expected", null),
         Arguments.of(
             "while with incorrect condition",
             "while (2)",
@@ -1165,10 +1157,7 @@ public class ParserTest {
         Arguments.of(
             "repeat without condition", "repeat {} until true", "Expected (, found true", null),
         Arguments.of(
-            "repeat with empty condition",
-            "repeat {} until ()",
-            "Expression expected",
-            null),
+            "repeat with empty condition", "repeat {} until ()", "Expression expected", null),
         Arguments.of(
             "repeat with incorrect condition",
             "repeat {} until ('done')",
