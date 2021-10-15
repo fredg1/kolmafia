@@ -6254,7 +6254,7 @@ public class Parser {
     for (TypedNode current : params) {
       buffer.append(sep);
       sep = ", ";
-      buffer.append(current);
+      buffer.append(current.getType());
     }
 
     buffer.append(" )");
