@@ -2,18 +2,17 @@ package net.sourceforge.kolmafia.textui.parsetree;
 
 import org.eclipse.lsp4j.Location;
 
-public abstract class Command extends ParseTreeNode {
+public abstract class Command implements ParseTreeNode {
   private Location location;
-
-  /** For {@link Value}, which use {@link Value.LocatedValue} instead */
-  public Command() {
-    this.location = null;
-  }
 
   public Command(final Location location) {
     this.location = location;
   }
 
+  /**
+   * {@link BasicScope} and its subtypes don't know their location at the time of the
+   * initialization, and need to have it set later.
+   */
   protected void setLocation(final Location location) {
     this.location = location;
   }

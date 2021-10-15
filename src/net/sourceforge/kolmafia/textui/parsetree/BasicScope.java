@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 import net.sourceforge.kolmafia.KoLmafia;
 import net.sourceforge.kolmafia.textui.AshRuntime;
 import net.sourceforge.kolmafia.textui.DataTypes;
@@ -164,12 +165,12 @@ public abstract class BasicScope extends Command {
     return this.functions.remove(f);
   }
 
-  public final Function findFunction(final String name, final List<Value> params) {
+  public final Function findFunction(final String name, final List<Evaluable> params) {
     return this.findFunction(name, params, MatchType.ANY);
   }
 
   public final Function findFunction(
-      final String name, List<Value> params, final MatchType matchType) {
+      final String name, List<Evaluable> params, final MatchType matchType) {
     // Functions with no params are fine.
     if (params == null) {
       params = Collections.emptyList();
@@ -227,12 +228,14 @@ public abstract class BasicScope extends Command {
   private Function findFunction(
       final Function[] functions,
       final String name,
-      final List<Value> params,
+      final List<Evaluable> params,
       final MatchType match,
       final boolean vararg) {
     // Search the function list for a match
     for (Function function : functions) {
-      if (function.paramsMatch(params, match, vararg)) {
+      List<Type> types =
+          params.stream().map(value -> value.getRawType()).collect(Collectors.toList());
+      if (function.paramsMatch(types, match, vararg)) {
         return function;
       }
     }
