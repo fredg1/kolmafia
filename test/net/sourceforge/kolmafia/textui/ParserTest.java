@@ -45,7 +45,8 @@ public class ParserTest {
         valid(
             "valid empty Java for-loop",
             "for (;;) {}",
-            Arrays.asList("for", "(", ";", ";", ")", "{", "}")),
+            Arrays.asList("for", "(", ";", ";", ")", "{", "}"),
+            Arrays.asList(11, 51, 61, 71, 81, 101, 111)),
         valid(
             "Java for-loop with new variable",
             "for (int i = 0; i < 5; ++i) {}",
@@ -54,11 +55,15 @@ public class ParserTest {
                 "}")),
         invalid("Multiline string, end of line not escaped", "'\n'", "No closing ' found"),
         valid(
-            "Multiline string, end of line properly escaped", "'\\\n'", Arrays.asList("'\\", "'")),
+            "Multiline string, end of line properly escaped",
+            "'\\\n'",
+            Arrays.asList("'\\", "'"),
+            Arrays.asList(11, 12)),
         valid(
             "Multiline string, end of line properly escaped + empty lines",
             "'\\\n\n   \n\n\n'",
-            Arrays.asList("'\\", "'")),
+            Arrays.asList("'\\", "'"),
+            Arrays.asList(11, 16)),
         invalid(
             "Multiline string, end of line properly escaped + empty lines + comment",
             "'\\\n\n\n//Comment\n\n'",
@@ -83,11 +88,13 @@ public class ParserTest {
         valid(
             "Typed constant non-successive characters",
             "$		boolean 	 [ 		false ]",
-            Arrays.asList("$", "boolean", "[", "false ", "]")),
+            Arrays.asList("$", "boolean", "[", "false ", "]"),
+            Arrays.asList(11, 41, 141, 181, 241)),
         valid(
             "Typed constant escaped characters",
             "$boolean[\\f\\a\\l\\s\\e]",
-            Arrays.asList("$", "boolean", "[", "\\f\\a\\l\\s\\e", "]")),
+            Arrays.asList("$", "boolean", "[", "\\f\\a\\l\\s\\e", "]"),
+            Arrays.asList(11, 21, 91, 101, 201)),
         invalid("Typed constant bad typecast", "$boolean['']", "Bad boolean value: \"''\""),
         invalid("Typed constant, unknown type", "$foo[]", "Unknown type foo"),
         invalid(
@@ -99,7 +106,8 @@ public class ParserTest {
         valid(
             "Typed constant, nested brackets, proper",
             "$item[[8042]rock]",
-            Arrays.asList("$", "item", "[", "[8042]rock", "]")),
+            Arrays.asList("$", "item", "[", "[8042]rock", "]"),
+            Arrays.asList(11, 21, 61, 71, 171)),
         invalid(
             "Typed constant, nested brackets, improper",
             "$item[[abc]]",
@@ -107,7 +115,8 @@ public class ParserTest {
         valid(
             "Typed constant, numeric literal",
             "$item[1]",
-            Arrays.asList("$", "item", "[", "1", "]")),
+            Arrays.asList("$", "item", "[", "1", "]"),
+            Arrays.asList(11, 21, 61, 71, 81)),
         valid(
             "Typed constant literal correction",
             "$item[rock]; $effect[buy!]; $monster[eldritch]; $skill[boon]; $location[dire warren]",
@@ -166,7 +175,8 @@ public class ParserTest {
         valid(
             "Plural constant non-successive characters",
             "$		booleans 	 [ 		 ]",
-            Arrays.asList("$", "booleans", "[", "]")),
+            Arrays.asList("$", "booleans", "[", "]"),
+            Arrays.asList(11, 41, 151, 201)),
         valid(
             "Plural constant multiline",
             // End-of-lines can appear anywhere
@@ -190,7 +200,8 @@ public class ParserTest {
         valid(
             "Plural constant, nested brackets, proper",
             "$items[[8042]rock]",
-            Arrays.asList("$", "items", "[", "[8042]rock", "]")),
+            Arrays.asList("$", "items", "[", "[8042]rock", "]"),
+            Arrays.asList(11, 21, 71, 81, 181)),
         invalid(
             "Plural constant, nested brackets, improper",
             "$items[[abc]]",
@@ -202,7 +213,8 @@ public class ParserTest {
         valid(
             "Plural constant, comment",
             "$booleans[tr//Comment\nue]",
-            Arrays.asList("$", "booleans", "[", "tr", "//Comment", "ue", "]")),
+            Arrays.asList("$", "booleans", "[", "tr", "//Comment", "ue", "]"),
+            Arrays.asList(11, 21, 101, 111, 131, 12, 32)),
         invalid(
             "Plural constant, two line-separated slashes",
             "$booleans[tr/\n/ue]",
@@ -214,13 +226,15 @@ public class ParserTest {
         valid(
             "Mid-line // comment",
             "int x = // interrupting comment\n  5;",
-            Arrays.asList("int", "x", "=", "// interrupting comment", "5", ";")),
+            Arrays.asList("int", "x", "=", "// interrupting comment", "5", ";"),
+            Arrays.asList(11, 51, 71, 91, 32, 42)),
         valid(
             "Mid-line # comment",
             // This ought to only accept full-line comments, but it's incorrectly implemented,
             // and at this point, widely used enough that this isn't feasible to change.
             "int x = # interrupting comment\n  5;",
-            Arrays.asList("int", "x", "=", "# interrupting comment", "5", ";")),
+            Arrays.asList("int", "x", "=", "# interrupting comment", "5", ";"),
+            Arrays.asList(11, 51, 71, 91, 32, 42)),
         valid(
             "Multiline comment",
             "int x =/* this\n    is a comment\n   */ 5;",
@@ -327,15 +341,18 @@ public class ParserTest {
         valid(
             "script directive delimited with <>",
             "script <zlib.ash>;",
-            Arrays.asList("script", "<zlib.ash>", ";")),
+            Arrays.asList("script", "<zlib.ash>", ";"),
+            Arrays.asList(11, 81, 181)),
         valid(
             "script directive delimited with \"\"",
             "script \"zlib.ash\"",
-            Arrays.asList("script", "\"zlib.ash\"")),
+            Arrays.asList("script", "\"zlib.ash\""),
+            Arrays.asList(11, 81)),
         valid(
             "script directive without delimiter",
             "script zlib.ash",
-            Arrays.asList("script", "zlib.ash")),
+            Arrays.asList("script", "zlib.ash"),
+            Arrays.asList(11, 81)),
         invalid("Unterminated script directive", "script \"zlib.ash", "No closing \" found"),
         valid("Script with bom", "\ufeff    'hello world'", Arrays.asList("'hello world'")),
         valid("Simple operator assignment", "int x = 3;", Arrays.asList("int", "x", "=", "3", ";")),
@@ -457,15 +474,18 @@ public class ParserTest {
         valid(
             "Numeric literal split after negative",
             "-/*negative \nnumber*/1.23;",
-            Arrays.asList("-", "/*negative", "number*/", "1", ".", "23", ";")),
+            Arrays.asList("-", "/*negative", "number*/", "1", ".", "23", ";"),
+            Arrays.asList(11, 21, 12, 92, 102, 112, 132)),
         valid(
             "Float literal split after decimal",
             "1./*decimal\n*/23;",
-            Arrays.asList("1", ".", "/*decimal", "*/", "23", ";")),
+            Arrays.asList("1", ".", "/*decimal", "*/", "23", ";"),
+            Arrays.asList(11, 21, 31, 12, 32, 52)),
         valid(
             "Float literal with no integral component",
             "-.123;",
-            Arrays.asList("-", ".", "123", ";")),
+            Arrays.asList("-", ".", "123", ";"),
+            Arrays.asList(11, 21, 31, 61)),
         invalid(
             "Float literal with no integral part, non-numeric fractional part",
             "-.123abc;",
@@ -473,7 +493,8 @@ public class ParserTest {
         valid(
             "unary negation",
             "int x; (-x);",
-            Arrays.asList("int", "x", ";", "(", "-", "x", ")", ";")),
+            Arrays.asList("int", "x", ";", "(", "-", "x", ")", ";"),
+            Arrays.asList(11, 51, 61, 81, 91, 101, 111, 121)),
         /*
           There's code for this case, but we encounter a separate error ("Record expected").
         valid(
@@ -509,7 +530,8 @@ public class ParserTest {
         valid(
             "Non-basic-script cli_execute",
             "int cli_execute; cli_execute++",
-            Arrays.asList("int", "cli_execute", ";", "cli_execute", "++")),
+            Arrays.asList("int", "cli_execute", ";", "cli_execute", "++"),
+            Arrays.asList(11, 51, 161, 181, 291)),
         invalid(
             "For loop, no/bad initial expression",
             "for x from",
@@ -525,7 +547,8 @@ public class ParserTest {
         valid(
             "basic template string",
             "`this is some math: {4 + 7}`",
-            Arrays.asList("`this is some math: {", "4", "+", "7", "}`")),
+            Arrays.asList("`this is some math: {", "4", "+", "7", "}`"),
+            Arrays.asList(11, 221, 241, 261, 271)),
         invalid(
             "template string with a new variable",
             "`this is some math: {int x = 4; x + 7}`",
@@ -549,12 +572,14 @@ public class ParserTest {
             "template string with multiple templates",
             "`{'hello'} {'world'}`",
             Arrays.asList("`{", "'hello'", "} {", "'world'", "}`")),
-        valid("string with uninteresting escape", "'\\z'", Arrays.asList("'\\z'")),
+        valid(
+            "string with uninteresting escape", "'\\z'", Arrays.asList("'\\z'"), Arrays.asList(11)),
         valid(
             "string with unclearly terminated octal escape",
             "'\\1131'",
             // \113 is char code 75, which maps to 'K'
-            Arrays.asList("'\\1131'")),
+            Arrays.asList("'\\1131'"),
+            Arrays.asList(11)),
         invalid(
             "string with insufficient octal digits",
             "'\\11'",
@@ -563,7 +588,7 @@ public class ParserTest {
             "string with invalid octal digits",
             "'\\118'",
             "Octal character escape requires 3 digits"),
-        valid("string with hex digits", "'\\x3fgh'", Arrays.asList("'\\x3fgh'")),
+        valid("string with hex digits", "'\\x3fgh'", Arrays.asList("'\\x3fgh'"), Arrays.asList(11)),
         invalid(
             "string with invalid hex digits",
             "'\\xhello'",
@@ -572,7 +597,11 @@ public class ParserTest {
             "string with insufficient hex digits",
             "'\\x1'",
             "Hexadecimal character escape requires 2 digits"),
-        valid("string with unicode digits", "'\\u0041'", Arrays.asList("'\\u0041'")),
+        valid(
+            "string with unicode digits",
+            "'\\u0041'",
+            Arrays.asList("'\\u0041'"),
+            Arrays.asList(11)),
         invalid(
             "string with invalid unicode digits",
             "'\\uzzzz'",
@@ -810,7 +839,7 @@ public class ParserTest {
             // Arrays.asList( "return", ";" )
             ),
         valid("top-level exit", "exit;", Arrays.asList("exit", ";")),
-        valid("empty block", "{}", Arrays.asList("{", "}")),
+        valid("empty block", "{}", Arrays.asList("{", "}"), Arrays.asList(11, 21)),
         invalid("exit with parameter", "exit 1;", "Expected ;, found 1"),
         valid(
             "break inside while-loop",
@@ -835,20 +864,24 @@ public class ParserTest {
         valid(
             "for-from-to",
             "for i from 1 to 10000;",
-            Arrays.asList("for", "i", "from", "1", "to", "10000", ";")),
+            Arrays.asList("for", "i", "from", "1", "to", "10000", ";"),
+            Arrays.asList(11, 51, 71, 121, 141, 171, 221)),
         valid(
             "for-from-upto",
             "for i from 1 upto 10000;",
-            Arrays.asList("for", "i", "from", "1", "upto", "10000", ";")),
+            Arrays.asList("for", "i", "from", "1", "upto", "10000", ";"),
+            Arrays.asList(11, 51, 71, 121, 141, 191, 241)),
         valid(
             "for-from-to-by",
             "for i from 1 to 10000 by 100;",
-            Arrays.asList("for", "i", "from", "1", "to", "10000", "by", "100", ";")),
+            Arrays.asList("for", "i", "from", "1", "to", "10000", "by", "100", ";"),
+            Arrays.asList(11, 51, 71, 121, 141, 171, 231, 261, 291)),
         valid(
             "for-from-downto",
             // This is valid, but will immediately return.
             "for i from 1 downto 10000;",
-            Arrays.asList("for", "i", "from", "1", "downto", "10000", ";")),
+            Arrays.asList("for", "i", "from", "1", "downto", "10000", ";"),
+            Arrays.asList(11, 51, 71, 121, 141, 211, 261)),
         invalid("no return from int function", "int f() {}", "Missing return value"),
         invalid("return void from int function", "int f() { return; }", "Return needs int value"),
         invalid(
@@ -863,8 +896,13 @@ public class ParserTest {
         valid(
             "single-command if",
             "if (true) print('msg');",
-            Arrays.asList("if", "(", "true", ")", "print", "(", "'msg'", ")", ";")),
-        valid("empty if", "if (true);", Arrays.asList("if", "(", "true", ")", ";")),
+            Arrays.asList("if", "(", "true", ")", "print", "(", "'msg'", ")", ";"),
+            Arrays.asList(11, 41, 51, 91, 111, 161, 171, 221, 231)),
+        valid(
+            "empty if",
+            "if (true);",
+            Arrays.asList("if", "(", "true", ")", ";"),
+            Arrays.asList(11, 41, 51, 91, 101)),
         invalid("unclosed block scope", "{", "Expected }, found end of file"),
         // if / else-if / else
         invalid("if without condition", "if true", "Expected (, found true"),
@@ -1336,9 +1374,19 @@ public class ParserTest {
     // This will fail if an exception is thrown.
     script.parser.parse();
     assertEquals(((ValidScriptData) script).tokens, getTokensContent(script.parser), script.desc);
+    if (((ValidScriptData) script).positions != null) {
+      assertEquals(
+          ((ValidScriptData) script).positions, getTokensPosition(script.parser), script.desc);
+    }
   }
 
   public static List<String> getTokensContent(final Parser parser) {
     return parser.getTokens().stream().map(token -> token.content).collect(Collectors.toList());
+  }
+
+  public static List<Integer> getTokensPosition(final Parser parser) {
+    return parser.getTokens().stream()
+        .map(token -> (token.getStart().getCharacter() + 1) * 10 + token.getStart().getLine() + 1)
+        .collect(Collectors.toList());
   }
 }

@@ -11,6 +11,26 @@ public abstract class ScriptData {
     return Arguments.of(new ValidScriptData(desc, script, tokens));
   }
 
+  /**
+   * Shortcut method for the creation of a valid script containing the given tokens, each of them
+   * starting on its respective position.
+   *
+   * <p>Positions are encoded as follow: {@code CCC(...)L} where C is the starting character, and L
+   * is the starting line.
+   *
+   * <p>For example, {@code 105} means 10th character, 5th line.
+   *
+   * <p>Both character and line are 1-indexed, meaning the smallest position is {@code 11} (1st
+   * character, 1st line).
+   */
+  public static Arguments valid(
+      final String desc,
+      final String script,
+      final List<String> tokens,
+      final List<Integer> positions) {
+    return Arguments.of(new ValidScriptData(desc, script, tokens, positions));
+  }
+
   /** Shortcut method for the creation of an invalid script failing with the given error message. */
   public static Arguments invalid(final String desc, final String script, final String errorText) {
     return Arguments.of(new InvalidScriptData(desc, script, errorText));
@@ -28,11 +48,22 @@ public abstract class ScriptData {
 
   public static class ValidScriptData extends ScriptData {
     public final List<String> tokens;
+    public List<Integer> positions;
 
     private ValidScriptData(
         final String description, final String script, final List<String> tokens) {
       super(description, script);
       this.tokens = tokens;
+    }
+
+    private ValidScriptData(
+        final String description,
+        final String script,
+        final List<String> tokens,
+        final List<Integer> positions) {
+      super(description, script);
+      this.tokens = tokens;
+      this.positions = positions;
     }
   }
 
