@@ -48,12 +48,11 @@ public abstract class ScriptData {
 
   public static class ValidScriptData extends ScriptData {
     public final List<String> tokens;
-    public List<Integer> positions;
+    public final List<Integer> positions;
 
     private ValidScriptData(
         final String description, final String script, final List<String> tokens) {
-      super(description, script);
-      this.tokens = tokens;
+      this(description, script, tokens, null); // Will be deleted
     }
 
     private ValidScriptData(
