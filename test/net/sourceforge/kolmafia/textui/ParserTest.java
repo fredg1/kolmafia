@@ -1386,11 +1386,11 @@ public class ParserTest {
     }
   }
 
-  public static List<String> getTokensContent(final Parser parser) {
+  private static List<String> getTokensContent(final Parser parser) {
     return parser.getTokens().stream().map(token -> token.content).collect(Collectors.toList());
   }
 
-  public static List<Integer> getTokensPosition(final Parser parser) {
+  private static List<Integer> getTokensPosition(final Parser parser) {
     return parser.getTokens().stream()
         .map(token -> (token.getStart().getCharacter() + 1) * 10 + token.getStart().getLine() + 1)
         .collect(Collectors.toList());
