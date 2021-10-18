@@ -1599,15 +1599,15 @@ public class ParserTest {
   private static void testValidScript(final ValidScriptData script) {
     // This will fail if an exception is thrown.
     script.parser.parse();
-    assertEquals(script.tokens, getTokensContent(script.parser), script.desc);
-    assertEquals(script.positions, getTokensPosition(script.parser), script.desc);
+    assertEquals(script.tokens, getTokensContents(script.parser), script.desc);
+    assertEquals(script.positions, getTokensPositions(script.parser), script.desc);
   }
 
-  private static List<String> getTokensContent(final Parser parser) {
+  private static List<String> getTokensContents(final Parser parser) {
     return parser.getTokens().stream().map(token -> token.content).collect(Collectors.toList());
   }
 
-  private static List<String> getTokensPosition(final Parser parser) {
+  private static List<String> getTokensPositions(final Parser parser) {
     return parser.getTokens().stream()
         .map(token -> token.getStart().getLine() + 1 + "-" + (token.getStart().getCharacter() + 1))
         .collect(Collectors.toList());
