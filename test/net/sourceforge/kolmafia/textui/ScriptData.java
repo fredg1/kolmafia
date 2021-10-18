@@ -6,28 +6,18 @@ import java.util.List;
 import org.junit.jupiter.params.provider.Arguments;
 
 public abstract class ScriptData {
-  /** Shortcut method for the creation of a valid script containing the given tokens. */
-  public static Arguments valid(final String desc, final String script, final List<String> tokens) {
-    return Arguments.of(new ValidScriptData(desc, script, tokens));
-  }
-
   /**
    * Shortcut method for the creation of a valid script containing the given tokens, each of them
    * starting on its respective position.
    *
-   * <p>Positions are encoded as follow: {@code CCC(...)L} where C is the starting character, and L
-   * is the starting line.
-   *
-   * <p>For example, {@code 105} means 10th character, 5th line.
-   *
-   * <p>Both character and line are 1-indexed, meaning the smallest position is {@code 11} (1st
-   * character, 1st line).
+   * <p>Positions are serialized as {@code "L-C"} where L is the starting line, C is the starting
+   * character, and both are 1-indexed.
    */
   public static Arguments valid(
       final String desc,
       final String script,
       final List<String> tokens,
-      final List<Integer> positions) {
+      final List<String> positions) {
     return Arguments.of(new ValidScriptData(desc, script, tokens, positions));
   }
 
@@ -48,18 +38,13 @@ public abstract class ScriptData {
 
   public static class ValidScriptData extends ScriptData {
     public final List<String> tokens;
-    public final List<Integer> positions;
-
-    private ValidScriptData(
-        final String description, final String script, final List<String> tokens) {
-      this(description, script, tokens, null); // Will be deleted
-    }
+    public final List<String> positions;
 
     private ValidScriptData(
         final String description,
         final String script,
         final List<String> tokens,
-        final List<Integer> positions) {
+        final List<String> positions) {
       super(description, script);
       this.tokens = tokens;
       this.positions = positions;
