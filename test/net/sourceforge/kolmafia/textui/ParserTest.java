@@ -1365,18 +1365,24 @@ public class ParserTest {
   @MethodSource("data")
   public void testScriptValidity(ScriptData script) {
     if (script instanceof InvalidScriptData) {
-      ScriptException e = assertThrows(ScriptException.class, script.parser::parse, script.desc);
-      assertThat(
-          script.desc, e.getMessage(), containsString(((InvalidScriptData) script).errorText));
+      testInvalidScript((InvalidScriptData) script);
       return;
     }
 
+    testValidScript((ValidScriptData) script);
+  }
+
+  private static void testInvalidScript(final InvalidScriptData script) {
+    ScriptException e = assertThrows(ScriptException.class, script.parser::parse, script.desc);
+    assertThat(script.desc, e.getMessage(), containsString(script.errorText));
+  }
+
+  private static void testValidScript(final ValidScriptData script) {
     // This will fail if an exception is thrown.
     script.parser.parse();
-    assertEquals(((ValidScriptData) script).tokens, getTokensContent(script.parser), script.desc);
-    if (((ValidScriptData) script).positions != null) {
-      assertEquals(
-          ((ValidScriptData) script).positions, getTokensPosition(script.parser), script.desc);
+    assertEquals(script.tokens, getTokensContent(script.parser), script.desc);
+    if (script.positions != null) {
+      assertEquals(script.positions, getTokensPosition(script.parser), script.desc);
     }
   }
 
