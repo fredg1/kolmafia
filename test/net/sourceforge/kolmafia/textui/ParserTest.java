@@ -7,6 +7,8 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.sourceforge.kolmafia.StaticEntity;
 import net.sourceforge.kolmafia.textui.ScriptData.InvalidScriptData;
@@ -1333,6 +1335,10 @@ public class ParserTest {
 
     // This will fail if an exception is thrown.
     script.parser.parse();
-    assertEquals(((ValidScriptData) script).tokens, script.parser.getTokensContent(), script.desc);
+    assertEquals(((ValidScriptData) script).tokens, getTokensContent(script.parser), script.desc);
+  }
+
+  public static List<String> getTokensContent(final Parser parser) {
+    return parser.getTokens().stream().map(token -> token.content).collect(Collectors.toList());
   }
 }
