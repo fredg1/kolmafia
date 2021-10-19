@@ -868,17 +868,11 @@ public class ParserTest {
         // if / else-if / else
         invalid("if without condition", "if true", "Expected (, found true"),
         invalid("if with empty condition", "if ()", "Expression expected"),
-        invalid(
-            "if with incorrect condition", "if (1)", "\"if\" requires a boolean condition"),
-        invalid(
-            "if with unclosed condition", "if (true", "Expected ), found end of file"),
+        invalid("if with incorrect condition", "if (1)", "\"if\" requires a boolean condition"),
+        invalid("if with unclosed condition", "if (true", "Expected ), found end of file"),
         // These probably shouldn't need to be separate test cases...
-        invalid(
-            "else if without condition",
-            "if (false); else if true",
-            "Expected (, found true"),
-        invalid(
-            "else if with empty condition", "if (false); else if ()", "Expression expected"),
+        invalid("else if without condition", "if (false); else if true", "Expected (, found true"),
+        invalid("else if with empty condition", "if (false); else if ()", "Expression expected"),
         invalid(
             "else if with incorrect condition",
             "if (false); else if (2)",
@@ -908,8 +902,7 @@ public class ParserTest {
                 "repeat", "print", "(", "'hello'", ")", ";", "until", "(", "true", ")", ";")),
         invalid("repeat without until", "repeat {}", "Expected until, found end of file"),
         invalid("repeat without condition", "repeat {} until true", "Expected (, found true"),
-        invalid(
-            "repeat with empty condition", "repeat {} until ()", "Expression expected"),
+        invalid("repeat with empty condition", "repeat {} until ()", "Expression expected"),
         invalid(
             "repeat with incorrect condition",
             "repeat {} until ('done')",
@@ -1346,13 +1339,17 @@ public class ParserTest {
     if (script instanceof InvalidScriptData) {
       for (Parser.AshDiagnostic diagnostic : script.parser.getDiagnostics()) {
         if (diagnostic.severity == Error) {
-          assertThat(script.desc, diagnostic.toString(), containsString(((InvalidScriptData) script).errorText));
+          assertThat(
+              script.desc,
+              diagnostic.toString(),
+              containsString(((InvalidScriptData) script).errorText));
           break;
         }
       }
       return;
     }
 
-    assertEquals(((ValidScriptData) script).tokens, script.parser.getTokensContent(null), script.desc);
+    assertEquals(
+        ((ValidScriptData) script).tokens, script.parser.getTokensContent(null), script.desc);
   }
 }
