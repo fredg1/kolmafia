@@ -563,7 +563,7 @@ public class Parser {
           () -> {
             // Found a type but no function or variable to tie it to
             this.error(
-                this.makeLocation(t.getLocation(), this.currentToken()),
+                Parser.makeLocation(t.getLocation(), this.currentToken()),
                 "Type given but not used to declare anything");
           });
     }
@@ -688,7 +688,7 @@ public class Parser {
       } else {
         // Found a type but no function or variable to tie it to
         this.error(
-            this.makeLocation(t.getLocation(), this.currentToken()),
+            Parser.makeLocation(t.getLocation(), this.currentToken()),
             "Type given but not used to declare anything");
       }
     }
@@ -951,7 +951,7 @@ public class Parser {
         // Make a vararg type out of the previously parsed type.
         paramType =
             new VarArgType(paramType)
-                .reference(this.makeLocation(paramType.getLocation(), this.currentToken()));
+                .reference(Parser.makeLocation(paramType.getLocation(), this.currentToken()));
 
         this.readToken(); // read ...
       }
@@ -1896,7 +1896,7 @@ public class Parser {
 
       Type type = new AggregateType(dataType, new BadType(null, null));
 
-      return type.reference(this.makeLocation(dataType.getLocation(), this.peekPreviousToken()));
+      return type.reference(Parser.makeLocation(dataType.getLocation(), this.peekPreviousToken()));
     }
 
     if (this.currentToken().equals(",")
@@ -1920,7 +1920,7 @@ public class Parser {
             ? new AggregateType(dataType, indexType)
             : new AggregateType(dataType, size);
 
-    return type.reference(this.makeLocation(dataType.getLocation(), this.peekPreviousToken()));
+    return type.reference(Parser.makeLocation(dataType.getLocation(), this.peekPreviousToken()));
   }
 
   private boolean parseIdentifier(final String identifier) {
@@ -2640,7 +2640,7 @@ public class Parser {
         // Found a type but no function or variable to tie it to
         if (!caseError) {
           this.error(
-              this.makeLocation(t.getLocation(), this.currentToken()),
+              Parser.makeLocation(t.getLocation(), this.currentToken()),
               "Type given but not used to declare anything");
         }
         switchError = caseError = true;
@@ -3635,7 +3635,7 @@ public class Parser {
 
     // Include the first parameter, if any, in the FunctionCall's location
     if (firstParam != null) {
-      functionCallLocation = this.makeLocation(firstParam.getLocation(), functionCallLocation);
+      functionCallLocation = Parser.mergeLocations(firstParam.getLocation(), functionCallLocation);
     }
 
     return new FunctionCall(functionCallLocation, target, params, this);
@@ -3840,7 +3840,7 @@ public class Parser {
               : oper.isInteger()
                   ? (oper + " requires an integer expression and an integer variable reference")
                   : ("Cannot store " + rhs.getType() + " in " + lhs + " of type " + lhs.getType());
-      this.error(this.makeLocation(lhs.getLocation(), rhs.getLocation()), error);
+      this.error(Parser.mergeLocations(lhs.getLocation(), rhs.getLocation()), error);
       assignmentError = true;
     }
 
@@ -3940,7 +3940,7 @@ public class Parser {
 
     Operator oper = new Operator(this.makeLocation(operToken), operStr, this);
 
-    return new IncDec(this.makeLocation(lhs.getLocation(), oper.getLocation()), lhs, oper);
+    return new IncDec(Parser.mergeLocations(lhs.getLocation(), oper.getLocation()), lhs, oper);
   }
 
   private Evaluable parseExpression(final BasicScope scope) throws InterruptedException {
@@ -4103,7 +4103,7 @@ public class Parser {
 
         if (!expressionError && !oper.validCoercion(lhs.getType(), rhs.getType())) {
           this.error(
-              this.makeLocation(lhs.getLocation(), rhs.getLocation()),
+              Parser.mergeLocations(lhs.getLocation(), rhs.getLocation()),
               "Cannot choose between "
                   + lhs
                   + " ("
@@ -4149,7 +4149,7 @@ public class Parser {
             lhs = new Concatenate(lhs, rhs);
           }
         } else {
-          Location operationLocation = this.makeLocation(lhs.getLocation(), rhs.getLocation());
+          Location operationLocation = Parser.mergeLocations(lhs.getLocation(), rhs.getLocation());
 
           rhs = this.autoCoerceValue(ltype, rhs, scope);
           if (!expressionError && !oper.validCoercion(ltype, rhs.getType())) {
@@ -5024,7 +5024,7 @@ public class Parser {
 
         if (!(type instanceof AggregateType)) {
           if (!variableReferenceError && !type.isBad()) {
-            Location location = this.makeLocation(current.getLocation(), this.peekPreviousToken());
+            Location location = Parser.makeLocation(current.getLocation(), this.peekPreviousToken());
             String message;
             if (indices.isEmpty()) {
               message = "Variable '" + var.getName() + "' cannot be indexed";
@@ -5134,7 +5134,7 @@ public class Parser {
       // TODO gather references to record fields
       current =
           new CompositeReference(
-              this.makeLocation(current.getLocation(), this.peekPreviousToken()),
+              Parser.makeLocation(current.getLocation(), this.peekPreviousToken()),
               current.target,
               indices,
               this);
@@ -5882,12 +5882,20 @@ public class Parser {
     return new Location(uri, range);
   }
 
-  private Location makeLocation(final Location start, final Range end) {
-    return this.makeLocation(start.getRange(), end);
+  private static Location makeLocation(final Location start, final Range end) {
+    return Parser.mergeLocations(start, new Location(start.getUri(), end));
   }
 
-  private Location makeLocation(final Location start, final Location end) {
-    return this.makeLocation(start.getRange(), end.getRange());
+  private static Location mergeLocations(final Location start, final Location end) {
+    if (start == null) {
+      return end;
+    }
+
+    if (end == null || !start.getUri().equals(end.getUri())) {
+      return start;
+    }
+
+    return new Location(start.getUri(), Parser.mergeRanges(start.getRange(), end.getRange()));
   }
 
   // **************** Parse errors *****************
