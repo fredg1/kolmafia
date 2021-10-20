@@ -53,8 +53,8 @@ import org.eclipse.lsp4j.SemanticTokensWithRegistrationOptions;
 import org.eclipse.lsp4j.ServerCapabilities;
 import org.eclipse.lsp4j.TokenFormat;
 
+import net.sourceforge.kolmafia.textui.Line.Token;
 import net.sourceforge.kolmafia.textui.Parser;
-import net.sourceforge.kolmafia.textui.Parser.Line.Token;
 
 import net.sourceforge.kolmafia.textui.langserver.AshLanguageServer;
 
