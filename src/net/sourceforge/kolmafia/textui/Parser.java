@@ -5882,12 +5882,12 @@ public class Parser {
     return new Location(uri, range);
   }
 
-  private Location makeLocation(final Location start, final Location end) {
-    return this.makeLocation(start.getRange(), end.getRange());
-  }
-
   private Location makeLocation(final Location start, final Range end) {
     return this.makeLocation(start.getRange(), end);
+  }
+
+  private Location makeLocation(final Location start, final Location end) {
+    return this.makeLocation(start.getRange(), end.getRange());
   }
 
   // **************** Parse errors *****************
