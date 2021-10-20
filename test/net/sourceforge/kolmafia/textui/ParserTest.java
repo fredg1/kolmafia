@@ -8,6 +8,8 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.sourceforge.kolmafia.StaticEntity;
 import net.sourceforge.kolmafia.textui.ScriptData.InvalidScriptData;
@@ -1336,20 +1338,39 @@ public class ParserTest {
     } catch (InterruptedException e) {
     }
 
-    if (script instanceof InvalidScriptData) {
-      for (Parser.AshDiagnostic diagnostic : script.parser.getDiagnostics()) {
-        if (diagnostic.severity == Error) {
-          assertThat(
-              script.desc,
-              diagnostic.toString(),
-              containsString(((InvalidScriptData) script).errorText));
-          break;
-        }
+    String firstError = null;
+    for (Parser.AshDiagnostic diagnostic : script.parser.getDiagnostics()) {
+      if (diagnostic.severity == Error) {
+        firstError = diagnostic.toString();
+        break;
       }
+    }
+
+    if (script instanceof InvalidScriptData) {
+      testInvalidScript((InvalidScriptData) script, firstError);
       return;
     }
 
-    assertEquals(
-        ((ValidScriptData) script).tokens, script.parser.getTokensContent(null), script.desc);
+    testValidScript((ValidScriptData) script, firstError);
+  }
+
+  private static void testInvalidScript(final InvalidScriptData script, final String error) {
+    assertThat(script.desc, error, containsString(script.errorText));
+  }
+
+  private static void testValidScript(final ValidScriptData script, final String error) {
+    assertNull(error, script.desc);
+    assertEquals(script.tokens, getTokensContents(script.parser), script.desc);
+    assertEquals(script.positions, getTokensPositions(script.parser), script.desc);
+  }
+
+  private static List<String> getTokensContents(final Parser parser) {
+    return parser.getTokens().stream().map(token -> token.content).collect(Collectors.toList());
+  }
+
+  private static List<String> getTokensPositions(final Parser parser) {
+    return parser.getTokens().stream()
+        .map(token -> token.getStart().getLine() + 1 + "-" + (token.getStart().getCharacter() + 1))
+        .collect(Collectors.toList());
   }
 }

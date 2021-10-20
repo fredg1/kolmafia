@@ -11,7 +11,6 @@ import java.io.PrintStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.stream.Collectors;
 import net.java.dev.spellcast.utilities.DataUtilities;
 import net.sourceforge.kolmafia.KoLConstants;
 import net.sourceforge.kolmafia.KoLmafiaCLI;
@@ -5567,6 +5566,10 @@ public class Parser {
         || previousPosition.getCharacter() < currentPosition.getCharacter();
   }
 
+  public List<Token> getTokens() {
+    return this.getTokens(null);
+  }
+
   public List<Token> getTokens(final Range range) {
     final List<Token> result = new LinkedList<>();
 
@@ -5606,10 +5609,6 @@ public class Parser {
     }
 
     return result;
-  }
-
-  public List<String> getTokensContent(final Range range) {
-    return this.getTokens(range).stream().map(token -> token.content).collect(Collectors.toList());
   }
 
   private Position getCurrentPosition() {
