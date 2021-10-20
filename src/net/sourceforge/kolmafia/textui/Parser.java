@@ -5886,7 +5886,7 @@ public class Parser {
     return Parser.mergeLocations(start, new Location(start.getUri(), end));
   }
 
-  private static Location mergeLocations(final Location start, final Location end) {
+  public static Location mergeLocations(final Location start, final Location end) {
     if (start == null) {
       return end;
     }
