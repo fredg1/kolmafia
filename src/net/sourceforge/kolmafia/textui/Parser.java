@@ -5864,6 +5864,11 @@ public class Parser {
     return new Range(start.getStart(), end.getEnd());
   }
 
+  // temporary, we want to not need this
+  private Location makeZeroWidthLocation() {
+    return this.makeLocation(this.getCurrentPosition());
+  }
+
   private Location makeLocation(final Position start) {
     return this.makeLocation(this.rangeToHere(start));
   }
@@ -5872,22 +5877,17 @@ public class Parser {
     return this.makeLocation(Parser.mergeRanges(start, end));
   }
 
+  private Location makeLocation(final Range range) {
+    String uri = this.fileUri != null ? this.fileUri.toString() : this.istream.toString();
+    return new Location(uri, range);
+  }
+
   private Location makeLocation(final Location start, final Location end) {
     return this.makeLocation(start.getRange(), end.getRange());
   }
 
   private Location makeLocation(final Location start, final Range end) {
     return this.makeLocation(start.getRange(), end);
-  }
-
-  private Location makeLocation(final Range range) {
-    String uri = this.fileUri != null ? this.fileUri.toString() : this.istream.toString();
-    return new Location(uri, range);
-  }
-
-  // temporary, we want to not need this
-  private Location makeZeroWidthLocation() {
-    return this.makeLocation(this.getCurrentPosition());
   }
 
   // **************** Parse errors *****************
