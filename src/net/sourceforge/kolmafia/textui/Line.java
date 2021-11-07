@@ -7,6 +7,7 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Stack;
 import net.sourceforge.kolmafia.StaticEntity;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
@@ -19,7 +20,7 @@ public final class Line {
   final int lineNumber;
   final int offset;
 
-  final Deque<Token> tokens = new LinkedList<>();
+  private final Deque<Token> tokens = new LinkedList<>();
 
   final Line previousLine;
   /* Not made final to avoid a possible StackOverflowError. Do not modify. */
@@ -49,7 +50,7 @@ public final class Line {
     if (line == null) {
       // We are the "end of file" (or there was an IOException when reading)
       this.content = null;
-      this.lineNumber = this.previousLine != null ? this.previousLine.lineNumber : 0;
+      this.lineNumber = this.previousLine != null ? this.previousLine.lineNumber : 1;
       this.offset = this.previousLine != null ? this.previousLine.offset : 0;
       return;
     }
@@ -92,6 +93,10 @@ public final class Line {
       return "";
     }
 
+    if (beginIndex < this.offset) {
+      throw new IndexOutOfBoundsException();
+    }
+
     // subtract "offset" from beginIndex, since we already removed it
     return this.content.substring(beginIndex - this.offset);
   }
@@ -109,6 +114,55 @@ public final class Line {
     return newToken;
   }
 
+  Iterable<Token> getTokensIterator() {
+    return new Iterable<Token>() {
+      public Iterator<Token> iterator() {
+        return Line.this.tokens.iterator();
+      }
+    };
+  }
+
+  boolean hasTokens() {
+    return !this.tokens.isEmpty();
+  }
+
+  Token getLastToken() {
+    return this.tokens.getLast();
+  }
+
+  /**
+   * Returns the first non-comment token preceding {@code token} (the very last if {@code null}).
+   *
+   * <p>{@code token} must be part of this {@link Line}. The return value may not.
+   *
+   * @param token the token following the one we want
+   * @return the first non-comment token preceding {@code token} (the very last if {@code null}).
+   */
+  Token peekPreviousToken(final Token token) {
+    final Stack<Token> reAddStack = new Stack<>();
+
+    if (token != null) {
+      if (!this.tokens.contains(token)) {
+        throw new IllegalArgumentException();
+      }
+
+      // Temporarily remove tokens up to (and including) token
+      do {
+        reAddStack.push(this.removeLastToken());
+      } while (reAddStack.peek() != token);
+    }
+
+    final Token previousToken = this.peekLastToken();
+
+    while (!reAddStack.isEmpty()) {
+      // Add the previously removed tokens back in
+      this.tokens.addLast(reAddStack.pop());
+    }
+
+    return previousToken;
+  }
+
+  /** Returns the last non-comment {@link Token} starting from the end of this {@link Line}. */
   Token peekLastToken() {
     Line line = this;
 
@@ -122,10 +176,14 @@ public final class Line {
         }
       }
 
-      line = this.previousLine;
+      line = line.previousLine;
     }
 
     return null;
+  }
+
+  Token removeLastToken() {
+    return this.tokens.removeLast();
   }
 
   @Override
@@ -141,7 +199,16 @@ public final class Line {
     private String semanticType;
     private List<String> semanticModifiers = new ArrayList<>();
 
-    private Token(final int tokenLength) {
+    private Token(int tokenLength) {
+      if (tokenLength <= 0 && Line.this.content != null) {
+        throw new IllegalArgumentException();
+      }
+
+      // Only one "end of file" token allowed
+      if (Line.this.content == null && Line.this.hasTokens()) {
+        throw new IllegalStateException();
+      }
+
       final int offset;
 
       if (!Line.this.tokens.isEmpty()) {
@@ -158,6 +225,7 @@ public final class Line {
         // Going forward, we can just assume lineRemainder is an
         // empty string.
         lineRemainder = "";
+        tokenLength = 0;
       } else {
         final String lineRemainderWithToken = Line.this.substring(offset);
 
@@ -166,7 +234,7 @@ public final class Line {
       }
 
       // 0-indexed line
-      final int lineNumber = Math.max(0, Line.this.lineNumber - 1);
+      final int lineNumber = Line.this.lineNumber - 1;
       this.setStart(new Position(lineNumber, offset));
       this.setEnd(new Position(lineNumber, offset + tokenLength));
 

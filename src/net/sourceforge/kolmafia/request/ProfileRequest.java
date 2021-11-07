@@ -6,6 +6,7 @@ import java.util.Locale;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.sourceforge.kolmafia.AscensionClass;
 import net.sourceforge.kolmafia.KoLCharacter;
 import net.sourceforge.kolmafia.KoLConstants;
 import net.sourceforge.kolmafia.RequestLogger;
@@ -129,7 +130,9 @@ public class ProfileRequest extends GenericRequest implements Comparable<Profile
       while (!token.startsWith("Class")) {
         token = st.nextToken();
       }
-      this.classType = KoLCharacter.getClassType(st.nextToken().trim());
+      token = st.nextToken();
+      AscensionClass ascensionClass = AscensionClass.nameToClass(token.trim());
+      this.classType = ascensionClass == null ? token : ascensionClass.getName();
     } else { // no custom title
       if (!cleanHTML.contains("Level")) {
         return;
@@ -140,7 +143,10 @@ public class ProfileRequest extends GenericRequest implements Comparable<Profile
       }
 
       this.playerLevel = IntegerPool.get(StringUtilities.parseInt(token.substring(5).trim()));
-      this.classType = KoLCharacter.getClassType(st.nextToken().trim());
+
+      token = st.nextToken();
+      AscensionClass ascensionClass = AscensionClass.nameToClass(token.trim());
+      this.classType = ascensionClass == null ? token : ascensionClass.getName();
     }
 
     if (cleanHTML.contains("\nAscensions") && cleanHTML.contains("\nPath")) {
@@ -545,12 +551,11 @@ public class ProfileRequest extends GenericRequest implements Comparable<Profile
 
   public static void parseResponse(String location, String responseText) {
     int who = ProfileRequest.getWho(location);
-    if (who == 1) // if we're looking at Jick's profile
-    {
+    if (who == 1) { // if we're looking at Jick's profile
+      // and we have an empty jar
       if (InventoryManager.hasItem(ItemPool.PSYCHOANALYTIC_JAR)
-          && // and we have an empty jar
-          !Preferences.getBoolean("_psychoJarFilled")) // and we haven't already filled a jar
-      {
+          // and we haven't already filled a jar
+          && !Preferences.getBoolean("_psychoJarFilled")) {
         Preferences.setString(
             "_jickJarAvailable", Boolean.toString(responseText.contains("psychoanalytic jar")));
       }
@@ -585,8 +590,7 @@ public class ProfileRequest extends GenericRequest implements Comparable<Profile
     }
 
     int who = ProfileRequest.getWho(urlString);
-    if (who == 1) // if we're looking at Jick's profile
-    {
+    if (who == 1) { // if we're looking at Jick's profile
       if (urlString.contains("action=jung") && urlString.contains("whichperson=jick")) {
         String message = "Psychoanalyzing Jick";
         RequestLogger.updateSessionLog();

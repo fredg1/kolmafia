@@ -6,6 +6,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -48,7 +49,7 @@ public class Modifiers {
   private static final Map<String, String> familiarEffectByName = new HashMap<>();
   private static final Map<String, Integer> modifierIndicesByName = new HashMap<>();
   private static final List<UseSkillRequest> passiveSkills = new ArrayList<>();
-  private static final List synergies = new ArrayList();
+  private static final Map<String, Integer> synergies = new HashMap<>();
   private static final List<String> mutexes = new ArrayList<>();
   private static final Map<String, Set<String>> uniques = new HashMap<>();
   public static String currentLocation = "";
@@ -1720,8 +1721,8 @@ public class Modifiers {
     }
 
     // Make sure the modifiers apply to current class
-    String type = mods.strings[Modifiers.CLASS];
-    if (type != "" && !type.equals(KoLCharacter.getClassType())) {
+    AscensionClass ascensionClass = AscensionClass.nameToClass(mods.strings[Modifiers.CLASS]);
+    if (ascensionClass != null && ascensionClass != KoLCharacter.getAscensionClass()) {
       return;
     }
 
@@ -2013,22 +2014,22 @@ public class Modifiers {
 
   private static final String[][] classStrings = {
     {
-      KoLCharacter.SEAL_CLUBBER, "Seal Clubbers", "Seal&nbsp;Clubbers",
+      AscensionClass.SEAL_CLUBBER.getName(), "Seal Clubbers", "Seal&nbsp;Clubbers",
     },
     {
-      KoLCharacter.TURTLE_TAMER, "Turtle Tamers", "Turtle&nbsp;Tamers",
+      AscensionClass.TURTLE_TAMER.getName(), "Turtle Tamers", "Turtle&nbsp;Tamers",
     },
     {
-      KoLCharacter.PASTAMANCER, "Pastamancers",
+      AscensionClass.PASTAMANCER.getName(), "Pastamancers",
     },
     {
-      KoLCharacter.SAUCEROR, "Saucerors",
+      AscensionClass.SAUCEROR.getName(), "Saucerors",
     },
     {
-      KoLCharacter.DISCO_BANDIT, "Disco Bandits", "Disco&nbsp;Bandits",
+      AscensionClass.DISCO_BANDIT.getName(), "Disco Bandits", "Disco&nbsp;Bandits",
     },
     {
-      KoLCharacter.ACCORDION_THIEF, "Accordion Thieves", "Accordion&nbsp;Thieves",
+      AscensionClass.ACCORDION_THIEF.getName(), "Accordion Thieves", "Accordion&nbsp;Thieves",
     },
   };
 
@@ -2434,35 +2435,44 @@ public class Modifiers {
             this.set(Modifiers.SPELL_DAMAGE, 0.0);
 
             // Set modifiers depending on Character class
-            String classType = KoLCharacter.getClassType();
-            if (classType == KoLCharacter.SEAL_CLUBBER
-                || classType == KoLCharacter.ZOMBIE_MASTER
-                || classType == KoLCharacter.ED
-                || classType == KoLCharacter.COWPUNCHER
-                || classType == KoLCharacter.BEANSLINGER
-                || classType == KoLCharacter.SNAKE_OILER) {
-              this.set(Modifiers.HP_REGEN_MIN, 10.0);
-              this.set(Modifiers.HP_REGEN_MAX, 12.0);
-              this.set(Modifiers.WEAPON_DAMAGE, 15.0);
-              this.set(Modifiers.DAMAGE_REDUCTION, 1.0);
-            } else if (classType == KoLCharacter.TURTLE_TAMER) {
-              this.set(Modifiers.HP_REGEN_MIN, 10.0);
-              this.set(Modifiers.HP_REGEN_MAX, 12.0);
-              this.set(Modifiers.FAMILIAR_WEIGHT, 5.0);
-            } else if (classType == KoLCharacter.DISCO_BANDIT
-                || classType == KoLCharacter.AVATAR_OF_SNEAKY_PETE) {
-              this.set(Modifiers.RANGED_DAMAGE, 20.0);
-            } else if (classType == KoLCharacter.ACCORDION_THIEF) {
-              this.set(Modifiers.FOUR_SONGS, true);
-            } else if (classType == KoLCharacter.PASTAMANCER) {
-              this.set(Modifiers.MP_REGEN_MIN, 5.0);
-              this.set(Modifiers.MP_REGEN_MAX, 6.0);
-              this.set(Modifiers.COMBAT_MANA_COST, -3.0);
-            } else if (classType == KoLCharacter.SAUCEROR
-                || classType == KoLCharacter.AVATAR_OF_JARLSBERG) {
-              this.set(Modifiers.MP_REGEN_MIN, 5.0);
-              this.set(Modifiers.MP_REGEN_MAX, 6.0);
-              this.set(Modifiers.SPELL_DAMAGE, 20.0);
+            AscensionClass ascensionClass = KoLCharacter.getAscensionClass();
+            if (ascensionClass != null) {
+              switch (ascensionClass) {
+                case SEAL_CLUBBER:
+                case ZOMBIE_MASTER:
+                case ED:
+                case COWPUNCHER:
+                case BEANSLINGER:
+                case SNAKE_OILER:
+                  this.set(Modifiers.HP_REGEN_MIN, 10.0);
+                  this.set(Modifiers.HP_REGEN_MAX, 12.0);
+                  this.set(Modifiers.WEAPON_DAMAGE, 15.0);
+                  this.set(Modifiers.DAMAGE_REDUCTION, 1.0);
+                  break;
+                case TURTLE_TAMER:
+                  this.set(Modifiers.HP_REGEN_MIN, 10.0);
+                  this.set(Modifiers.HP_REGEN_MAX, 12.0);
+                  this.set(Modifiers.FAMILIAR_WEIGHT, 5.0);
+                  break;
+                case DISCO_BANDIT:
+                case AVATAR_OF_SNEAKY_PETE:
+                  this.set(Modifiers.RANGED_DAMAGE, 20.0);
+                  break;
+                case ACCORDION_THIEF:
+                  this.set(Modifiers.FOUR_SONGS, true);
+                  break;
+                case PASTAMANCER:
+                  this.set(Modifiers.MP_REGEN_MIN, 5.0);
+                  this.set(Modifiers.MP_REGEN_MAX, 6.0);
+                  this.set(Modifiers.COMBAT_MANA_COST, -3.0);
+                  break;
+                case SAUCEROR:
+                case AVATAR_OF_JARLSBERG:
+                  this.set(Modifiers.MP_REGEN_MIN, 5.0);
+                  this.set(Modifiers.MP_REGEN_MAX, 6.0);
+                  this.set(Modifiers.SPELL_DAMAGE, 20.0);
+                  break;
+              }
             }
             return true;
           }
@@ -2666,19 +2676,18 @@ public class Modifiers {
   public void applySynergies() {
     int synergetic = this.getRawBitmap(Modifiers.SYNERGETIC);
     if (synergetic == 0) return; // nothing possible
-    Iterator i = Modifiers.synergies.iterator();
-    while (i.hasNext()) {
-      String name = (String) i.next();
-      int mask = ((Integer) i.next()).intValue();
+    for (Entry<String, Integer> entry : Modifiers.synergies.entrySet()) {
+      String name = entry.getKey();
+      int mask = entry.getValue().intValue();
       if ((synergetic & mask) == mask) {
         this.add(Modifiers.getModifiers("Synergy", name));
       }
     }
   }
 
-  // Returned iterator yields alternating names / bitmaps
-  public static Iterator getSynergies() {
-    return Modifiers.synergies.iterator();
+  // Returned set yields bitmaps keyed by names
+  public static Set<Entry<String, Integer>> getSynergies() {
+    return Collections.unmodifiableSet(Modifiers.synergies.entrySet());
   }
 
   private static final AdventureResult somePigs = EffectPool.get(EffectPool.SOME_PIGS);
@@ -3138,25 +3147,25 @@ public class Modifiers {
     matcher = Modifiers.CLASS_PATTERN.matcher(enchantment);
     if (matcher.find()) {
       String plural = matcher.group(1);
-      String cls = "none";
+      AscensionClass cls = null;
       if (plural.equals("Accordion&nbsp;Thieves")) {
-        cls = KoLCharacter.ACCORDION_THIEF;
+        cls = AscensionClass.ACCORDION_THIEF;
       } else if (plural.equals("Disco&nbsp;Bandits")) {
-        cls = KoLCharacter.DISCO_BANDIT;
+        cls = AscensionClass.DISCO_BANDIT;
       } else if (plural.equals("Pastamancers")) {
-        cls = KoLCharacter.PASTAMANCER;
+        cls = AscensionClass.PASTAMANCER;
       } else if (plural.equals("Saucerors")) {
-        cls = KoLCharacter.SAUCEROR;
+        cls = AscensionClass.SAUCEROR;
       } else if (plural.equals("Seal&nbsp;Clubbers")) {
-        cls = KoLCharacter.SEAL_CLUBBER;
+        cls = AscensionClass.SEAL_CLUBBER;
       } else if (plural.equals("Turtle&nbsp;Tamers")) {
-        cls = KoLCharacter.TURTLE_TAMER;
+        cls = AscensionClass.TURTLE_TAMER;
       } else {
         return null;
       }
       return Modifiers.modifierTag(Modifiers.stringModifiers, Modifiers.CLASS)
           + ": \""
-          + cls
+          + cls.getName()
           + "\"";
     }
 
@@ -3577,8 +3586,7 @@ public class Modifiers {
           }
           mask |= emask;
         }
-        Modifiers.synergies.add(name);
-        Modifiers.synergies.add(IntegerPool.get(mask));
+        Modifiers.synergies.put(name, IntegerPool.get(mask));
       } else if (type.startsWith("Mutex")) {
         String[] pieces = name.split("/");
         if (pieces.length < 2) {
@@ -3648,11 +3656,9 @@ public class Modifiers {
     Set<String> wikiname = new TreeSet<>();
 
     // Iterate over all items and assign item id to category
-    Iterator it = ItemDatabase.dataNameEntrySet().iterator();
-    while (it.hasNext()) {
-      Entry entry = (Entry) it.next();
-      Integer key = (Integer) entry.getKey();
-      String name = (String) entry.getValue();
+    for (Entry<Integer, String> entry : ItemDatabase.dataNameEntrySet()) {
+      Integer key = entry.getKey();
+      String name = entry.getValue();
       int type = ItemDatabase.getConsumptionType(key.intValue());
 
       switch (type) {
@@ -3712,10 +3718,8 @@ public class Modifiers {
     Set<String> familiars = new TreeSet<>();
     familiars.add("Familiar:(none)");
 
-    it = FamiliarDatabase.entrySet().iterator();
-    while (it.hasNext()) {
-      Entry entry = (Entry) it.next();
-      String name = (String) entry.getValue();
+    for (Entry<Integer, String> entry : FamiliarDatabase.entrySet()) {
+      String name = entry.getValue();
       if (Modifiers.getModifiers("Familiar", name) != null) {
         familiars.add(name);
       }
@@ -3746,11 +3750,9 @@ public class Modifiers {
     // Make a map of status effects
     Set<String> effects = new TreeSet<>();
 
-    it = EffectDatabase.entrySet().iterator();
-    while (it.hasNext()) {
-      Entry entry = (Entry) it.next();
-      Integer key = (Integer) entry.getKey();
-      String name = (String) entry.getValue();
+    for (Entry<Integer, String> entry : EffectDatabase.entrySet()) {
+      Integer key = entry.getKey();
+      String name = entry.getValue();
       // Skip effect which is also an item
       effects.add(name);
     }
@@ -3758,11 +3760,9 @@ public class Modifiers {
     // Make a map of passive skills
     Set<String> passives = new TreeSet<>();
 
-    it = SkillDatabase.entrySet().iterator();
-    while (it.hasNext()) {
-      Entry entry = (Entry) it.next();
-      Integer key = (Integer) entry.getKey();
-      String name = (String) entry.getValue();
+    for (Entry<Integer, String> entry : SkillDatabase.entrySet()) {
+      Integer key = entry.getKey();
+      String name = entry.getValue();
       if (SkillDatabase.isPassive(key.intValue())) {
         passives.add(name);
       }
@@ -3781,12 +3781,9 @@ public class Modifiers {
 
     // Make a map of zodiac signs
     Set<String> zodiacs = new TreeSet<>();
-    int signCount = KoLCharacter.ZODIACS.length;
 
-    for (int i = 0; i < signCount; ++i) {
-      String key = KoLCharacter.ZODIACS[i];
-      String name = key;
-      zodiacs.add(name);
+    for (ZodiacSign sign : ZodiacSign.standardZodiacSigns) {
+      zodiacs.add(sign.getName());
     }
 
     // Make a map of stat days
@@ -3798,10 +3795,7 @@ public class Modifiers {
     // Make a map of zones
     Set<String> zones = new TreeSet<>();
 
-    it = AdventureDatabase.ZONE_DESCRIPTIONS.keySet().iterator();
-    while (it.hasNext()) {
-      String key = (String) it.next();
-      String name = key;
+    for (String name : AdventureDatabase.ZONE_DESCRIPTIONS.keySet()) {
       if (Modifiers.getModifiers("Zone", name) != null) {
         zones.add(name);
       }
@@ -3810,9 +3804,7 @@ public class Modifiers {
     // Make a map of locations
     Set<String> locations = new TreeSet<>();
 
-    it = AdventureDatabase.getAsLockableListModel().iterator();
-    while (it.hasNext()) {
-      KoLAdventure key = (KoLAdventure) it.next();
+    for (KoLAdventure key : AdventureDatabase.getAsLockableListModel()) {
       String name = key.getAdventureName();
       if (Modifiers.getModifiers("Loc", name) != null) {
         locations.add(name);
@@ -3822,19 +3814,16 @@ public class Modifiers {
     // Make a map of synergies
     Set<String> synergies = new TreeSet<>();
 
-    it = Modifiers.synergies.iterator();
-    while (it.hasNext()) {
-      String name = (String) it.next();
-      int mask = ((Integer) it.next()).intValue();
+    for (Entry<String, Integer> entry : Modifiers.synergies.entrySet()) {
+      String name = entry.getKey();
+      int mask = entry.getValue().intValue();
       synergies.add(name);
     }
 
     // Make a map of mutexes
     Set<String> mutexes = new TreeSet<>();
 
-    it = Modifiers.mutexes.iterator();
-    while (it.hasNext()) {
-      String name = (String) it.next();
+    for (String name : Modifiers.mutexes) {
       mutexes.add(name);
     }
 

@@ -91,122 +91,12 @@ import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.SemanticTokenModifiers;
 import org.eclipse.lsp4j.SemanticTokenTypes;
+import org.eclipse.lsp4j.util.Positions;
 
-/*
-Scope
-	Typedef
-		Identifier (exactly 1)
-	Type
-		existing type
-		Record
-			( Type + Identifier ) (0+)
-		AggregateType
-			AggregateType
-				AggregateType
-					(...) (e.g. boolean [string][string,string][][4][int] [...] )
-	Command (one of:)
-		Return
-			Expression
-				Expression
-					Expression
-						(...)
-				Value
-				Operator
-		BasicScript
-		While
-			Expression
-			+	LoopScope (one of:)
-					Scope
-					Command
-		Foreach
-			Identifier + Value + LoopScope
-		JavaFor
-			Type + Identifier + Expression (0-1)
-			+ Expression
-			+ PreIncDec (0-1) + VariableReference + PostIncDec (0-1) + Assignment
-			+ LoopScope
-		For
-			Identifier + Expression + Expression + Expression (0-1)
-			+ LoopScope
-		Repeat
-			LoopScope + Expression
-		Switch
-			Expression
-			+	(1+):
-				Expression (0-1)
-				+	Type
-					Command
-					Variables
-		Conditional
-			Expression
-			+	(1+)
-				BlockOrSingleCommand
-				+ Expression (0-1)
-		Try
-			BlockOrSingleCommand (one of:)
-				Block
-				SingleCommandScope
-					Command (exactly 1)
-			+ BlockOrSingleCommand
-		Catch
-			BlockOrSingleCommand
-		Static
-			CommandOrDeclaration
-				Type
-				Command
-				Variables
-			Scope
-		Sort
-			VariableReference + Expression
-		Remove
-			Expression
-		Block
-			Scope
-		Value
-			Expression
-			Number
-			String
-				Expression
-				Literal
-			TypedConstant
-				Type
-				String
-				Literal
-			NewRecord
-				Identifier
-				+	AggregateLiteral
-					Expression
-			CatchValue
-				Block
-				Expression
-			PreIncDec
-				VariableReference
-			Invoke
-				Type
-				+	Expression
-					Identifier + VariableReference
-				+	Parameters
-						Expression (0+)
-				+	PostCall
-						VariableReference
-			Call
-				ScopedIdentifier
-				+ Parameters
-				+ PostCall
-			Type + ( AggregateLiteral / VariableReference )
-	Function
-		Identifier + ( Type + Variable ) (0+)
-		+	BlockOrSingleCommand
-	Variables
-		Variable (1+)
-			Identifier
-	AggregateLiteral
-		AggregateLiteral
-			AggregateLiteral
-				(...)
-		Expression
-*/
-
+/**
+ * See devdoc/ParseRoadmap.ebnf for a simplified representation of this class's parsing methods'
+ * call hierarchy.
+ */
 public class Parser {
   public static final String APPROX = "\u2248";
   public static final String PRE_INCREMENT = "++X";
@@ -2256,9 +2146,8 @@ public class Parser {
 
             condition = Value.locate(errorLocation, Value.BAD_VALUE);
           }
-        } else
-        // else without condition
-        {
+        } else {
+          // else without condition
           condition = Value.locate(this.makeZeroWidthLocation(), DataTypes.TRUE_VALUE);
           finalElse = true;
         }
@@ -2794,8 +2683,7 @@ public class Parser {
       } else {
         this.unexpectedTokenError("}", this.currentToken());
       }
-    } else // body is a single call
-    {
+    } else { // body is a single call
       this.parseCommandOrDeclaration(result, functionType);
     }
 
@@ -4869,8 +4757,10 @@ public class Parser {
       if (slash) {
         slash = false;
         if (ch == '/') {
-          this.currentLine.makeToken(i - 1).setType(SemanticTokenTypes.String);
-          this.currentIndex += i - 1;
+          if (i > 1) {
+            this.currentLine.makeToken(i - 1).setType(SemanticTokenTypes.String);
+            this.currentIndex += i - 1;
+          }
           // Throw away the rest of the line
           this.currentLine.makeComment(this.restOfLine().length());
           this.currentIndex += this.restOfLine().length();
@@ -5228,9 +5118,11 @@ public class Parser {
       }
 
       resultString = line.substring(0, endIndex);
-      directiveValueToken = this.currentToken = this.currentLine.makeToken(endIndex);
-      this.currentToken().setType(SemanticTokenTypes.String);
-      this.readToken();
+      if (endIndex > 0) {
+        directiveValueToken = this.currentToken = this.currentLine.makeToken(endIndex);
+        this.currentToken().setType(SemanticTokenTypes.String);
+        this.readToken();
+      }
     }
 
     if (this.currentToken().equals(";")) {
@@ -5300,7 +5192,9 @@ public class Parser {
         final int commentEnd = restOfLine.indexOf("*/");
 
         if (commentEnd == -1) {
-          this.currentLine.makeComment(restOfLine.length());
+          if (!restOfLine.isEmpty()) {
+            this.currentLine.makeComment(restOfLine.length());
+          }
 
           this.currentLine = this.currentLine.nextLine;
           this.currentIndex = this.currentLine.offset;
@@ -5336,7 +5230,9 @@ public class Parser {
         final int commentEnd = restOfLine.indexOf("*/", 2);
 
         if (commentEnd == -1) {
-          this.currentLine.makeComment(restOfLine.length());
+          if (!restOfLine.isEmpty()) {
+            this.currentLine.makeComment(restOfLine.length());
+          }
 
           this.currentLine = this.currentLine.nextLine;
           this.currentIndex = this.currentLine.offset;
@@ -5413,34 +5309,22 @@ public class Parser {
     this.currentToken();
 
     while (this.currentToken != destinationToken) {
-      this.currentLine.tokens.removeLast();
+      this.currentLine.removeLastToken();
 
-      while (this.currentLine.tokens.isEmpty()) {
+      while (!this.currentLine.hasTokens()) {
         // Don't do null checks. If previousLine is null, it means we never saw the
         // destination token, meaning we'd want to throw an error anyway.
         this.currentLine = this.currentLine.previousLine;
       }
 
-      this.currentToken = this.currentLine.tokens.getLast();
+      this.currentToken = this.currentLine.getLastToken();
       this.currentIndex = this.currentToken.getStart().getCharacter();
     }
   }
 
   /** Finds the last token that was *read* */
   private final Token peekPreviousToken() {
-    if (this.currentToken != null) {
-      // Temporarily remove currentToken
-      this.currentLine.tokens.removeLast();
-    }
-
-    final Token previousToken = this.peekLastToken();
-
-    if (this.currentToken != null) {
-      // Add the previously removed token back in
-      this.currentLine.tokens.addLast(this.currentToken);
-    }
-
-    return previousToken;
+    return this.currentLine.peekPreviousToken(this.currentToken);
   }
 
   /** Finds the last token that was *discovered* */
@@ -5472,7 +5356,7 @@ public class Parser {
   private void clearCurrentToken() {
     if (this.currentToken != null) {
       this.currentToken = null;
-      this.currentLine.tokens.removeLast();
+      this.currentLine.removeLastToken();
     }
   }
 
@@ -5585,7 +5469,7 @@ public class Parser {
     while (line != null
         && line.content != null
         && (range == null || range.getEnd().getLine() >= line.lineNumber - 1)) {
-      for (final Token token : line.tokens) {
+      for (final Token token : line.getTokensIterator()) {
         // We know Tokens cannot span multiple lines
 
         if (range != null
@@ -5613,7 +5497,7 @@ public class Parser {
 
   private Position getCurrentPosition() {
     // 0-indexed
-    int lineNumber = Math.max(0, this.getLineNumber() - 1);
+    int lineNumber = this.getLineNumber() - 1;
     return new Position(lineNumber, this.currentIndex);
   }
 
@@ -5628,10 +5512,7 @@ public class Parser {
   }
 
   private static Range mergeRanges(final Range start, final Range end) {
-    if (end == null
-        || start.getStart().getLine() > end.getEnd().getLine()
-        || (start.getStart().getLine() == end.getEnd().getLine()
-            && start.getStart().getCharacter() > end.getEnd().getCharacter())) {
+    if (end == null || Positions.isBefore(end.getEnd(), start.getStart())) {
       return start;
     }
 
@@ -5909,8 +5790,7 @@ public class Parser {
 
   private void enforceSince(String revision, final Range directiveRange) {
     try {
-      if (revision.startsWith("r")) // revision
-      {
+      if (revision.startsWith("r")) { // revision
         revision = revision.substring(1);
         int targetRevision = Integer.parseInt(revision);
         int currentRevision = StaticEntity.getRevision();
@@ -5920,8 +5800,7 @@ public class Parser {
           this.sinceError(String.valueOf(currentRevision), revision, directiveRange, true);
           return;
         }
-      } else // version (or syntax error)
-      {
+      } else { // version (or syntax error)
         String[] target = revision.split("\\.");
         if (target.length != 2) {
           this.error(directiveRange, "invalid 'since' format");
