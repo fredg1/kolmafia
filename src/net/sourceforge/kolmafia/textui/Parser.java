@@ -3042,8 +3042,6 @@ public class Parser {
     javaForStartToken.setType(SemanticTokenTypes.Keyword);
     this.readToken(); // (
 
-    Token loopScopeStartToken = this.currentToken();
-
     // Parse variables and initializers
 
     Scope scope = new Scope(parentScope);
@@ -3278,9 +3276,6 @@ public class Parser {
     // Parse scope body
     this.parseLoopScope(scope, functionType, parentScope);
 
-    Location loopScopeLocation = this.makeLocation(loopScopeStartToken, this.peekPreviousToken());
-    scope.setScopeLocation(loopScopeLocation);
-
     Location javaForLocation = this.makeLocation(javaForStartToken, this.peekPreviousToken());
     return new JavaForLoop(javaForLocation, scope, initializers, condition, incrementers);
   }
@@ -3288,21 +3283,14 @@ public class Parser {
   private Scope parseLoopScope(
       final Type functionType, final VariableList varList, final BasicScope parentScope)
       throws InterruptedException {
-    Scope result = new Scope(varList, parentScope);
-
-    Token loopScopeStartToken = this.currentToken();
-
-    this.parseLoopScope(result, functionType, parentScope);
-
-    Location loopScopeLocation = this.makeLocation(loopScopeStartToken, this.peekPreviousToken());
-    result.setScopeLocation(loopScopeLocation);
-
-    return result;
+    return this.parseLoopScope(new Scope(varList, parentScope), functionType, parentScope);
   }
 
   private Scope parseLoopScope(
       final Scope result, final Type functionType, final BasicScope parentScope)
       throws InterruptedException {
+    Token loopScopeStartToken = this.currentToken();
+
     if (this.currentToken().equals("{")) {
       // Scope is a block
 
@@ -3328,6 +3316,9 @@ public class Parser {
         result.addCommand(command, this);
       }
     }
+
+    Location loopScopeLocation = this.makeLocation(loopScopeStartToken, this.peekPreviousToken());
+    result.setScopeLocation(loopScopeLocation);
 
     return result;
   }
