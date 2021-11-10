@@ -572,8 +572,18 @@ public class Parser {
         continue;
       }
 
-      if ((t.getBaseType() instanceof AggregateType) && this.currentToken().equals("{")) {
-        result.addCommand(this.parseAggregateLiteral(result, (AggregateType) t), this);
+      if (this.currentToken().equals("{")) {
+        if (t.getBaseType() instanceof AggregateType) {
+          result.addCommand(this.parseAggregateLiteral(result, (AggregateType) t), this);
+        } else {
+          this.parseAggregateLiteral(result, new BadAggregateType());
+
+          if (!t.isBad()) {
+            this.error(
+                Parser.makeLocation(t.getLocation(), this.peekLastToken()),
+                "Aggregate type required to make an aggregate literal");
+          }
+        }
       } else {
         // Found a type but no function or variable to tie it to
         this.error(
