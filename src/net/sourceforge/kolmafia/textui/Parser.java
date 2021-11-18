@@ -411,7 +411,6 @@ public class Parser {
               parser.mainMethod.getVariableReferences(),
               parser.mainMethod.getDefinitionLocation());
       f.setScope(((UserDefinedFunction) parser.mainMethod).getScope());
-      f.setVariableReferences(parser.mainMethod.getVariableReferences());
       result.addFunction(f);
     }
 
