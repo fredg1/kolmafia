@@ -116,7 +116,7 @@ public class FunctionList extends SymbolList<Function> {
     } else if (t1 instanceof RecordType) {
       comparison = t1.compareTo(t2);
     } else if (t1 instanceof TypeDef) {
-      comparison = compareTypes(((TypeDef) t1).base, ((TypeDef) t2).base);
+      comparison = compareTypes(((TypeDef) t1).getBaseType(), ((TypeDef) t2).getBaseType());
     }
 
     return comparison;

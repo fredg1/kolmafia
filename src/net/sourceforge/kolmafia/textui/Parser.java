@@ -196,7 +196,8 @@ public class Parser {
     Token firstToken = this.currentToken();
     Scope scope = this.parseFile(null);
 
-    scope.setScopeLocation(this.makeLocation(firstToken, this.peekPreviousToken()));
+    Location scriptLocation = this.makeLocation(firstToken, this.peekPreviousToken());
+    scope.setScopeLocation(scriptLocation);
 
     return scope;
   }
@@ -1418,7 +1419,7 @@ public class Parser {
         false) {
       typeErrors.submitError(
           () -> {
-            this.error(this.currentToken(), "Unknown type " + this.currentToken().content);
+            this.error(this.currentToken(), "Unknown type " + this.currentToken());
           });
 
       valType = new BadType(this.currentToken().content, this.makeLocation(this.currentToken()));
@@ -1962,7 +1963,8 @@ public class Parser {
       }
     }
 
-    result.setScopeLocation(this.makeLocation(scopeStartToken, this.peekPreviousToken()));
+    Location scopeLocation = this.makeLocation(scopeStartToken, this.peekPreviousToken());
+    result.setScopeLocation(scopeLocation);
 
     return result;
   }
@@ -2092,6 +2094,8 @@ public class Parser {
       Location conditionalLocation =
           this.makeLocation(conditionalStartToken, this.peekPreviousToken());
 
+      // TODO save conditional chains as their own class so that we can access the first
+      // If's location
       if (result == null) {
         result = new If(conditionalLocation, scope, condition);
       } else if (finalElse) {
@@ -2631,8 +2635,8 @@ public class Parser {
       return null;
     }
 
-    Token catchToken = this.currentToken();
-    catchToken.setType(SemanticTokenTypes.Keyword);
+    Token catchStartToken = this.currentToken();
+    catchStartToken.setType(SemanticTokenTypes.Keyword);
 
     this.readToken(); // catch
 
@@ -2640,7 +2644,7 @@ public class Parser {
         this.parseBlockOrSingleCommand(
             functionType, null, parentScope, false, allowBreak, allowContinue);
 
-    return new Catch(this.makeLocation(catchToken, body.getLocation().getRange()), body);
+    return new Catch(this.makeLocation(catchStartToken, this.peekPreviousToken()), body);
   }
 
   private Catch parseCatchValue(final BasicScope parentScope) throws InterruptedException {
@@ -2745,6 +2749,8 @@ public class Parser {
       this.unexpectedTokenError("by", this.currentToken());
     }
 
+    Token scopeStartToken = this.currentToken();
+
     // Define key variables of appropriate type
     VariableList varList = new VariableList();
     AggregateType type = (AggregateType) aggregate.getType().getBaseType();
@@ -2764,6 +2770,9 @@ public class Parser {
 
       expr = Value.locate(errorLocation, Value.BAD_VALUE);
     }
+
+    Location scopeLocation = this.makeLocation(scopeStartToken, this.peekPreviousToken());
+    scope.setScopeLocation(scopeLocation);
 
     Location sortLocation = this.makeLocation(sortStartToken, this.peekPreviousToken());
     return new SortBy(sortLocation, (VariableReference) aggregate, indexvar, valuevar, expr, this);
@@ -2882,9 +2891,8 @@ public class Parser {
     // Parse the scope with the list of keyVars
     Scope scope = this.parseLoopScope(functionType, varList, parentScope);
 
-    Location foreachLocation = this.makeLocation(foreachStartToken, this.peekPreviousToken());
-
     // Add the foreach node with the list of varRefs
+    Location foreachLocation = this.makeLocation(foreachStartToken, this.peekPreviousToken());
     return new ForEachLoop(foreachLocation, scope, variableReferences, aggregate, this);
   }
 
@@ -3645,13 +3653,8 @@ public class Parser {
       params = new ArrayList<>();
     }
 
-    return new FunctionInvocation(
-        this.makeLocation(invokeStartToken, this.peekPreviousToken()),
-        scope,
-        type,
-        name,
-        params,
-        this);
+    Location invokeLocation = this.makeLocation(invokeStartToken, this.peekPreviousToken());
+    return new FunctionInvocation(invokeLocation, scope, type, name, params, this);
   }
 
   private Assignment parseAssignment(final BasicScope scope, final VariableReference lhs)
@@ -3779,7 +3782,7 @@ public class Parser {
 
     Token operToken = this.currentToken();
     operToken.setType(SemanticTokenTypes.Operator);
-    String operStr = this.currentToken().equals("++") ? Parser.PRE_INCREMENT : Parser.PRE_DECREMENT;
+    String operStr = operToken.equals("++") ? Parser.PRE_INCREMENT : Parser.PRE_DECREMENT;
 
     this.readToken(); // oper
 
@@ -3816,8 +3819,7 @@ public class Parser {
 
     Token operToken = this.currentToken();
     operToken.setType(SemanticTokenTypes.Operator);
-    String operStr =
-        this.currentToken().equals("++") ? Parser.POST_INCREMENT : Parser.POST_DECREMENT;
+    String operStr = operToken.equals("++") ? Parser.POST_INCREMENT : Parser.POST_DECREMENT;
 
     int ltype = lhs.getType().getType();
     if (ltype != DataTypes.TYPE_INT && ltype != DataTypes.TYPE_FLOAT && !lhs.getType().isBad()) {
@@ -3885,7 +3887,6 @@ public class Parser {
       // See if it's a negative numeric constant
       if ((lhs = this.parseEvaluable(scope)) == null) {
         // Nope. Unary minus.
-
         oper = new Operator(this.makeLocation(operator), operator.content, this);
         operator.setType(SemanticTokenTypes.Operator);
         this.readToken(); // -
@@ -4544,17 +4545,16 @@ public class Parser {
 
     this.readToken(); // read $
 
-    Token typedConstantTypeToken = this.currentToken();
-    String name = typedConstantTypeToken.content;
+    Token name = this.currentToken();
     Type type = null;
     boolean plurals = false;
     boolean typedConstantError = false, typedConstantSyntaxError = false;
 
-    if (this.parseIdentifier(name)) {
-      type = scope.findType(name);
+    if (this.parseIdentifier(name.content)) {
+      type = scope.findType(name.content);
 
       if (type == null) {
-        StringBuilder buf = new StringBuilder(name);
+        StringBuilder buf = new StringBuilder(name.content);
         int length = name.length();
 
         if (name.endsWith("ies")) {
@@ -4574,7 +4574,7 @@ public class Parser {
         plurals = true;
       }
 
-      typedConstantTypeToken.setType(
+      name.setType(
           plurals ? SemanticTokenTypes.Enum : SemanticTokenTypes.EnumMember);
       this.readToken();
     }
@@ -4584,23 +4584,23 @@ public class Parser {
 
     if (type == null) {
       if (!typedConstantSyntaxError) {
-        this.error(typedConstantTypeToken, "Unknown type " + name);
+        this.error(name, "Unknown type " + name);
       }
       typedConstantError = typedConstantSyntaxError = true;
 
-      type = new BadType(name, this.makeLocation(typedConstantTypeToken));
+      type = new BadType(name.content, this.makeLocation(name));
     } else {
-      scope.addReference(type, this.makeLocation(typedConstantTypeToken));
-      type = type.reference(this.makeLocation(typedConstantTypeToken));
+      scope.addReference(type, this.makeLocation(name));
+      type = type.reference(this.makeLocation(name));
     }
 
     if (!type.isPrimitive() && !type.isBad()) {
       if (!typedConstantError) {
-        this.error(typedConstantTypeToken, "Non-primitive type " + name);
+        this.error(name, "Non-primitive type " + name);
         typedConstantError = true;
       }
 
-      type = new BadType(name, this.makeLocation(typedConstantTypeToken));
+      type = new BadType(name.content, this.makeLocation(name));
     }
 
     if (this.currentToken().equals("[")) {
