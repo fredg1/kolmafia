@@ -3500,6 +3500,10 @@ public class Parser {
     Function target = scope.findFunction(name.content, params);
 
     Location functionCallLocation = this.makeLocation(name, this.peekPreviousToken());
+    // Include the first parameter, if any, in the FunctionCall's location
+    if (firstParam != null) {
+      functionCallLocation = Parser.mergeLocations(firstParam.getLocation(), functionCallLocation);
+    }
 
     if (target != null) {
       params = this.autoCoerceParameters(target, params, scope);
@@ -3527,11 +3531,6 @@ public class Parser {
       if (error) {
         this.error(name, Parser.undefinedFunctionMessage(name.content, params));
       }
-    }
-
-    // Include the first parameter, if any, in the FunctionCall's location
-    if (firstParam != null) {
-      functionCallLocation = Parser.mergeLocations(firstParam.getLocation(), functionCallLocation);
     }
 
     return new FunctionCall(functionCallLocation, target, params, this);
