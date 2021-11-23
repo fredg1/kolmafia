@@ -5687,13 +5687,19 @@ public class Parser {
       result.append(" (");
 
       if (Parser.this.shortFileName == null) {
-        result.append(Preferences.getString("commandLineNamespace"));
+        String commandLineNamespace = Preferences.getString("commandLineNamespace");
+
+        if (!commandLineNamespace.isEmpty()) {
+          result.append(commandLineNamespace);
+          result.append(", ");
+        }
       } else {
         result.append(Parser.this.shortFileName);
         result.append(", line " + (this.range.getStart().getLine() + 1));
+        result.append(", ");
       }
 
-      result.append(", char " + (this.range.getStart().getCharacter() + 1));
+      result.append("char " + (this.range.getStart().getCharacter() + 1));
 
       if (!this.range.getStart().equals(this.range.getEnd())) {
         result.append(" to ");
