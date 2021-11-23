@@ -5786,9 +5786,7 @@ public class Parser {
           "'%s' requires version %s of kolmafia or higher (current: %s).  Up-to-date builds can be found at https://ci.kolmafia.us/.";
     }
 
-    this.error(
-        this.makeLocation(directiveRange),
-        String.format(template, this.shortFileName, target, current));
+    this.error(directiveRange, String.format(template, this.shortFileName, target, current));
   }
 
   public static String undefinedFunctionMessage(
