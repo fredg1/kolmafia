@@ -2997,7 +2997,7 @@ public class Parser {
       last = Value.locate(errorLocation, Value.BAD_VALUE);
     }
 
-    Evaluable increment = Value.locate(last.getLocation(), DataTypes.ONE_VALUE);
+    Evaluable increment = Value.locate(this.makeZeroWidthLocation(), DataTypes.ONE_VALUE);
     if (this.currentToken().equalsIgnoreCase("by")) {
       this.currentToken().setType(SemanticTokenTypes.Keyword);
       this.readToken(); // by
@@ -3803,8 +3803,8 @@ public class Parser {
 
     Operator oper = new Operator(this.makeLocation(operToken), operStr, this);
 
-    return new IncDec(
-        this.makeLocation(operToken, this.peekPreviousToken()), (VariableReference) lhs, oper);
+    Location preIncDecLocation = this.makeLocation(operToken, this.peekPreviousToken());
+    return new IncDec(preIncDecLocation, (VariableReference) lhs, oper);
   }
 
   private Evaluable parsePostIncDec(final VariableReference lhs) throws InterruptedException {
@@ -3828,7 +3828,8 @@ public class Parser {
 
     Operator oper = new Operator(this.makeLocation(operToken), operStr, this);
 
-    return new IncDec(Parser.mergeLocations(lhs.getLocation(), oper.getLocation()), lhs, oper);
+    Location postIncDecLocation = Parser.mergeLocations(lhs, oper);
+    return new IncDec(postIncDecLocation, lhs, oper);
   }
 
   private Evaluable parseExpression(final BasicScope scope) throws InterruptedException {
@@ -5020,12 +5021,9 @@ public class Parser {
       }
 
       // TODO gather references to record fields
-      current =
-          new CompositeReference(
-              Parser.makeLocation(current.getLocation(), this.peekPreviousToken()),
-              current.target,
-              indices,
-              this);
+      Location currentLocation =
+          Parser.makeLocation(current.getLocation(), this.peekPreviousToken());
+      current = new CompositeReference(currentLocation, current.target, indices, this);
     }
 
     if (parseAggregate && !variableReferenceSyntaxError) {
@@ -5550,6 +5548,22 @@ public class Parser {
     }
 
     return new Location(start.getUri(), Parser.mergeRanges(start.getRange(), end.getRange()));
+  }
+
+  public static Location mergeLocations(final Command start, final Command end) {
+    if (start == null && end == null) {
+      return null;
+    }
+
+    if (start == null) {
+      return end.getLocation();
+    }
+
+    if (end == null) {
+      return start.getLocation();
+    }
+
+    return Parser.mergeLocations(start.getLocation(), end.getLocation());
   }
 
   // **************** Parse errors *****************
