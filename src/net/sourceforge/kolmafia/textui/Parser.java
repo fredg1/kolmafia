@@ -5693,6 +5693,14 @@ public class Parser {
           result.append(commandLineNamespace);
           result.append(", ");
         }
+
+        // It's impossible to submit multiple lines from the command line, except maybe with
+        // "ash cli_execute('ash \n')"
+        // As such, don't display the start's line if it's '0', because it can easily be assumed.
+        if (range.getStart().getLine() > 0) {
+          result.append("line " + (range.getStart().getLine() + 1));
+          result.append(", ");
+        }
       } else {
         result.append(Parser.this.shortFileName);
         result.append(", line " + (this.range.getStart().getLine() + 1));
