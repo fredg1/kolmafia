@@ -705,7 +705,7 @@ public class Parser {
       } else if (fieldType.getBaseType().equals(DataTypes.VOID_TYPE)) {
         recordErrors.submitError(
             () -> {
-              this.error(this.currentToken(), "Non-void field type expected");
+              this.error(fieldType.getLocation(), "Non-void field type expected");
             });
       }
 
