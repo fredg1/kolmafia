@@ -890,7 +890,7 @@ public class Parser {
       if (this.currentToken().equals("=")) {
         parameterErrors.submitError(
             () -> {
-              this.error(param.getLocation(), "Cannot initialize parameter " + param.getName());
+              this.error(this.currentToken(), "Cannot initialize parameter " + param.getName());
             });
       }
 
