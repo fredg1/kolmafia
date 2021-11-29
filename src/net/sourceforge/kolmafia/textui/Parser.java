@@ -3346,26 +3346,25 @@ public class Parser {
       return Value.locate(this.makeLocation(this.peekPreviousToken()), Value.BAD_VALUE);
     }
 
-    String name = this.currentToken().content;
-    Type type = scope.findType(name);
+    Token name = this.currentToken();
+    name.setType(SemanticTokenTypes.Struct);
+    Type type = scope.findType(name.content);
 
-    Token nameToken = this.currentToken();
-    nameToken.setType(SemanticTokenTypes.Struct);
     boolean newRecordError = false, newRecordSyntaxError = false;
 
     if (type != null) {
-      scope.addReference(type, this.makeLocation(nameToken));
+      scope.addReference(type, this.makeLocation(name));
     }
 
     if (!(type instanceof RecordType)) {
       if (type == null || !type.isBad()) {
         if (!newRecordSyntaxError) {
-          this.error(nameToken, "'" + name + "' is not a record type");
+          this.error(name, "'" + name + "' is not a record type");
         }
         newRecordError = newRecordSyntaxError = true;
       }
 
-      type = new BadRecordType(null, this.makeLocation(nameToken));
+      type = new BadRecordType(null, this.makeLocation(name));
     }
 
     RecordType target = (RecordType) type;
