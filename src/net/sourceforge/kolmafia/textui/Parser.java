@@ -452,7 +452,7 @@ public class Parser {
           () -> {
             // Found a type but no function or variable to tie it to
             this.error(
-                Parser.makeLocation(t.getLocation(), this.currentToken()),
+                Parser.makeLocation(t.getLocation(), this.peekPreviousToken()),
                 "Type given but not used to declare anything");
           });
     }
@@ -587,7 +587,7 @@ public class Parser {
       } else {
         // Found a type but no function or variable to tie it to
         this.error(
-            Parser.makeLocation(t.getLocation(), this.currentToken()),
+            Parser.makeLocation(t.getLocation(), this.peekPreviousToken()),
             "Type given but not used to declare anything");
       }
     }
@@ -2541,7 +2541,7 @@ public class Parser {
         // Found a type but no function or variable to tie it to
         if (!caseError) {
           this.error(
-              Parser.makeLocation(t.getLocation(), this.currentToken()),
+              Parser.makeLocation(t.getLocation(), this.peekPreviousToken()),
               "Type given but not used to declare anything");
         }
         switchError = caseError = true;
