@@ -1665,7 +1665,7 @@ public class Parser {
               this.error(
                   finalLhs.getLocation(),
                   "Invalid map literal; cannot assign type "
-                      + dataType.toString()
+                      + index.toString()
                       + " to key of type "
                       + finalLhs.getType().toString());
             });
@@ -3695,8 +3695,7 @@ public class Parser {
         rhs = this.parseAggregateLiteral(scope, new BadAggregateType());
 
         if (!assignmentError
-            && operStr.equals("=")) // otherwise the coercion check can catch this instead
-        {
+            && operStr.equals("=")) { // otherwise the coercion check can catch this instead
           Location errorLocation =
               rhs != null ? rhs.getLocation() : this.makeLocation(this.peekPreviousToken());
 
@@ -4357,9 +4356,9 @@ public class Parser {
         this.currentToken().setType(SemanticTokenTypes.String);
         this.readToken();
 
-        Evaluable result =
-            Value.locate(
-                this.makeLocation(stringStartPosition), new Value(resultString.toString()));
+        Location resultLocation =
+            this.makeLocation(stringStartPosition, this.peekPreviousToken().getEnd());
+        Evaluable result = Value.locate(resultLocation, new Value(resultString.toString()));
 
         if (conc == null) {
           return result;
@@ -4411,8 +4410,8 @@ public class Parser {
           Location errorLocation =
               this.makeLocation(
                   Parser.makeInlineRange(
-                      new Position(this.getLineNumber(), backslashIndex),
-                      Math.min(backslashIndex + 4, line.length())));
+                      new Position(this.getLineNumber() - 1, backslashIndex),
+                      Math.min(4, line.length() - backslashIndex)));
 
           this.error(errorLocation, "Hexadecimal character escape requires 2 digits");
 
@@ -4429,8 +4428,8 @@ public class Parser {
           Location errorLocation =
               this.makeLocation(
                   Parser.makeInlineRange(
-                      new Position(this.getLineNumber(), backslashIndex),
-                      Math.min(backslashIndex + 6, line.length())));
+                      new Position(this.getLineNumber() - 1, backslashIndex),
+                      Math.min(6, line.length() - backslashIndex)));
 
           this.error(errorLocation, "Unicode character escape requires 4 digits");
 
@@ -4449,8 +4448,8 @@ public class Parser {
             Location errorLocation =
                 this.makeLocation(
                     Parser.makeInlineRange(
-                        new Position(this.getLineNumber(), backslashIndex),
-                        Math.min(backslashIndex + 4, line.length())));
+                        new Position(this.getLineNumber() - 1, backslashIndex),
+                        Math.min(4, line.length() - backslashIndex)));
 
             this.error(errorLocation, "Octal character escape requires 3 digits");
           }
@@ -4795,7 +4794,7 @@ public class Parser {
       resultString.setLength(0);
       if (element.length() != 0) {
         Position currentElementEndPosition =
-            new Position(this.getLineNumber(), this.currentIndex + i - 1);
+            new Position(this.getLineNumber(), this.currentIndex + i);
         Location currentElementLocation =
             this.makeLocation(new Range(currentElementStartPosition, currentElementEndPosition));
         currentElementStartPosition = currentElementEndPosition;
@@ -5522,6 +5521,10 @@ public class Parser {
 
   private Location makeLocation(final Position start) {
     return this.makeLocation(this.rangeToHere(start));
+  }
+
+  private Location makeLocation(final Position start, final Position end) {
+    return this.makeLocation(new Range(start, end));
   }
 
   private Location makeLocation(final Range start, final Range end) {
