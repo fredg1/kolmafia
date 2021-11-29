@@ -2049,15 +2049,6 @@ public class Parser {
 
     Evaluable condition = this.parseExpression(parentScope);
 
-    if (this.currentToken().equals(")")) {
-      this.readToken(); // )
-    } else {
-      conditionalErrors.submitSyntaxError(
-          () -> {
-            this.unexpectedTokenError(")", this.currentToken());
-          });
-    }
-
     if (condition == null) {
       Location errorLocation = this.makeLocation(this.currentToken());
 
@@ -2067,7 +2058,18 @@ public class Parser {
           });
 
       condition = Value.locate(errorLocation, Value.BAD_VALUE);
-    } else if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE)
+    }
+
+    if (this.currentToken().equals(")")) {
+      this.readToken(); // )
+    } else {
+      conditionalErrors.submitSyntaxError(
+          () -> {
+            this.unexpectedTokenError(")", this.currentToken());
+          });
+    }
+
+    if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE)
         && !condition.getType().isBad()) {
       Location errorLocation = condition.getLocation();
 
@@ -2130,15 +2132,6 @@ public class Parser {
 
           condition = this.parseExpression(parentScope);
 
-          if (this.currentToken().equals(")")) {
-            this.readToken(); // )
-          } else {
-            elseErrors.submitSyntaxError(
-                () -> {
-                  this.unexpectedTokenError(")", this.currentToken());
-                });
-          }
-
           if (condition == null) {
             Location errorLocation = this.makeLocation(this.currentToken());
 
@@ -2148,7 +2141,18 @@ public class Parser {
                 });
 
             condition = Value.locate(errorLocation, Value.BAD_VALUE);
-          } else if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE)
+          }
+
+          if (this.currentToken().equals(")")) {
+            this.readToken(); // )
+          } else {
+            elseErrors.submitSyntaxError(
+                () -> {
+                  this.unexpectedTokenError(")", this.currentToken());
+                });
+          }
+
+          if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE)
               && !condition.getType().isBad()) {
             Location errorLocation = condition.getLocation();
 
@@ -2258,15 +2262,6 @@ public class Parser {
 
     Evaluable condition = this.parseExpression(parentScope);
 
-    if (this.currentToken().equals(")")) {
-      this.readToken(); // )
-    } else {
-      whileErrors.submitSyntaxError(
-          () -> {
-            this.unexpectedTokenError(")", this.currentToken());
-          });
-    }
-
     if (condition == null) {
       Location errorLocation = this.makeLocation(this.currentToken());
 
@@ -2276,7 +2271,18 @@ public class Parser {
           });
 
       condition = Value.locate(errorLocation, Value.BAD_VALUE);
-    } else if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE)
+    }
+
+    if (this.currentToken().equals(")")) {
+      this.readToken(); // )
+    } else {
+      whileErrors.submitSyntaxError(
+          () -> {
+            this.unexpectedTokenError(")", this.currentToken());
+          });
+    }
+
+    if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE)
         && !condition.getType().isBad()) {
       Location errorLocation = condition.getLocation();
 
@@ -2326,13 +2332,6 @@ public class Parser {
 
     Evaluable condition = this.parseExpression(parentScope);
 
-    if (this.currentToken().equals(")")) {
-      this.readToken(); // )
-    } else if (!repeatError) {
-      this.unexpectedTokenError(")", this.currentToken());
-      repeatError = true;
-    }
-
     if (condition == null) {
       Location errorLocation = this.makeLocation(this.currentToken());
 
@@ -2342,7 +2341,16 @@ public class Parser {
       }
 
       condition = Value.locate(errorLocation, Value.BAD_VALUE);
-    } else if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE)
+    }
+
+    if (this.currentToken().equals(")")) {
+      this.readToken(); // )
+    } else if (!repeatError) {
+      this.unexpectedTokenError(")", this.currentToken());
+      repeatError = true;
+    }
+
+    if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE)
         && !condition.getType().isBad()) {
       Location errorLocation = condition.getLocation();
 
@@ -2383,13 +2391,6 @@ public class Parser {
 
       condition = this.parseExpression(parentScope);
 
-      if (this.currentToken().equals(")")) {
-        this.readToken(); // )
-      } else if (!switchError) {
-        this.unexpectedTokenError(")", this.currentToken());
-        switchError = true;
-      }
-
       if (condition == null) {
         Location errorLocation = this.makeLocation(this.currentToken());
 
@@ -2399,6 +2400,13 @@ public class Parser {
         }
 
         condition = Value.locate(errorLocation, Value.BAD_VALUE);
+      }
+
+      if (this.currentToken().equals(")")) {
+        this.readToken(); // )
+      } else if (!switchError) {
+        this.unexpectedTokenError(")", this.currentToken());
+        switchError = true;
       }
     }
 
@@ -3185,15 +3193,6 @@ public class Parser {
             ? Value.locate(this.makeZeroWidthLocation(), DataTypes.TRUE_VALUE)
             : this.parseExpression(scope);
 
-    if (this.currentToken().equals(";")) {
-      this.readToken(); // ;
-    } else {
-      if (!javaForSyntaxError) {
-        this.unexpectedTokenError(";", this.currentToken());
-      }
-      javaForError = javaForSyntaxError = true;
-    }
-
     if (condition == null) {
       Location errorLocation = this.makeLocation(this.currentToken());
 
@@ -3203,7 +3202,18 @@ public class Parser {
       }
 
       condition = Value.locate(errorLocation, Value.BAD_VALUE);
-    } else if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE)
+    }
+
+    if (this.currentToken().equals(";")) {
+      this.readToken(); // ;
+    } else {
+      if (!javaForSyntaxError) {
+        this.unexpectedTokenError(";", this.currentToken());
+      }
+      javaForError = javaForSyntaxError = true;
+    }
+
+    if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE)
         && !condition.getType().isBad()) {
       Location errorLocation = condition.getLocation();
 
