@@ -5058,7 +5058,6 @@ public class Parser {
 
     Token directiveToken = this.currentToken();
     directiveToken.setType(SemanticTokenTypes.Keyword);
-    Token directiveValueToken = null;
 
     this.readToken(); // directive
 
@@ -5097,18 +5096,18 @@ public class Parser {
         }
 
         resultString = line.substring(0, endIndex);
-        directiveValueToken = this.currentToken = this.currentLine.makeToken(endIndex);
+        this.currentToken = this.currentLine.makeToken(endIndex);
         this.currentToken().setType(SemanticTokenTypes.String);
         this.readToken();
 
-        this.error(directiveValueToken, "No closing " + ch + " found");
+        this.error(this.peekPreviousToken(), "No closing " + ch + " found");
 
         break;
       }
 
       resultString = line.substring(1, endIndex);
       // +1 to include and get rid of '>', '\'' or '"' token
-      directiveValueToken = this.currentToken = this.currentLine.makeToken(endIndex + 1);
+      this.currentToken = this.currentLine.makeToken(endIndex + 1);
       this.currentToken().setType(SemanticTokenTypes.String);
       this.readToken();
 
@@ -5124,17 +5123,20 @@ public class Parser {
 
       resultString = line.substring(0, endIndex);
       if (endIndex > 0) {
-        directiveValueToken = this.currentToken = this.currentLine.makeToken(endIndex);
+        this.currentToken = this.currentLine.makeToken(endIndex);
         this.currentToken().setType(SemanticTokenTypes.String);
         this.readToken();
       }
     }
 
+    Directive result =
+        new Directive(resultString, Parser.mergeRanges(directiveToken, this.peekPreviousToken()));
+
     if (this.currentToken().equals(";")) {
       this.readToken(); // read ;
     }
 
-    return new Directive(resultString, Parser.mergeRanges(directiveToken, directiveValueToken));
+    return result;
   }
 
   private void parseScriptName() throws InterruptedException {
