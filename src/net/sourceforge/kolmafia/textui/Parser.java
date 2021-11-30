@@ -5770,16 +5770,9 @@ public class Parser {
   public final void sinceError(
       final String current,
       final String target,
-      final Range directiveRange,
-      final boolean targetIsRevision) {
-    String template;
-    if (targetIsRevision) {
-      template =
-          "'%s' requires revision r%s of kolmafia or higher (current: r%s).  Up-to-date builds can be found at https://ci.kolmafia.us/.";
-    } else {
-      template =
-          "'%s' requires version %s of kolmafia or higher (current: %s).  Up-to-date builds can be found at https://ci.kolmafia.us/.";
-    }
+      final Range directiveRange) {
+    String template =
+        "'%s' requires revision r%s of kolmafia or higher (current: r%s).  Up-to-date builds can be found at https://ci.kolmafia.us/.";
 
     this.error(directiveRange, String.format(template, this.shortFileName, target, current));
   }
@@ -5803,7 +5796,7 @@ public class Parser {
         // A revision of zero means you're probably running in a debugger, in which
         // case you should be able to run anything.
         if (currentRevision != 0 && currentRevision < targetRevision) {
-          this.sinceError(String.valueOf(currentRevision), revision, directiveRange, true);
+          this.sinceError(String.valueOf(currentRevision), revision, directiveRange);
           return;
         }
       } else { // version (or syntax error)
