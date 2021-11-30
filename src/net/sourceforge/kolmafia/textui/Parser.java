@@ -366,20 +366,12 @@ public class Parser {
         if (s.length() > 0) s.append("; ");
         s.append(f.getPath());
       }
-      if (location != null) {
-        this.error(location, "too many matches for " + fileName + ": " + s);
-      } else {
-        this.error("too many matches for " + fileName + ": " + s);
-      }
+      this.error(location, "too many matches for " + fileName + ": " + s);
 
       return scope;
     }
     if (matches.size() == 0) {
-      if (location != null) {
-        this.error(location, fileName + " could not be found");
-      } else {
-        this.error(fileName + " could not be found");
-      }
+      this.error(location, fileName + " could not be found");
 
       return scope;
     }
