@@ -3749,19 +3749,12 @@ public class Parser {
       return null;
     }
 
-    Evaluable lhs = this.parseExpression(scope);
-
-    if (lhs == null) {
-      // FIXME replace by allowing parseExpression to accept "remove" regardless of case, but
-      // throwing an error on the result (since the result will cause an error if executed)
-      Location errorLocation = this.makeLocation(this.currentToken());
-
-      this.error(errorLocation, "Bad 'remove' statement");
-
-      return Value.locate(errorLocation, Value.BAD_VALUE);
+    // Due to the workings of Operator, we need 'remove' to be case-sensitive
+    if (!this.currentToken().equals("remove")) {
+      this.error(this.currentToken(), "Bad 'remove' statement");
     }
 
-    return lhs;
+    return this.parseExpression(scope);
   }
 
   private Evaluable parsePreIncDec(final BasicScope scope) throws InterruptedException {
@@ -3902,7 +3895,7 @@ public class Parser {
           this.error(lhs.getLocation(), "\"-\" operator requires an integer or float value");
         }
       }
-    } else if (operator.equals("remove")) {
+    } else if (operator.equalsIgnoreCase("remove")) {
       oper = new Operator(this.makeLocation(operator), operator.content, this);
       operator.setType(SemanticTokenTypes.Keyword); // not reaaaally an operator...
       this.readToken(); // remove
