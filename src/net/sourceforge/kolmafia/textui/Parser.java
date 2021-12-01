@@ -1876,9 +1876,7 @@ public class Parser {
       if (expectedType != null && !expectedType.equals(DataTypes.TYPE_VOID)) {
         returnErrors.submitError(
             () -> {
-              this.error(
-                  this.makeLocation(returnStartToken, this.currentToken()),
-                  "Return needs " + expectedType + " value");
+              this.error(returnStartToken, "Return needs " + expectedType + " value");
             });
       }
 
