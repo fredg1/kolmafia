@@ -915,7 +915,7 @@ public class Parser {
     if (f.overridesLibraryFunction()) {
       functionErrors.submitError(
           () -> {
-            this.overridesLibraryFunctionError(functionLocation, f);
+            this.overridesLibraryFunctionError(f);
           });
     }
 
@@ -924,7 +924,7 @@ public class Parser {
     if (existing != null && existing.getScope() != null) {
       functionErrors.submitError(
           () -> {
-            this.multiplyDefinedFunctionError(functionLocation, f);
+            this.multiplyDefinedFunctionError(f);
           });
     }
 
@@ -934,7 +934,7 @@ public class Parser {
       if (clash != null) {
         functionErrors.submitError(
             () -> {
-              this.varargClashError(functionLocation, f, clash);
+              this.varargClashError(f, clash);
             });
       }
     }
@@ -5737,30 +5737,28 @@ public class Parser {
     this.error(name, Parser.undefinedFunctionMessage(name.content, params));
   }
 
-  private void multiplyDefinedFunctionError(final Location location, final Function f) {
+  private void multiplyDefinedFunctionError(final Function f) {
     String buffer = "Function '" + f.getSignature() + "' defined multiple times.";
-    this.error(location, buffer);
+    this.error(f.getLocation(), buffer);
   }
 
-  private void overridesLibraryFunctionError(final Location location, final Function f) {
+  private void overridesLibraryFunctionError(final Function f) {
     String buffer = "Function '" + f.getSignature() + "' overrides a library function.";
-    this.error(location, buffer);
+    this.error(f.getLocation(), buffer);
   }
 
-  private void varargClashError(final Location location, final Function f, final Function clash) {
+  private void varargClashError(final Function f, final Function clash) {
     String buffer =
         "Function '"
             + f.getSignature()
             + "' clashes with existing function '"
             + clash.getSignature()
             + "'.";
-    this.error(location, buffer);
+    this.error(f.getLocation(), buffer);
   }
 
   public final void sinceError(
-      final String current,
-      final String target,
-      final Range directiveRange) {
+      final String current, final String target, final Range directiveRange) {
     String template =
         "'%s' requires revision r%s of kolmafia or higher (current: r%s).  Up-to-date builds can be found at https://ci.kolmafia.us/.";
 

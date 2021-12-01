@@ -51,7 +51,7 @@ public class ParserTest {
   }
 
   private static void testInvalidScript(final InvalidScriptData script, final Scope scope, final String error) {
-    assertThat(script.desc, error, containsString(script.errorText));
+    assertThat(script.desc, error, startsWith(script.errorText));
 
     if (script.errorLocationString != null) {
       assertThat(script.desc, error, containsString(" (" + script.errorLocationString + ")"));
