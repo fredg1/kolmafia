@@ -3896,6 +3896,11 @@ public class Parser {
         }
 
         lhs = new Operation(lhs, oper);
+        if (!lhs.getType().isBad()
+            && !lhs.getType().equals(DataTypes.INT_TYPE)
+            && !lhs.getType().equals(DataTypes.FLOAT_TYPE)) {
+          this.error(lhs.getLocation(), "\"-\" operator requires an integer or float value");
+        }
       }
     } else if (operator.equals("remove")) {
       oper = new Operator(this.makeLocation(operator), operator.content, this);
