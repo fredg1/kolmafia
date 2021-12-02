@@ -4874,8 +4874,8 @@ public class Parser {
   }
 
   /**
-   * Look for an index/key, and return the corresponding data, expecting {@code varRef} to be a {@link
-   * AggregateType}/{@link RecordType}, e.g., {@code map.key}, {@code array[0]}.
+   * Look for an index/key, and return the corresponding data, expecting {@code varRef} to be a
+   * {@link AggregateType}/{@link RecordType}, e.g., {@code map.key}, {@code array[0]}.
    *
    * <p>May also return a {@link FunctionCall} if the chain ends with/is a function call, e.g.,
    * {@code varRef.function()}.
