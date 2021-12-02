@@ -3891,12 +3891,7 @@ public class Parser {
         }
       }
     } else if (operator.equalsIgnoreCase("remove")) {
-      // Due to the workings of Operator, we need 'remove' to be case-sensitive
-      if (!operator.equals("remove")) {
-        this.error(operator, "Bad 'remove' statement");
-      }
-
-      oper = new Operator(this.makeLocation(operator), operator.content, this);
+      oper = new Operator(this.makeLocation(operator), operator.content.toLowerCase(), this);
       operator.setType(SemanticTokenTypes.Keyword); // not reaaaally an operator...
       this.readToken(); // remove
 
