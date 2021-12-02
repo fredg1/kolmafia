@@ -3,9 +3,6 @@ package net.sourceforge.kolmafia.textui.parsetree;
 import java.io.PrintStream;
 import java.util.List;
 import net.sourceforge.kolmafia.textui.AshRuntime;
-import net.sourceforge.kolmafia.textui.parsetree.Symbol.BadNode;
-import net.sourceforge.kolmafia.textui.parsetree.Type.BadType;
-import net.sourceforge.kolmafia.textui.parsetree.Variable.BadVariable;
 import org.eclipse.lsp4j.Location;
 
 public class VariableReference extends Evaluable implements Comparable<VariableReference> {
@@ -79,14 +76,11 @@ public class VariableReference extends Evaluable implements Comparable<VariableR
     stream.println("<VARREF> " + this.getName());
   }
 
-  /** Shortcut class */
-  public static class BadVariableReference extends VariableReference implements BadNode {
-    public BadVariableReference(final Location location) {
-      this(location, new BadType(null, null));
-    }
+  public static VariableReference badVariableReference(final Location location) {
+    return VariableReference.badVariableReference(location, new Type.BadType(null, null));
+  }
 
-    public BadVariableReference(final Location location, final Type type) {
-      super(location, new BadVariable(null, type, null));
-    }
+  public static VariableReference badVariableReference(final Location location, final Type type) {
+    return new VariableReference(location, new Variable.BadVariable(null, type, null));
   }
 }

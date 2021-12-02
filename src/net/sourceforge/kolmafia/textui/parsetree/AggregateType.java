@@ -168,10 +168,7 @@ public class AggregateType extends CompositeType {
     return this.getIndexType().isBad() || this.getDataType().isBad();
   }
 
-  public static class BadAggregateType extends AggregateType implements BadNode {
-    /** More of a shortcut method than an actual class with a purpose... */
-    public BadAggregateType() {
-      super(new BadType(null, null), new BadType(null, null));
-    }
+  public static AggregateType badAggregateType() {
+    return new AggregateType(new BadType(null, null), new BadType(null, null));
   }
 }

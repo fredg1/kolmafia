@@ -1,6 +1,8 @@
 package net.sourceforge.kolmafia.textui;
 
 import static org.eclipse.lsp4j.DiagnosticSeverity.*;
+import static net.sourceforge.kolmafia.textui.parsetree.AggregateType.badAggregateType;
+import static net.sourceforge.kolmafia.textui.parsetree.VariableReference.badVariableReference;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,7 +25,6 @@ import net.sourceforge.kolmafia.persistence.SkillDatabase;
 import net.sourceforge.kolmafia.preferences.Preferences;
 import net.sourceforge.kolmafia.textui.Line.Token;
 import net.sourceforge.kolmafia.textui.parsetree.AggregateType;
-import net.sourceforge.kolmafia.textui.parsetree.AggregateType.BadAggregateType;
 import net.sourceforge.kolmafia.textui.parsetree.ArrayLiteral;
 import net.sourceforge.kolmafia.textui.parsetree.Assignment;
 import net.sourceforge.kolmafia.textui.parsetree.BasicScope;
@@ -60,7 +61,7 @@ import net.sourceforge.kolmafia.textui.parsetree.RecordType.BadRecordType;
 import net.sourceforge.kolmafia.textui.parsetree.RepeatUntilLoop;
 import net.sourceforge.kolmafia.textui.parsetree.Scope;
 import net.sourceforge.kolmafia.textui.parsetree.ScriptExit;
-import net.sourceforge.kolmafia.textui.parsetree.ScriptState;
+import net.sourceforge.kolmafia.textui.parsetree.ScriptState.BadScriptState;
 import net.sourceforge.kolmafia.textui.parsetree.SortBy;
 import net.sourceforge.kolmafia.textui.parsetree.StaticScope;
 import net.sourceforge.kolmafia.textui.parsetree.Switch;
@@ -78,7 +79,6 @@ import net.sourceforge.kolmafia.textui.parsetree.Variable;
 import net.sourceforge.kolmafia.textui.parsetree.Variable.BadVariable;
 import net.sourceforge.kolmafia.textui.parsetree.VariableList;
 import net.sourceforge.kolmafia.textui.parsetree.VariableReference;
-import net.sourceforge.kolmafia.textui.parsetree.VariableReference.BadVariableReference;
 import net.sourceforge.kolmafia.textui.parsetree.WhileLoop;
 import net.sourceforge.kolmafia.utilities.ByteArrayStream;
 import net.sourceforge.kolmafia.utilities.CharacterEntities;
@@ -568,7 +568,7 @@ public class Parser {
         if (t.getBaseType() instanceof AggregateType) {
           result.addCommand(this.parseAggregateLiteral(result, (AggregateType) t), this);
         } else {
-          this.parseAggregateLiteral(result, new BadAggregateType());
+          this.parseAggregateLiteral(result, badAggregateType());
 
           if (!t.isBad()) {
             this.error(
@@ -1065,7 +1065,7 @@ public class Parser {
       if (ltype instanceof AggregateType) {
         result = this.parseAggregateLiteral(scope, (AggregateType) ltype);
       } else {
-        result = this.parseAggregateLiteral(scope, new BadAggregateType());
+        result = this.parseAggregateLiteral(scope, badAggregateType());
 
         if (!ltype.isBad()) {
           Location errorLocation =
@@ -1277,7 +1277,7 @@ public class Parser {
               this.error(this.currentToken(), "Encountered 'break' outside of loop");
             });
 
-        result = new ScriptState.BadScriptState(this.makeLocation(this.currentToken()));
+        result = new BadScriptState(this.makeLocation(this.currentToken()));
       }
 
       this.currentToken().setType(SemanticTokenTypes.Keyword);
@@ -1291,7 +1291,7 @@ public class Parser {
               this.error(this.currentToken(), "Encountered 'continue' outside of loop");
             });
 
-        result = new ScriptState.BadScriptState(this.makeLocation(this.currentToken()));
+        result = new BadScriptState(this.makeLocation(this.currentToken()));
       }
 
       this.currentToken().setType(SemanticTokenTypes.Keyword);
@@ -1501,7 +1501,7 @@ public class Parser {
         if (dataType instanceof AggregateType) {
           lhs = this.parseAggregateLiteral(scope, (AggregateType) dataType);
         } else {
-          lhs = this.parseAggregateLiteral(scope, new BadAggregateType());
+          lhs = this.parseAggregateLiteral(scope, badAggregateType());
 
           if (!dataType.isBad()) {
             Location errorLocation =
@@ -1615,7 +1615,7 @@ public class Parser {
         if (dataType instanceof AggregateType) {
           rhs = this.parseAggregateLiteral(scope, (AggregateType) dataType);
         } else {
-          rhs = this.parseAggregateLiteral(scope, new BadAggregateType());
+          rhs = this.parseAggregateLiteral(scope, badAggregateType());
 
           if (!dataType.isBad()) {
             Location errorLocation =
@@ -2736,7 +2736,7 @@ public class Parser {
         this.error(errorLocation, "Aggregate reference expected");
       }
 
-      aggregate = new BadVariableReference(errorLocation, new BadAggregateType());
+      aggregate = badVariableReference(errorLocation, badAggregateType());
     }
 
     if (this.currentToken().equalsIgnoreCase("by")) {
@@ -3239,7 +3239,7 @@ public class Parser {
           }
           javaForError = javaForSyntaxError = true;
 
-          value = new BadVariableReference(errorLocation);
+          value = badVariableReference(errorLocation);
         }
 
         VariableReference ref = (VariableReference) value;
@@ -3418,7 +3418,7 @@ public class Parser {
             val = this.parseAggregateLiteral(scope, (AggregateType) expected);
           } else {
             // No error. The coercion check will get this
-            val = this.parseAggregateLiteral(scope, new BadAggregateType());
+            val = this.parseAggregateLiteral(scope, badAggregateType());
           }
         } else {
           val = this.parseExpression(scope);
@@ -3636,7 +3636,7 @@ public class Parser {
           this.error(errorLocation, "Variable reference expected for function name");
         }
 
-        name = new BadVariableReference(errorLocation);
+        name = badVariableReference(errorLocation);
       }
     }
 
@@ -3692,7 +3692,7 @@ public class Parser {
       if (isAggregate) {
         rhs = this.parseAggregateLiteral(scope, (AggregateType) ltype);
       } else {
-        rhs = this.parseAggregateLiteral(scope, new BadAggregateType());
+        rhs = this.parseAggregateLiteral(scope, badAggregateType());
 
         if (!assignmentError
             && operStr.equals("=")) { // otherwise the coercion check can catch this instead
@@ -3779,7 +3779,7 @@ public class Parser {
         this.error(errorLocation, "Variable reference expected");
       }
 
-      lhs = new BadVariableReference(errorLocation);
+      lhs = badVariableReference(errorLocation);
     }
 
     int ltype = lhs.getType().getType();
@@ -3905,7 +3905,7 @@ public class Parser {
         }
 
         if (!(lhs instanceof VariableReference)) {
-          lhs = new BadVariableReference(errorLocation);
+          lhs = badVariableReference(errorLocation);
         }
       }
 
@@ -4915,7 +4915,7 @@ public class Parser {
             variableReferenceError = true;
           }
 
-          type = new BadAggregateType();
+          type = badAggregateType();
         }
 
         AggregateType atype = (AggregateType) type;
