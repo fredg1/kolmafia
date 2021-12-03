@@ -3973,7 +3973,7 @@ public class Parser {
           Location errorLocation = this.makeLocation(this.currentToken());
 
           if (!expressionSyntaxError) {
-            this.error(errorLocation, "Value expected");
+            this.error(errorLocation, "Value expected in right hand side");
           }
           expressionError = expressionSyntaxError = true;
 
@@ -4655,7 +4655,12 @@ public class Parser {
 
       char c = line.charAt(i);
       if (c == '\\') {
-        i = this.parseEscapeSequence(resultString, i);
+        if (i + 1 == line.length()) {
+          // Will throw an error at the start of the next loop
+          continue;
+        }
+
+        resultString.append(line.charAt(i));
       } else if (c == '[') {
         level++;
         resultString.append(c);
@@ -4787,7 +4792,7 @@ public class Parser {
       resultString.setLength(0);
       if (element.length() != 0) {
         Position currentElementEndPosition =
-            new Position(this.getLineNumber(), this.currentIndex + i);
+            new Position(this.getLineNumber() - 1, this.currentIndex + i);
         Location currentElementLocation =
             this.makeLocation(new Range(currentElementStartPosition, currentElementEndPosition));
         currentElementStartPosition = currentElementEndPosition;
