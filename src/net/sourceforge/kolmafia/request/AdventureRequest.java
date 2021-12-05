@@ -447,6 +447,7 @@ public class AdventureRequest
 
 		String encounter = null;
 		String type = null;
+		int choice = 0;
 
 		if ( isFight )
 		{
@@ -455,15 +456,15 @@ public class AdventureRequest
 		}
 		else if ( isChoice )
 		{
-			int choice = ChoiceManager.extractChoice( responseText );
-			type = choiceType( choice );
-			encounter = AdventureRequest.parseChoiceEncounter( urlString, choice, responseText );
-			ChoiceManager.registerDeferredChoice( choice, encounter );
+			type = "ChoiceAdventure";
+			choice = ChoiceManager.extractChoice( responseText );
+			ChoiceManager.registerDeferredChoice( choice );
+			encounter = ChoiceManager.encounterName( choice, urlString, responseText );
 		}
 		else
 		{
 			type = "Noncombat";
-			encounter = parseNoncombatEncounter( urlString, responseText );
+			encounter = AdventureRequest.parseNoncombatEncounter( urlString, responseText );
 			if ( responseText.contains( "charpane.php" ) )
 			{
 				// Since a charpane refresh was requested, this might have taken a turn
@@ -559,12 +560,22 @@ public class AdventureRequest
 			}
 			else if ( type.equals( "Noncombat" ) )
 			{
-				// only log the FIRST choice that we see in a choiceadventure chain.
-				if ( ( !urlString.startsWith( "choice.php" ) || ChoiceManager.getLastChoice() == 0 ) &&
-				     !FightRequest.edFightInProgress() )
+				if ( !FightRequest.edFightInProgress() )
 				{
 					AdventureQueueDatabase.enqueueNoncombat( KoLAdventure.lastVisitedLocation(), encounter );
 				}
+			}
+			else if ( type.equals( "ChoiceAdventure" ) )
+			{
+				// only log the FIRST choice that we see in a choiceadventure chain.
+				if ( ChoiceManager.getLastChoice() == 0 &&
+				     !FightRequest.edFightInProgress() )
+				{
+					ChoiceManager.addToQueue( choice, KoLAdventure.lastVisitedLocation(), encounter );
+				}
+
+				// Treat ChoiceAdventure and Noncombat as the same from here onwards
+				type = "Noncombat";
 			}
 			EncounterManager.registerEncounter( encounter, type, responseText );
 		}
@@ -735,100 +746,6 @@ public class AdventureRequest
 		return monster;
 	}
 
-	private static String parseChoiceEncounter( final String urlString, final int choice, final String responseText )
-	{
-		if ( LouvreManager.louvreChoice( choice ) )
-		{
-			return LouvreManager.encounterName( choice );
-		}
-
-		int urlChoice = ChoiceManager.extractChoiceFromURL( urlString );
-		int urlOption = ChoiceManager.extractOptionFromURL( urlString );
-
-		switch ( urlChoice )
-		{
-		case 1334: // Boxing Daycare (Lobby)
-			if ( urlOption == 1 )
-			{
-				// Have a Boxing Daydream
-				return "Have a Boxing Daydream";
-			}
-			return null;
-		case 1335: // Boxing Day Spa
-			if ( urlOption >= 1 && urlOption <= 4 )
-			{
-				// (Get a buff)
-				return "Visit the Boxing Day Spa";
-			}
-			return null;
-		case 1336: // Boxing Daycare
-			if ( urlOption >= 1 && urlOption <= 4 )
-			{
-				// (recruit, scavenge, hire, spar)
-				return "Enter the Boxing Daycare";
-			}
-			return null;
-		}
-
-		switch ( choice )
-		{
-		case 443:	// Chess Puzzle
-			// No "encounter" when moving on the chessboard
-			if ( urlString.contains( "xy" ) )
-			{
-				return null;
-			}
-			break;
-
-		case 1085:	// Deck of Every Card
-			return DeckOfEveryCardRequest.parseCardEncounter( responseText );
-
-		case 535:	// Deep Inside Ronald, Baby
-		case 536:	// Deep Inside Grimace, Bow Chick-a Bow Bow
-		case 585:	// Screwing Around!
-		case 595:	// Fire! I... have made... fire!
-		case 807:	// Breaker Breaker!
-		case 1003:	// Test Your Might And Also Test Other Things
-		case 1086:	// Pick a Card
-			return null;
-
-		case 1135:	// The Bat-Sedan
-			return BatManager.parseBatSedan( responseText );
-
-		case 1388:
-		{
-			if ( !BeachCombRequest.containsEncounter( urlString ) )
-			{
-				return null;
-			}
-			break;
-		}
-		}
-
-		// No "encounter" for certain arcade games
-		if ( ArcadeRequest.arcadeChoice( choice ) )
-		{
-			return null;
-		}
-
-		if ( ChoiceManager.canWalkFromChoice( choice ) )
-		{
-			return null;
-		}
-
-		return AdventureRequest.parseEncounter( responseText );
-	}
-
-	private static String choiceType( final int choice )
-	{
-		if ( LouvreManager.louvreChoice( choice ) )
-		{
-			return null;
-		}
-
-		return "Noncombat";
-	}
-
 	private static final String[][] LIMERICKS =
 	{
 		{ "Nantucket Snapper", "ancient old turtle" },
@@ -922,7 +839,7 @@ public class AdventureRequest
 		return null;
 	}
 
-	private static String parseEncounter( final String responseText )
+	public static String parseEncounter( final String responseText )
 	{
 		// Look only in HTML body; the header can have scripts with
 		// bold text.

@@ -620,6 +620,7 @@ public class ValhallaManager
 		Preferences.setBoolean( "mapToTheDiveBarPurchased", false );
 		Preferences.setBoolean( "mapToTheSkateParkPurchased", false );
 		Preferences.setString( "merkinLockkeyMonster", "" );
+		SeaMerkinOutpostManager.resetSearches();
 		Preferences.setString( "merkinQuestPath", "none" );
 		Preferences.setString( "seahorseName", "" );
 		Preferences.setString( "workteaClue", "" );
@@ -645,9 +646,11 @@ public class ValhallaManager
 		Preferences.setInteger( "garbageShirtCharge", 0 );
 		Preferences.setInteger( "garbageTreeCharge", 0 );
 		// Boxing Daycare
-		Preferences.setInteger( "daycareEquipment", 0 );
-		Preferences.setInteger( "daycareToddlers", 0 );
-		Preferences.setInteger( "daycareInstructors", 0 );
+		Preferences.resetToDefault( "daycareEquipment" );
+		Preferences.resetToDefault( "daycareInstructorCost" );
+		Preferences.resetToDefault( "daycareInstructorItem" );
+		Preferences.resetToDefault( "daycareInstructors" );
+		Preferences.resetToDefault( "daycareToddlers" );
 		// Sausage Grinder
 		Preferences.setInteger( "sausageGrinderUnits", 0 );
 		// Hewn Moon Rune Spoon
@@ -656,6 +659,8 @@ public class ValhallaManager
 		Preferences.setString( "cargoPocketsEmptied", "" );
 		Preferences.setString( "cargoPocketScraps", "" );
 		Preferences.setString( "demonName13", "" );
+		// Comprehensive Cartography
+		Preferences.resetToDefault( "cartographyAdventuresEncountered" );
 		// Community Service
 		Preferences.setString( "csServicesPerformed", "" );	
 		// AWOL

@@ -34,11 +34,16 @@
 package net.sourceforge.kolmafia.session;
 
 import java.util.Arrays;
+import java.util.function.Function;
 
 import net.sourceforge.kolmafia.AdventureResult;
 import net.sourceforge.kolmafia.KoLCharacter;
 
+import net.sourceforge.kolmafia.objectpool.EffectPool;
 import net.sourceforge.kolmafia.objectpool.ItemPool;
+
+import net.sourceforge.kolmafia.persistence.choiceadventures.ChoiceAdventureDatabase.ChoiceAdventure.Option;
+import net.sourceforge.kolmafia.persistence.choiceadventures.ChoiceAdventureDatabase.ProcessType;
 
 import net.sourceforge.kolmafia.preferences.Preferences;
 
@@ -118,6 +123,13 @@ public abstract class LouvreManager
 		ItemPool.get( ItemPool.PINOT_RENOIR, 1 ),
 	};
 
+
+	public static final AdventureResult[] LouvreGoalBuffs =
+	{
+		EffectPool.get( EffectPool.DANCIN_FOOL ),
+		EffectPool.get( EffectPool.SWORDHOLDER ),
+		EffectPool.get( EffectPool.IS_THIS_YOUR_CARD ),
+	};
 	// Identifying strings from the response text
 	public static final String[] LouvreGoalStrings =
 	{
@@ -232,7 +244,7 @@ public abstract class LouvreManager
 		}
 
 		String override = Preferences.getString( "louvreOverride" );
-		if ( override.contains( "," ) )
+		if ( false && override.contains( "," ) ) // this handling was for the old Louvre. It doesn't work this way anymore
 		{
 			String[] options = override.split( "\\s*,\\s*" );
 			if ( options.length > stepCount )
@@ -346,34 +358,53 @@ public abstract class LouvreManager
 		return nextHops;
 	}
 
-	public static final String[][] choiceSpoilers( final int choice )
+	public static final void choiceSpoilers( final int choice, final Function<Integer, Option> optionGenerator )
 	{
 		// We only handle LouvreManager choices
 		if ( !LouvreManager.louvreChoice( choice ) )
 		{
-			return null;
+			return;
 		}
 
-		// Return an array with the same structure as used by built-in
-		// choice adventures.
-		String[][] result = new String[ 3 ][];
+		int i = 1;
+		int[] exits = LouvreManager.choiceTuple( choice );
+		for ( int exit : exits )
+		{
+			Option option = optionGenerator.apply( i++ );
 
-		// The choice option is the first element
-		result[ 0 ] = new String[ 1 ];
-		result[ 0 ][ 0 ] = "choiceAdventure" + choice;
+			option.text( LouvreManager.choiceName( exit ) );
 
-		// The name of the choice is second element
-		result[ 1 ] = new String[ 1 ];
-		result[ 1 ][ 0 ] = LouvreManager.LouvreLocationNames[ choice - LouvreManager.FIRST_CHOICE ];
+			// 0 -> unknown (from Relativity Start)
+			// 1-3 -> leads to an item
+			// 4-6 -> leads to stats
+			// 7-9 -> leads to buffs
+			// 900+ -> leads to another Louvre choice
+			if ( exit <= 0 )
+			{
+				option.entersQueue( false );
+			}
+			else if ( exit < 10 )
+			{
+				option.turnCost( 1 );
 
-		// An array of choice spoilers is the third element
-		int[] choices = LouvreManager.choiceTuple( choice );
-		result[ 2 ] = new String[ 3 ];
-		result[ 2 ][ 0 ] = LouvreManager.choiceName( choices[ 0 ] );
-		result[ 2 ][ 1 ] = LouvreManager.choiceName( choices[ 1 ] );
-		result[ 2 ][ 2 ] = LouvreManager.choiceName( choices[ 2 ] );
-
-		return result;
+				if ( exit <= 3 )
+				{
+					option.attachItem( LouvreManager.LouvreGoalItems[ exit - 1 ], ProcessType.AUTO );
+				}
+				else if ( exit <= 6 )
+				{
+					//nothing
+				}
+				else if ( exit <= 9 )
+				{
+					option.attachEffect( LouvreManager.LouvreGoalBuffs[ exit - 7 ] );
+				}
+			}
+			else
+			{
+				option.leadsTo( exit );
+			}
+		}
 	}
 
 	public static final String encounterName( final int choice )
@@ -392,8 +423,8 @@ public abstract class LouvreManager
 		switch ( destination )
 		{
 		case 0:
-			return "";
-			
+			return null;
+
 		case 1:
 		case 2:
 		case 3:

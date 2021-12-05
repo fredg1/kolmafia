@@ -46,6 +46,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -74,6 +75,7 @@ import net.sourceforge.kolmafia.objectpool.ItemPool;
 
 import net.sourceforge.kolmafia.persistence.AdventureDatabase;
 import net.sourceforge.kolmafia.persistence.BountyDatabase;
+import net.sourceforge.kolmafia.persistence.choiceadventures.ChoiceAdventureDatabase.ChoiceAdventure.Option;
 import net.sourceforge.kolmafia.persistence.ItemDatabase;
 import net.sourceforge.kolmafia.persistence.MonsterDatabase;
 import net.sourceforge.kolmafia.persistence.QuestDatabase;
@@ -104,7 +106,6 @@ import net.sourceforge.kolmafia.session.IslandManager;
 import net.sourceforge.kolmafia.session.Limitmode;
 import net.sourceforge.kolmafia.session.NemesisManager;
 import net.sourceforge.kolmafia.session.OceanManager;
-import net.sourceforge.kolmafia.session.RabbitHoleManager;
 import net.sourceforge.kolmafia.session.ResultProcessor;
 import net.sourceforge.kolmafia.session.TavernManager;
 import net.sourceforge.kolmafia.session.VolcanoMazeManager;
@@ -1281,10 +1282,10 @@ public class RequestEditorKit
 		StringUtilities.insertAfter(
 			buffer, "<input type=text name=outfitname", " value=\"Backup\"" );
 
-                if ( !addComplexFeatures )
-                {
-                        return;
-                }
+		if ( !addComplexFeatures )
+		{
+			return;
+		}
 
 		// Split out normal outfits, custom outfits, automatic outfits
 		Matcher fmatcher = OUTFIT_FORM_PATTERN.matcher( buffer );
@@ -1868,7 +1869,7 @@ public class RequestEditorKit
 		}
 
 		String link = "<a href=\"cellar.php?action=explore&whichspot=" +
-                unexplored +
+				unexplored +
 				"\">Explore Next Unexplored Square</a><p>";
 		buffer.insert( index, link );
 	}
@@ -1958,7 +1959,7 @@ public class RequestEditorKit
 		String partyQuest = Preferences.getString( "_questPartyFairQuest" );
 
 		if ( partyQuest.equals( "woots" ) )
-		{	
+		{
 			Matcher m = RequestEditorKit.WOOTS_PATTERN.matcher( buffer );
 			if ( m.find() )
 			{
@@ -2050,7 +2051,7 @@ public class RequestEditorKit
 		if ( choice == 0 )
 		{
 			// It's a response to taking a choice.
-			RequestEditorKit.decorateChoiceResponse( location, buffer );
+			ChoiceManager.decorateChoiceResponse( location, buffer );
 			return;
 		}
 
@@ -2065,22 +2066,10 @@ public class RequestEditorKit
 		}
 
 		// Find the options for the choice we've encountered
-		Object[][] spoilers = ChoiceManager.choiceSpoilers( choice, buffer );
-
-		// Some choices we don't mark up with spoilers
-		if ( ChoiceManager.noRelayChoice( choice ) )
-		{
-			spoilers = null;
-		}
-
-		if ( spoilers == null )
-		{	// Don't give up - there may be a specified choice even if there
-			// are no spoilers.
-			spoilers = new Object[][] { null, null, {} };
-		}
+		Map<Integer, Option> options = ChoiceManager.choiceOptions( choice );
+		int decision = ChoiceManager.getDecision( choice, text );
 
 		int index1 = matcher.start();
-		int decision = ChoiceManager.getDecision( choice, text );
 
 		buffer.setLength( 0 );
 		buffer.append( text, 0, index1 );
@@ -2101,69 +2090,39 @@ public class RequestEditorKit
 			{	// this wasn't actually a choice option - strange!
 				buffer.append( currentSection );
 				buffer.append( "</form>" );
+
+				// ("</form>" is 7 characters)
 				index1 = index2 + 7;
 				continue;
 			}
 
 			int i = StringUtilities.parseInt( optionMatcher.group( 1 ) );
+
 			if ( i != decision )
 			{
 				buffer.append( currentSection );
 			}
 			else
 			{
+				// Add a right arrow to the start of the option's text
 				int pos = currentSection.lastIndexOf( "value=\"" );
 				buffer.append( currentSection, 0, pos + 7 );
 				buffer.append( "&rarr; " );
 				buffer.append( currentSection.substring( pos + 7 ) );
 			}
 
-			// Build spoiler text
-			while ( i > 0 )
+			String spoiler = ChoiceManager.getOptionSpoiler( options.get( i ) );
+
+			if ( spoiler.length() > 0 )
 			{
-				// Say what the choice will give you
-				Object spoiler = ChoiceManager.choiceSpoiler( choice, i, spoilers[ 2 ] );
-
-				// If we have nothing to say about this option, don't say anything
-				if ( spoiler == null )
-				{
-					break;
-				}
-
-				StringBuilder spoilerBuffer = new StringBuilder( spoiler.toString() );
-
-				// If this decision has an item associated with it, annotate it
-				if ( spoiler instanceof ChoiceManager.Option )
-				{
-					AdventureResult item = ((ChoiceManager.Option)spoiler).getItem();
-
-					// If this decision leads to an item...
-					if ( item != null )
-					{
-						// List # in inventory
-						spoilerBuffer.append( "<img src=\"/images/itemimages/magnify.gif\" valign=middle onclick=\"descitem('" );
-						spoilerBuffer.append( ItemDatabase.getDescriptionId( item.getItemId() ) );
-						spoilerBuffer.append( "');\">" );
-
-						int available = KoLCharacter.hasEquipped( item ) ? 1 : 0;
-						available += item.getCount( KoLConstants.inventory );
-
-						spoilerBuffer.append( available );
-						spoilerBuffer.append( " in inventory" );
-					}
-				}
-
-				if ( spoilerBuffer.length() != 0 )
-				{
-					// Add spoiler text
-					buffer.append( "<br><font size=-1>(" );
-					buffer.append( spoilerBuffer );
-					buffer.append( ")</font>" );
-				}
-
-				break;
+				// Add spoiler text
+				buffer.append( "<span style='font-size: small;'>" );
+				buffer.append( spoiler );
+				buffer.append( "</span>" );
 			}
+
 			buffer.append( "</form>" );
+			// ("</form>" is 7 characters)
 			index1 = index2 + 7;
 		}
 
@@ -2183,168 +2142,7 @@ public class RequestEditorKit
 		}
 	}
 
-	private static void decorateChoiceResponse( final String location, final StringBuffer buffer )
-	{
-		int choice = ChoiceManager.extractChoiceFromURL( location );
-		if ( choice == 0 )
-		{
-			return;
-		}
-		int option = ChoiceManager.extractOptionFromURL( location );
-
-		switch ( choice )
-		{
-		// The Oracle Will See You Now
-		case 3:
-			StringUtilities.singleStringReplace(
-				buffer, "It's actually a book.  Read it.",
-				"It's actually a book. <font size=1>[<a href=\"inv_use.php?pwd=" + GenericRequest.passwordHash + "&which=3&whichitem=818\">read it</a>]</font>" );
-			break;
-
-		case 392:
-			MemoriesDecorator.decorateElementsResponse( buffer );
-			break;
-		case 443:
-			// Chess Puzzle
-			RabbitHoleManager.decorateChessPuzzleResponse( buffer );
-			break;
-
-		case 509:	// Of Course!
-		case 1000:	// Everything in Moderation
-			// You should probably go tell Bart you've fixed his rat problem.
-			// You should probably go tell Bart you've fixed his lack-of-rat problem.
-			StringUtilities.singleStringReplace(
-				buffer, "rat problem.",
-				"rat problem. <font size=1>[<a href=\"tavern.php?place=barkeep\">Visit Bart</a>]</font>" );
-			break;
-		case 537:
-			// Play Porko!
-		case 540:
-			// Big-Time Generator
-			SpaaaceRequest.decoratePorko( buffer );
-			break;
-
-		case 571:
-			// Your Minstrel Vamps
-			RequestEditorKit.addMinstrelNavigationLink( buffer, "Go to the Typical Tavern", "tavern.php" );
-			break;
-
-		case 572:
-			// Your Minstrel Clamps
-			RequestEditorKit.addMinstrelNavigationLink( buffer, "Go to the Knob Shaft", "adventure.php?snarfblat=101" );
-			break;
-
-		case 573:
-			// Your Minstrel Stamps
-			// Add a link to the Luter's Grave
-			RequestEditorKit.addMinstrelNavigationLink( buffer, "Go to the Luter's Grave", 
-				"place.php?whichplace=plains&action=lutersgrave" );
-			break;
-
-		case 576:
-			// Your Minstrel Camps
-			RequestEditorKit.addMinstrelNavigationLink( buffer, "Go to the Icy Peak", "adventure.php?snarfblat=110" );
-			break;
-
-		case 577:
-			// Your Minstrel Scamp
-			RequestEditorKit.addMinstrelNavigationLink( buffer, "Go to the Ancient Buried Pyramid", "pyramid.php" );
-			break;
-
-		case 579:
-			// Such Great Heights
-			if ( option == 3 )
-			{
-				// xyzzy
-				int index = buffer.indexOf( "<p><a href=\"adventure.php?snarfblat=280\">Adventure Again (The Hidden Temple)</a>" );
-				if ( index == -1 )
-				{
-					break;
-				}
-
-				int itemId = ItemPool.STONE_WOOL;
-				int count = ItemPool.get( itemId, 1 ).getCount( KoLConstants.inventory );
-				if ( count == 0 )
-				{
-					break;
-				}
-
-				String name = "stone wool";
-				String link = "<a href=\"javascript:singleUse('inv_use.php','which=3&whichitem=" + itemId +
-						"&pwd=" +
-						GenericRequest.passwordHash +
-						"&ajax=1');void(0);\">Use another " +
-						name +
-						"</a>";
-				buffer.insert( index, link );
-			}
-			break;
-
-		case 611: {
-			// The Horror...
-			int index = buffer.indexOf( "<p><a href=\"adventure.php?snarfblat=296\">Adventure Again (A-Boo Peak)</a>" );
-			if ( index == -1 )
-			{
-				break;
-			}
-
-			boolean glover = KoLCharacter.inGLover();
-			int itemId = glover ? ItemPool.GLUED_BOO_CLUE : ItemPool.BOO_CLUE;
-			int count = ItemPool.get( itemId, 1 ).getCount( KoLConstants.inventory );
-			if ( count == 0 )
-			{
-				break;
-			}
-
-			String name = glover ? "glued A-Boo Clue" : "A-Boo Clue";
-			String link = "<a href=\"javascript:singleUse('inv_use.php','which=3&whichitem=" + itemId +
-					"&pwd=" +
-					GenericRequest.passwordHash +
-					"&ajax=1');void(0);\">Use another " +
-					name +
-					"</a>";
-			buffer.insert( index, link );
-			break;
-		}
-
-		case 1027:	// The End of the Tale of Spelunking
-		case 1042:	// Pick a Perk
-			SpelunkyRequest.decorateSpelunkyExit( buffer );
-			break;
-
-		case 1325:// A Room With a View...  Of a Bed
-			StringUtilities.singleStringReplace(
-				buffer, "hurry through the door to take your place.",
-				"hurry through the door to take your place. (" + Preferences.getString( "_questPartyFairProgress" ) + "/100 megawoots)" );
-			StringUtilities.singleStringReplace(
-				buffer, "start complaining and then leave.",
-				"start complaining and then leave. (" + Preferences.getString( "_questPartyFairProgress" ) + " Partiers remaining)" );
-			StringUtilities.singleStringReplace(
-				buffer, "contribute to the DJ's bill.",
-				"contribute to the DJ's bill. (" + Preferences.getString( "_questPartyFairProgress" ) + " Meat remaining)" );
-			break;
-
-		case 1326:// Gone Kitchin'
-			StringUtilities.singleStringReplace(
-				buffer, "pieces of trash in that can!",
-				"pieces of trash in that can! (~" + Preferences.getString( "_questPartyFairProgress" ) + " pieces of trash remaining)" );
-			break;
-
-		case 1327:// Forward to the Back
-			StringUtilities.singleStringReplace(
-				buffer, "flees over the back fence.",
-				"flees over the back fence. (" + Preferences.getString( "_questPartyFairProgress" ) + " Partiers remaining)" );
-			break;
-
-		case 1328:// Basement Urges
-			StringUtilities.singleStringReplace(
-				buffer, "burns the house down.",
-				"burns the house down. (" + Preferences.getString( "_questPartyFairProgress" ) + "/100 megawoots)" );
-			break;
-		}
-	}
-
-	private static void addMinstrelNavigationLink( final StringBuffer buffer, final String tag, final String url )
+	public static void addMinstrelNavigationLink( final StringBuffer buffer, final String tag, final String url )
 	{
 		int index = buffer.lastIndexOf( "<table>" );
 		if ( index == -1 )

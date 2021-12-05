@@ -41,8 +41,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.function.Supplier;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -67,8 +68,11 @@ import net.sourceforge.kolmafia.moods.MoodManager;
 
 import net.sourceforge.kolmafia.objectpool.IntegerPool;
 
-import net.sourceforge.kolmafia.session.ChoiceManager;
-import net.sourceforge.kolmafia.session.ChoiceManager.ChoiceAdventure;
+import net.sourceforge.kolmafia.persistence.choiceadventures.ChoiceAdventureDatabase;
+import net.sourceforge.kolmafia.persistence.choiceadventures.ChoiceAdventureDatabase.ChoiceAdventure;
+import net.sourceforge.kolmafia.persistence.choiceadventures.ChoiceAdventureDatabase.ChoiceAdventure.Option;
+import net.sourceforge.kolmafia.persistence.choiceadventures.ChoiceAdventureDatabase.ChoiceAdventure.CustomOption;
+import net.sourceforge.kolmafia.persistence.choiceadventures.ChoiceAdventureDatabase.UnknownChoiceAdventure;
 
 import net.sourceforge.kolmafia.swingui.AdventureFrame;
 
@@ -906,48 +910,111 @@ public class Preferences
 	{
 		PrintStream ostream = LogStream.openStream( "choices.txt", true );
 
+		ArrayList<ChoiceAdventure> configurables = new ArrayList<>();
+		ArrayList<ChoiceAdventure> unconfigurables = new ArrayList<>();
+
+		final Iterator<ChoiceAdventure> choiceAdventures = ChoiceAdventureDatabase.getDatabaseIterator();
+		while ( choiceAdventures.hasNext() )
+		{
+			ChoiceAdventure choiceAdventure = choiceAdventures.next();
+
+			if ( choiceAdventure instanceof UnknownChoiceAdventure )
+			{
+				continue;
+			}
+
+			if ( choiceAdventure.customOptions.size() > 0 )
+			{
+				configurables.add( choiceAdventure );
+			}
+			else
+			{
+				unconfigurables.add( choiceAdventure );
+			}
+		}
+
 		ostream.println( "[u]Configurable[/u]" );
 		ostream.println();
 
-		ChoiceManager.setChoiceOrdering( false );
-		Arrays.sort( ChoiceManager.CHOICE_ADVS );
-		Arrays.sort( ChoiceManager.CHOICE_ADV_SPOILERS );
+		for ( ChoiceAdventure choiceAdventure : configurables )
+		{
+			int choice = choiceAdventure.choice;
 
-		Preferences.printDefaults( ChoiceManager.CHOICE_ADVS, ostream );
+			ostream.print( "[" + choice + "] " );
+			ostream.print( choiceAdventure.name + ": " );
+
+			int defaultOption;
+
+			Supplier<Integer> supplier = choiceAdventure.customLoad;
+			if ( supplier != null )
+			{
+				defaultOption = supplier.get();
+			}
+			else
+			{
+				defaultOption = Preferences.getInteger( "choiceAdventure" + choiceAdventure.choice );
+			}
+
+			CustomOption def = null;
+			for ( CustomOption customOption : choiceAdventure.customOptions.values() )
+			{
+				if ( customOption.optionIndex == defaultOption )
+				{
+					def = customOption;
+					ostream.print( def.toString() + " " );
+					break;
+				}
+			}
+
+			ostream.print( "[color=gray](" );
+
+			int printedCount = 0;
+			for ( CustomOption customOption : choiceAdventure.customOptions.values() )
+			{
+				if ( customOption == def )
+				{
+					continue;
+				}
+
+				if ( printedCount != 0 )
+				{
+					ostream.print( ", " );
+				}
+
+				++printedCount;
+				ostream.print( customOption.displayText );
+			}
+
+			ostream.println( ")[/color]" );
+		}
 
 		ostream.println();
 		ostream.println();
 		ostream.println( "[u]Not Configurable[/u]" );
 		ostream.println();
 
-		Preferences.printDefaults( ChoiceManager.CHOICE_ADV_SPOILERS, ostream );
-
-		ChoiceManager.setChoiceOrdering( true );
-		Arrays.sort( ChoiceManager.CHOICE_ADVS );
-		Arrays.sort( ChoiceManager.CHOICE_ADV_SPOILERS );
-
-		ostream.close();
-	}
-
-	private static void printDefaults( final ChoiceAdventure[] choices, final PrintStream ostream )
-	{
-		for ( int i = 0; i < choices.length; ++i )
+		for ( ChoiceAdventure choiceAdventure : unconfigurables )
 		{
-			String setting = choices[ i ].getSetting();
+			int choice = choiceAdventure.choice;
+			String setting = "choiceAdventure" + choice;
 
-			ostream.print( "[" + setting.substring( 15 ) + "] " );
-			ostream.print( choices[ i ].getName() + ": " );
+			ostream.print( "[" + choice + "] " );
+			ostream.print( choiceAdventure.name + ": " );
 
-			Object[] options = choices[ i ].getOptions();
+			Map<Integer, Option> options = choiceAdventure.options;
 			int defaultOption = StringUtilities.parseInt( Preferences.userNames.get( setting ) );
-			Object def = ChoiceManager.findOption( options, defaultOption );
+			Option def = options.get( Integer.valueOf( defaultOption ) );
 
-			ostream.print( def.toString() + " [color=gray](" );
+			if ( def != null )
+			{
+				ostream.print( def.toString() + " " );
+			}
+
+			ostream.print( "[color=gray](" );
 
 			int printedCount = 0;
-			for ( int j = 0; j < options.length; ++j )
+			for ( Option option : options.values() )
 			{
-				Object option = options[ j ];
 				if ( option == def )
 				{
 					continue;
@@ -959,11 +1026,13 @@ public class Preferences
 				}
 
 				++printedCount;
-				ostream.print( option.toString() );
+				ostream.print( option.spoilerText );
 			}
 
 			ostream.println( ")[/color]" );
 		}
+
+		ostream.close();
 	}
 
 	public static void resetToDefault( String name )

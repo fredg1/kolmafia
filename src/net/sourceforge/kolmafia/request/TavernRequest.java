@@ -428,4 +428,13 @@ public class TavernRequest
 
 		return true;
 	}
+
+	public static final void decorateFaucetInteraction( final StringBuffer buffer, final int option )
+	{
+		// You should probably go tell Bart you've fixed his rat problem.
+		// You should probably go tell Bart you've fixed his lack-of-rat problem.
+		StringUtilities.singleStringReplace(
+			buffer, "rat problem.",
+			"rat problem. <font size=1>[<a href=\"tavern.php?place=barkeep\">Visit Bart</a>]</font>" );
+	}
 }

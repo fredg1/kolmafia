@@ -643,9 +643,8 @@ public class RequestLogger
 		// Some general URLs which never need to be registered
 		// because they don't do anything.
 
-		if ( urlString.startsWith( "choice" ) )
+		if ( ChoiceManager.registerRequest( urlString ) )
 		{
-			ChoiceManager.registerRequest( urlString );
 			return;
 		}
 

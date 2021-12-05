@@ -233,8 +233,9 @@ public class BeachManager
 			// Replace the setting
 			String value = BeachManager.layoutToString( layout );
 			Preferences.setString( "_beachLayout", value );
+			return true;
 		}
-		return BeachManager.parseCombUsage( text );
+		return false;
 	}
 
 	public static final boolean parseCombUsage( final String text )

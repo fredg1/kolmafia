@@ -79,6 +79,7 @@ import net.sourceforge.kolmafia.objectpool.ConcoctionPool;
 import net.sourceforge.kolmafia.objectpool.IntegerPool;
 
 import net.sourceforge.kolmafia.persistence.AdventureDatabase;
+import net.sourceforge.kolmafia.persistence.choiceadventures.ChoiceAdventureDatabase.ChoiceAdventure.Option;
 import net.sourceforge.kolmafia.persistence.ConcoctionDatabase;
 import net.sourceforge.kolmafia.persistence.EffectDatabase;
 import net.sourceforge.kolmafia.persistence.ItemDatabase;
@@ -257,13 +258,11 @@ public class TestCommand
 				return;
 			}
 			int choice = StringUtilities.parseInt( split[ 1 ] );
-			Object[] spoilers = ChoiceManager.dynamicChoiceOptions( choice );
-			if ( spoilers != null )
+			Map<Integer, Option> spoils = ChoiceManager.choiceOptions( choice );
+			for ( Option option : spoils.values() )
 			{
-				for ( int i = 0; i < spoilers.length; ++i )
-				{
-					RequestLogger.printLine( "Option " + ( i + 1 ) + ": " + spoilers[ i ] );
-				}
+				String message = "Option " + option.index + ": " + option.spoilerText + " (" + option.attachments.size() + " attachments)";
+				RequestLogger.printLine( message );
 			}
 			return;
 		}

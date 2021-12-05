@@ -4814,6 +4814,17 @@ public class FightRequest
 				AdventureResult result = AdventureResult.tallyItem( "sewer tunnel explorations", false );
 				AdventureResult.addResultToList( KoLConstants.tally, result );
 			}
+			else if ( monsterName.equals( "giant giant crab" ) ||
+			          monsterName.equals( "jungle titan" ) )
+			{
+				Preferences.setString( "_prCurrentProgress", "select" );
+			}
+			else if ( monsterName.equals( "pirate radio" ) ||
+			          monsterName.equals( "Red Roger" ) ||
+			          monsterName.equals( "Glass Jack Hummel" ) )
+			{
+				Preferences.setString( "_prCurrentProgress", "finished" );
+			}
 
 			if ( KoLCharacter.hasEquipped( ItemPool.BONE_ABACUS, EquipmentManager.OFFHAND ) &&
 			     responseText.contains( "You move a bone on the abacus to record your victory" ) )

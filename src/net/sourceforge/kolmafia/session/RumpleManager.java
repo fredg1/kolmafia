@@ -42,6 +42,10 @@ import net.sourceforge.kolmafia.objectpool.ItemPool;
 
 import net.sourceforge.kolmafia.preferences.Preferences;
 
+import net.sourceforge.kolmafia.request.GenericRequest;
+
+import net.sourceforge.kolmafia.utilities.StringUtilities;
+
 public abstract class RumpleManager
 {
 	// adventure.php?snarfblat=381 -> Portal to Terrible Parents
@@ -87,6 +91,7 @@ public abstract class RumpleManager
 	private static final Pattern PATTERN1 = Pattern.compile( "without fear of being noticed. *Y([^.]*)", Pattern.DOTALL );
 	private static final Pattern PATTERN2 = Pattern.compile( "and then y([^.]*)", Pattern.DOTALL );
 	private static final Pattern PATTERN3 = Pattern.compile( "when you look back y([^.]*)", Pattern.DOTALL );
+	private static final Pattern RUMPLE_MATERIAL_PATTERN = Pattern.compile( "alt=\"(.*?)\"></td><td valign=center>(\\d+)<" );
 
 	private static final String NEITHER = "neither parent";
 	private static final String FATHER = "the father";
@@ -549,5 +554,64 @@ public abstract class RumpleManager
 		output.append( "</table></center>" );
 
 		buffer.insert( insertionPoint, output.toString() );
+	}
+
+	public static final void parseAvailableMaterials( final GenericRequest request )
+	{
+		// Update remaining materials
+		Matcher matcher = RumpleManager.RUMPLE_MATERIAL_PATTERN.matcher( request.responseText );
+		while ( matcher.find() )
+		{
+			String material = matcher.group( 1 );
+			int number = StringUtilities.parseInt( matcher.group( 2 ) );
+			if ( material.equals( "straw" ) )
+			{
+				int straw = InventoryManager.getCount( ItemPool.STRAW );
+				if ( straw != number )
+				{
+					ResultProcessor.processItem( ItemPool.STRAW, number - straw );
+				}
+			}
+			else if ( material.equals( "leather" ) )
+			{
+				int leather = InventoryManager.getCount( ItemPool.LEATHER );
+				if ( leather != number )
+				{
+					ResultProcessor.processItem( ItemPool.LEATHER, number - leather );
+				}
+			}
+			else if ( material.equals( "clay" ) )
+			{
+				int clay = InventoryManager.getCount( ItemPool.CLAY );
+				if ( clay != number )
+				{
+					ResultProcessor.processItem( ItemPool.CLAY, number - clay );
+				}
+			}
+			else if ( material.equals( "filling" ) )
+			{
+				int filling = InventoryManager.getCount( ItemPool.FILLING );
+				if ( filling != number )
+				{
+					ResultProcessor.processItem( ItemPool.FILLING, number - filling );
+				}
+			}
+			else if ( material.equals( "parchment" ) )
+			{
+				int parchment = InventoryManager.getCount( ItemPool.PARCHMENT );
+				if ( parchment != number )
+				{
+					ResultProcessor.processItem( ItemPool.PARCHMENT, number - parchment );
+				}
+			}
+			else if ( material.equals( "glass" ) )
+			{
+				int glass = InventoryManager.getCount( ItemPool.GLASS );
+				if ( glass != number )
+				{
+					ResultProcessor.processItem( ItemPool.GLASS, number - glass );
+				}
+			}
+		}
 	}
 }

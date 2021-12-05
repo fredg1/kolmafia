@@ -3002,7 +3002,8 @@ public class GenericRequest
 
 	private static void checkItemRedirection( final String location )
 	{
-		// Certain choices lead to fights. We log those in ChoiceManager.
+		// Certain items lead to choices which lead to fights.
+		// We log those in ChoiceManager or with checkChoiceRedirection( final String location ).
 		if ( location.startsWith( "choice.php" ) )
 		{
 			return;
@@ -3024,6 +3025,7 @@ public class GenericRequest
 		int itemId = item.getItemId();
 		String itemName = null;
 		boolean consumed = false;
+		// If the item forcibly moves us to a different location
 		String nextAdventure = null;
 
 		switch ( itemId )
@@ -3231,8 +3233,6 @@ public class GenericRequest
 
 		case ItemPool.WHITE_PAGE:
 			itemName = "white page";
-			consumed = true;
-			nextAdventure = "Whitey's Grove";
 			break;
 
 		case ItemPool.XIBLAXIAN_HOLOTRAINING_SIMCODE:
@@ -3449,11 +3449,7 @@ public class GenericRequest
 			return;
 		}
 
-		KoLAdventure.lastVisitedLocation = null;
-		KoLAdventure.lastLocationName = null;
 		KoLAdventure.lastLocationURL = location;
-		KoLAdventure.setLastAdventure( "None" );
-		KoLAdventure.setNextAdventure( "None" );
 
 		String message = "[" + KoLAdventure.getAdventureCount() + "] " + name;
 		RequestLogger.printLine();

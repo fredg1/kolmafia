@@ -81,6 +81,7 @@ import net.sourceforge.kolmafia.session.Limitmode;
 import net.sourceforge.kolmafia.session.QuestManager;
 import net.sourceforge.kolmafia.session.ResponseTextParser;
 import net.sourceforge.kolmafia.session.ResultProcessor;
+import net.sourceforge.kolmafia.session.SpacegateManager;
 import net.sourceforge.kolmafia.session.SpadingManager;
 import net.sourceforge.kolmafia.session.TurnCounter;
 
@@ -5863,7 +5864,7 @@ public class UseItemRequest
 				// If you already have access it is not consumed
 				return;
 			}
-			ChoiceManager.parseLanguageFluency( responseText, "spaceBabyLanguageFluency" );
+			SpacegateManager.parseLanguageFluency( responseText, "spaceBabyLanguageFluency" );
 			break;
 
 		case ItemPool.LICENSE_TO_CHILL:
