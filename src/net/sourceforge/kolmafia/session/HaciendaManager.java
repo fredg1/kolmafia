@@ -238,42 +238,7 @@ public class HaciendaManager {
     return REWARDS[location];
   }
 
-  public static String[] getSpoilers(final int choice) {
-    String[] result = new String[4];
-
-    switch (choice) {
-      case 410:
-        // choice of hallways
-        result[0] = HaciendaManager.getWingSpoilers(0);
-        result[1] = HaciendaManager.getWingSpoilers(9);
-        result[2] = "leave barracks";
-        break;
-      case 411:
-      case 412:
-        // choice of rooms
-        for (int i = 0; i < 3; i++) {
-          String buffer =
-              HaciendaManager.getSpoiler(choice * 9 + i * 3 - 3699)
-                  + " / "
-                  + HaciendaManager.getSpoiler(choice * 9 + i * 3 - 3698)
-                  + " / "
-                  + HaciendaManager.getSpoiler(choice * 9 + i * 3 - 3697);
-          result[i] = buffer;
-        }
-        result[3] = "leave barracks";
-        break;
-      default:
-        // choice of locations in rooms
-        for (int i = 0; i < 3; i++) {
-          result[i] = HaciendaManager.getSpoiler(choice * 3 + i - 1239);
-        }
-        result[3] = "leave barracks";
-        break;
-    }
-    return result;
-  }
-
-  private static String getSpoiler(final int spoiler) {
+  public static String getSpoiler(final int spoiler) {
     String haciendaLayout = Preferences.getString("haciendaLayout");
     Boolean questComplete = QuestDatabase.isQuestFinished(Quest.NEMESIS);
     String result = "";
@@ -322,10 +287,9 @@ public class HaciendaManager {
     return result;
   }
 
-  private static String getWingSpoilers(final int spoiler) {
+  public static String getWingSpoilers(final int wingNumber) {
     String haciendaLayout = Preferences.getString("haciendaLayout");
     Boolean questComplete = QuestDatabase.isQuestFinished(Quest.NEMESIS);
-    int wingNumber = spoiler / 9;
 
     String wing = haciendaLayout.substring(wingNumber * 9, wingNumber * 9 + 9);
 
@@ -342,7 +306,7 @@ public class HaciendaManager {
       result.append(" rewards left, ");
       result.append(rewardsLocated);
       result.append(" located");
-      if (spoiler == 9) {
+      if (wingNumber == 1) {
         result.append(", make recordings");
       }
       result.append(".");

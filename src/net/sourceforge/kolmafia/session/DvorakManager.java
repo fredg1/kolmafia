@@ -112,6 +112,8 @@ public abstract class DvorakManager {
     // over. Worst. Spelling bee. Ever.
 
     if (responseText.contains("You jump to the last letter")) {
+      // The tiles took a turn to get here
+      ResultProcessor.processAdventuresUsed(1);
 
       String message = "What's that spell? " + DvorakManager.currentSolution + "!";
       RequestLogger.printLine(message);

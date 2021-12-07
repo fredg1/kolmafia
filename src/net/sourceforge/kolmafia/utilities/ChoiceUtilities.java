@@ -8,6 +8,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.sourceforge.kolmafia.RequestLogger;
 import net.sourceforge.kolmafia.objectpool.IntegerPool;
+import net.sourceforge.kolmafia.persistence.choiceadventures.ChoiceAdventureDatabase.ChoiceAdventure.Option;
 import net.sourceforge.kolmafia.session.ChoiceManager;
 
 /** Utilities for extracting data from a choice.php response */
@@ -121,22 +122,19 @@ public class ChoiceUtilities {
       return rv;
     }
 
-    Object[][] possibleDecisions = ChoiceManager.choiceSpoilers(ChoiceManager.lastChoice, null);
-    if (possibleDecisions == null) {
-      return rv;
-    }
-
-    Object[] options = possibleDecisions[2];
-    if (options == null) {
-      return rv;
-    }
+    Map<Integer, Option> options = ChoiceManager.choiceOptions(ChoiceManager.lastChoice);
 
     for (Map.Entry<Integer, String> entry : rv.entrySet()) {
       Integer key = entry.getKey();
-      Object option = ChoiceManager.findOption(options, key);
+      Option option = options.get(key);
       if (option != null) {
-        String text = entry.getValue() + " (" + option.toString() + ")";
-        rv.put(key, text);
+        StringBuilder text = new StringBuilder(entry.getValue());
+        if (option.spoilerText != null) {
+          text.append(" (");
+          text.append(option.spoilerText);
+          text.append(")");
+        }
+        rv.put(key, text.toString());
       }
     }
 

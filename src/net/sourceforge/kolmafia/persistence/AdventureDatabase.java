@@ -70,14 +70,6 @@ public class AdventureDatabase {
     AdventureDatabase.refreshAdventureList();
   }
 
-  public static final AdventureResult[] WOODS_ITEMS = new AdventureResult[12];
-
-  static {
-    for (int i = 0; i < 12; ++i) {
-      AdventureDatabase.WOODS_ITEMS[i] = ItemPool.get(i + 1);
-    }
-  }
-
   // Some adventures don't actually cost a turn
   public static final String[] FREE_ADVENTURES = {"Rock-a-bye larva", "Cobb's Knob lab key"};
 

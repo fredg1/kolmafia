@@ -417,7 +417,7 @@ public class DeckOfEveryCardRequest extends GenericRequest {
   public static final Pattern SPADE_CARD_PATTERN =
       Pattern.compile("There's something written on the ground under the shovels: (.*?)<");
 
-  public static void postChoice1(final String responseText) {
+  public static void postChoice2(final String responseText) {
     Matcher matcher = DeckOfEveryCardRequest.SPADE_CARD_PATTERN.matcher(responseText);
     if (matcher.find()) {
       String message = "Spade letters: " + matcher.group(1);

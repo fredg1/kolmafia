@@ -144,6 +144,12 @@ public class EffectPool {
   public static final int FORM_OF_ROACH = 509;
   public static final int SHAPE_OF_MOLE = 510;
   public static final int FORM_OF_BIRD = 511;
+  public static final int RADIANT_PERSONALITY = 519;
+  public static final int ALCHEMICAL_BROTHER = 520;
+  public static final int ACK_BARRED = 521;
+  public static final int NEW_IMPROVED = 522;
+  public static final int EXTRA_SENSORY_PERCEPTION = 523;
+  public static final int UNPOPULAR = 524;
   public static final int THE_BALLAD_OF_RICHIE_THINGFINDER = 530;
   public static final int BENETTONS_MEDLEY_OF_DIVERSITY = 531;
   public static final int ELRONS_EXPLOSIVE_ETUDE = 532;
@@ -257,6 +263,9 @@ public class EffectPool {
   public static final int UNMUFFLED = 1545;
   public static final int MUFFLED = 1546;
   public static final int BORED_WITH_EXPLOSIONS = 1557;
+  public static final int DANCIN_FOOL = 1609;
+  public static final int SWORDHOLDER = 1610;
+  public static final int IS_THIS_YOUR_CARD = 1611;
   public static final int SOME_PIGS = 1640;
   public static final int CONFIDENCE = 1791;
   public static final int PURR_OF_THE_FELINE = 1800;

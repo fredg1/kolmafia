@@ -647,7 +647,7 @@ public class QuestManager {
   }
 
   private static void handlePirateRealmChange(final String location, final String responseText) {
-    if (!Preferences.getBoolean("prAlways")) {
+    if (!Preferences.getBoolean("prAlways") && !responseText.contains("That isn't anywhere.")) {
       Preferences.setBoolean("_prToday", true);
     }
   }

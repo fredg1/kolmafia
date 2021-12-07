@@ -105,4 +105,16 @@ public class EdBaseRequest extends PlaceRequest {
 
     return false;
   }
+
+  private static final Pattern ED_RETURN_PATTERN =
+      Pattern.compile("Return to the fight! \\((\\d+) Ka\\)");
+
+  public static final void parseReviveFees(final GenericRequest request) {
+    Matcher matcher = EdBaseRequest.ED_RETURN_PATTERN.matcher(request.responseText);
+    if (matcher.find()) {
+      int cost = StringUtilities.parseInt(matcher.group(1));
+      int defeats = 3 + (int) (Math.log(cost) / Math.log(2));
+      Preferences.setInteger("_edDefeats", defeats);
+    }
+  }
 }

@@ -390,6 +390,7 @@ user	canteenUnlocked	false
 user	carboLoading	0
 user	cargoPocketsEmptied
 user	cargoPocketScraps
+user	cartographyAdventuresEncountered
 user	catBurglarBankHeists	0
 user	cellarLayout	0
 user	chaosButterflyThrown	false
@@ -488,6 +489,8 @@ user	dailyDungeonDone	false
 user	dampOldBootPurchased	false
 user	darkGyfftePoints	0
 user	daycareEquipment	0
+user	daycareInstructorCost	11
+user	daycareInstructorItem
 user	daycareInstructors	0
 user	daycareLastScavenge	0
 user	daycareOpen	false
@@ -952,6 +955,7 @@ user	mayoMinderSetting
 user	meansuckerPrice	400
 user	merkinQuestPath	none
 user	merkinLockkeyMonster
+user	merkinStashboxSearches	000000000
 user	merkinVocabularyMastery	0
 user	middleChamberUnlock	false
 user	milkOfMagnesiumActive	false
@@ -1888,7 +1892,17 @@ user	_powerfulGloveBatteryPowerUsed	0
 user	_powerPillDrops	0
 user	_powerPillUses	0
 user	_precisionCasts	0
+user	_prCurrentProgress	unstarted
+user	_prPirateCrewAdjective1
+user	_prPirateCrewAdjective2
+user	_prPirateCrewAdjective3
+user	_prPirateCrewRole1
+user	_prPirateCrewRole2
+user	_prPirateCrewRole3
+user	_prPirateCrewTaken	0
+user	_prPirateShip
 user	_prToday	false
+user	_prTravelLeft	0
 user	_psychoJarFilled	false
 user	_psychoJarUsed	false
 user	_psychokineticHugUsed	false
@@ -2834,12 +2848,32 @@ user	choiceAdventure1335	0
 user	choiceAdventure1340	0
 user	choiceAdventure1341	0
 user	choiceAdventure1345	0
+user	choiceAdventure1356	0
+user	choiceAdventure1357	0
+user	choiceAdventure1358	0
+user	choiceAdventure1359	0
+user	choiceAdventure1362	0
+user	choiceAdventure1363	0
+user	choiceAdventure1364	0
+user	choiceAdventure1365	0
+user	choiceAdventure1367	0
 user	choiceAdventure1389	25
 user	choiceAdventure1392	0
 user	choiceAdventure1399	2
 user	choiceAdventure1405	1
 user	choiceAdventure1411	0
+user	choiceAdventure1414	0
 user	choiceAdventure1415	0
+user	choiceAdventure1425	0
+user	choiceAdventure1427	0
+user	choiceAdventure1428	0
+user	choiceAdventure1429	0
+user	choiceAdventure1430	0
+user	choiceAdventure1431	0
+user	choiceAdventure1432	0
+user	choiceAdventure1433	0
+user	choiceAdventure1434	0
+user	choiceAdventure1436	0
 
 user	lockedItem4637	true
 user	lockedItem4638	true

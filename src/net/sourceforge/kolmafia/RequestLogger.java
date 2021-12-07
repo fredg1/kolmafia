@@ -535,8 +535,7 @@ public class RequestLogger extends NullStream {
     // Some general URLs which never need to be registered
     // because they don't do anything.
 
-    if (urlString.startsWith("choice")) {
-      ChoiceManager.registerRequest(urlString);
+    if (ChoiceManager.registerRequest(urlString)) {
       return;
     }
 

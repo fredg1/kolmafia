@@ -1,12 +1,14 @@
 package net.sourceforge.kolmafia.session;
 
 import java.util.Arrays;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.sourceforge.kolmafia.KoLConstants.MafiaState;
 import net.sourceforge.kolmafia.KoLmafia;
 import net.sourceforge.kolmafia.RequestLogger;
+import net.sourceforge.kolmafia.persistence.choiceadventures.ChoiceAdventureDatabase.ChoiceAdventure.Option;
 import net.sourceforge.kolmafia.webui.RelayLoader;
 
 public abstract class WumpusManager {
@@ -654,15 +656,11 @@ public abstract class WumpusManager {
     return WumpusManager.monsterIsWumpus;
   }
 
-  public static String[] dynamicChoiceOptions(String text) {
+  public static void dynamicChoiceOptions(String text, final Map<Integer, Option> options) {
     if (WumpusManager.current == null) {
-      String[] results = new String[3];
-      results[0] = "";
-      results[1] = "";
-      return results;
+      return;
     }
 
-    String[] results = new String[6];
     for (int i = 0; i < 3; ++i) {
       Room room = WumpusManager.current.getExit(i);
       if (room == null) {
@@ -670,11 +668,9 @@ public abstract class WumpusManager {
         continue;
       }
       String warning = WumpusManager.WARN_STRINGS[room.getHazards()];
-      results[i] = warning;
-      results[i + 3] = warning;
+      options.get(i + 1).text(warning);
+      options.get(i + 4).text(warning);
     }
-
-    return results;
   }
 
   private static void printDeduction(final String text) {

@@ -5,7 +5,6 @@ import java.util.regex.Pattern;
 import net.sourceforge.kolmafia.objectpool.ItemPool;
 import net.sourceforge.kolmafia.persistence.MonsterDatabase.Element;
 import net.sourceforge.kolmafia.preferences.Preferences;
-import net.sourceforge.kolmafia.session.ResultProcessor;
 import net.sourceforge.kolmafia.utilities.StringUtilities;
 
 public class VYKEACompanionData implements Comparable<VYKEACompanionData> {
@@ -420,11 +419,9 @@ public class VYKEACompanionData implements Comparable<VYKEACompanionData> {
       switch (decision) {
         case 1:
           // Start with 5 planks -> bookshelf, ceiling fan, dresser
-          ResultProcessor.processItem(ItemPool.VYKEA_PLANK, -5);
           break;
         case 2:
           // Start with 5 rails -> couch, dishrack, lamp
-          ResultProcessor.processItem(ItemPool.VYKEA_RAIL, -5);
           break;
         case 6:
           // Do nothing
@@ -435,8 +432,7 @@ public class VYKEACompanionData implements Comparable<VYKEACompanionData> {
       }
 
       // You've started construction and cannot abort from
-      // here on. Remove the instructions from inventory.
-      ResultProcessor.processItem(ItemPool.VYKEA_INSTRUCTIONS, -1);
+      // here on.
 
       // Initialize preferences
       Preferences.setString("_VYKEACompanionName", "");
@@ -477,11 +473,6 @@ public class VYKEACompanionData implements Comparable<VYKEACompanionData> {
       // Save the rune in the preference
       Preferences.setString("_VYKEACompanionRune", VYKEACompanionData.runeToString(rune));
 
-      // Remove the rune from inventory
-      if (rune != NO_RUNE) {
-        ResultProcessor.processItem(rune.getItemId(), -1);
-      }
-
       return;
     }
 
@@ -494,24 +485,19 @@ public class VYKEACompanionData implements Comparable<VYKEACompanionData> {
 
     if (choice == 1122) {
       int level = 1;
-      int dowels = 0;
 
       switch (decision) {
         case 1:
           level = 2;
-          dowels = 1;
           break;
         case 2:
           level = 3;
-          dowels = 11;
           break;
         case 3:
           level = 4;
-          dowels = 23;
           break;
         case 4:
           level = 5;
-          dowels = 37;
           break;
         case 6:
           // Do not add any dowels
@@ -523,11 +509,6 @@ public class VYKEACompanionData implements Comparable<VYKEACompanionData> {
 
       // Save the level in the preference
       Preferences.setInteger("_VYKEACompanionLevel", level);
-
-      // Remove the dowels from inventory
-      if (dowels > 0) {
-        ResultProcessor.processItem(ItemPool.VYKEA_DOWEL, -dowels);
-      }
       return;
     }
 
@@ -539,15 +520,12 @@ public class VYKEACompanionData implements Comparable<VYKEACompanionData> {
       switch (decision) {
         case 1:
           // Add 5 planks -> bookshelf, couch
-          ResultProcessor.processItem(ItemPool.VYKEA_PLANK, -5);
           break;
         case 2:
           // Add 5 rails -> dresser, lamp
-          ResultProcessor.processItem(ItemPool.VYKEA_RAIL, -5);
           break;
         case 3:
           // Add 5 brackets -> ceiling fan, dishrack
-          ResultProcessor.processItem(ItemPool.VYKEA_BRACKET, -5);
           break;
         default:
           // Invalid decision, presumably from URL manipulation.

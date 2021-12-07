@@ -79,27 +79,28 @@ public class AdventureSpentDatabase implements Serializable {
   }
 
   public static void addTurn(KoLAdventure adv) {
-    if (FightRequest.edFightInProgress()) {
-      return;
-    }
-    String name = adv.getAdventureName();
-    AdventureSpentDatabase.addTurn(name);
+    AdventureSpentDatabase.addTurn(adv.getAdventureName());
+  }
+
+  public static void addTurn(KoLAdventure adv, final int turns) {
+    AdventureSpentDatabase.addTurn(adv.getAdventureName(), turns);
   }
 
   public static void addTurn(final String loc) {
-    if (FightRequest.edFightInProgress()) {
-      return;
-    }
-    if (loc == null) {
+    AdventureSpentDatabase.addTurn(loc, 1);
+  }
+
+  public static void addTurn(final String loc, final int turns) {
+    if (FightRequest.edFightInProgress() || loc == null || turns < 1) {
       return;
     }
     if (!AdventureSpentDatabase.TURNS.containsKey(loc)) {
       // This is a new location
-      AdventureSpentDatabase.TURNS.put(loc, 1);
+      AdventureSpentDatabase.TURNS.put(loc, turns);
       return;
     }
-    int turns = AdventureSpentDatabase.TURNS.get(loc);
-    AdventureSpentDatabase.TURNS.put(loc, turns + 1);
+    int current_turns = AdventureSpentDatabase.TURNS.get(loc);
+    AdventureSpentDatabase.TURNS.put(loc, current_turns + turns);
   }
 
   public static void setTurns(final String loc, final int turns) {
@@ -152,7 +153,7 @@ public class AdventureSpentDatabase implements Serializable {
   }
 
   /*
-   * Attempts to load saved adventure queue settings from <username>_turns.ser
+   * Attempts to load saved adventure spent settings from <username>_turns.ser
    */
   public static void deserialize() {
     File file =

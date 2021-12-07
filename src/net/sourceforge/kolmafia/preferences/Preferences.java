@@ -27,6 +27,7 @@ import net.sourceforge.kolmafia.listener.PreferenceListenerRegistry;
 import net.sourceforge.kolmafia.moods.MoodManager;
 import net.sourceforge.kolmafia.objectpool.IntegerPool;
 import net.sourceforge.kolmafia.session.MonorailManager;
+import net.sourceforge.kolmafia.session.SeaMerkinOutpostManager;
 import net.sourceforge.kolmafia.swingui.AdventureFrame;
 import net.sourceforge.kolmafia.utilities.FileUtilities;
 import net.sourceforge.kolmafia.utilities.StringUtilities;
@@ -156,6 +157,7 @@ public class Preferences {
         "carboLoading",
         "cargoPocketScraps",
         "cargoPocketsEmptied",
+        "cartographyAdventuresEncountered",
         "catBurglarBankHeists",
         "chaosButterflyThrown",
         "charitableDonations",
@@ -183,6 +185,8 @@ public class Preferences {
         "cyrusAdjectives",
         "dampOldBootPurchased",
         "daycareEquipment",
+        "daycareInstructorCost",
+        "daycareInstructorItem",
         "daycareInstructors",
         "daycareToddlers",
         "demonName12",
@@ -1098,6 +1102,7 @@ public class Preferences {
 
     // Some need special treatment
     MonorailManager.resetMuffinOrder();
+    SeaMerkinOutpostManager.resetSearches();
 
     // Deferred ascension rewards
     Preferences.setInteger(

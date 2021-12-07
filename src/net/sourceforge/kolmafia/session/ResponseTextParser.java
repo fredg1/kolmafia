@@ -744,23 +744,7 @@ public class ResponseTextParser {
     // The following skills are found in battle and result in
     // losing an item from inventory.
 
-    if (skillName.equals("Snarl of the Timberwolf")) {
-      if (InventoryManager.hasItem(ItemPool.TATTERED_WOLF_STANDARD)) {
-        ResultProcessor.processItem(ItemPool.TATTERED_WOLF_STANDARD, -1);
-      }
-    } else if (skillName.equals("Spectral Snapper")) {
-      if (InventoryManager.hasItem(ItemPool.TATTERED_SNAKE_STANDARD)) {
-        ResultProcessor.processItem(ItemPool.TATTERED_SNAKE_STANDARD, -1);
-      }
-    } else if (skillName.equals("Scarysauce") || skillName.equals("Fearful Fettucini")) {
-      if (InventoryManager.hasItem(ItemPool.ENGLISH_TO_A_F_U_E_DICTIONARY)) {
-        ResultProcessor.processItem(ItemPool.ENGLISH_TO_A_F_U_E_DICTIONARY, -1);
-      }
-    } else if (skillName.equals("Tango of Terror") || skillName.equals("Dirge of Dreadfulness")) {
-      if (InventoryManager.hasItem(ItemPool.BIZARRE_ILLEGIBLE_SHEET_MUSIC)) {
-        ResultProcessor.processItem(ItemPool.BIZARRE_ILLEGIBLE_SHEET_MUSIC, -1);
-      }
-    } else if (skillName.equals("Belch The Rainbow")) {
+    if (skillName.equals("Belch The Rainbow")) {
       Preferences.increment("skillLevel117", 1, 11, false);
     } else if (skillName.equals("Toggle Optimality")) {
       Preferences.increment("skillLevel7254", 1);

@@ -40,6 +40,7 @@ import net.sourceforge.kolmafia.persistence.ItemFinder;
 import net.sourceforge.kolmafia.persistence.ItemFinder.Match;
 import net.sourceforge.kolmafia.persistence.MonsterDatabase;
 import net.sourceforge.kolmafia.persistence.SkillDatabase;
+import net.sourceforge.kolmafia.persistence.choiceadventures.ChoiceAdventureDatabase.ChoiceAdventure.Option;
 import net.sourceforge.kolmafia.preferences.Preferences;
 import net.sourceforge.kolmafia.request.AdventureRequest;
 import net.sourceforge.kolmafia.request.CampAwayRequest;
@@ -187,11 +188,17 @@ public class TestCommand extends AbstractCommand {
         return;
       }
       int choice = StringUtilities.parseInt(split[1]);
-      Object[] spoilers = ChoiceManager.dynamicChoiceOptions(choice);
-      if (spoilers != null) {
-        for (int i = 0; i < spoilers.length; ++i) {
-          RequestLogger.printLine("Option " + (i + 1) + ": " + spoilers[i]);
-        }
+      Map<Integer, Option> spoils = ChoiceManager.choiceOptions(choice);
+      for (Option option : spoils.values()) {
+        String message =
+            "Option "
+                + option.index
+                + ": "
+                + option.spoilerText
+                + " ("
+                + option.attachments.size()
+                + " attachments)";
+        RequestLogger.printLine(message);
       }
       return;
     }
