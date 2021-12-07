@@ -353,7 +353,7 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
             .attachItem(
                 ItemPool.DRIPPY_STAFF, 1, AUTO, new DisplayAll("don't have", WANT, EXACTLY, 0))
             .attachItem("drippy orb", 1, AUTO, new DisplayAll("drippy orb"));
-        new Option(2).leadsTo(1415, false, (Option o) -> true, " or ");
+        new Option(2).leadsTo(1415, false, o -> true, " or ");
         new Option(3, "drippy humanoid", true).turnCost(1);
         new Option(4, "Trade a drippy stein for a drippy pilsner", true)
             .turnCost(1)
@@ -773,10 +773,10 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
 
         this.customName = "Top Floor Cartography";
 
-        new Option(1).leadsTo(677, true, (Option o) -> true);
-        new Option(2).leadsTo(675, true, (Option o) -> true);
-        new Option(3).leadsTo(676, true, (Option o) -> true);
-        new Option(4).leadsTo(678, true, (Option o) -> true);
+        new Option(1).leadsTo(677, true, o -> true);
+        new Option(2).leadsTo(675, true, o -> true);
+        new Option(3).leadsTo(676, true, o -> true);
+        new Option(4).leadsTo(678, true, o -> true);
 
         new CustomOption(1, "Top Steampunk");
         new CustomOption(2, "Top Goth");
@@ -796,9 +796,9 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
 
         this.customName = "Protesters Cartography";
 
-        new Option(1).leadsTo(857, true, (Option o) -> o.index == 1);
-        new Option(2).leadsTo(856, true, (Option o) -> o.index == 1);
-        new Option(3).leadsTo(858, false, (Option o) -> o.index == 1);
+        new Option(1).leadsTo(857, true, o -> o.index == 1);
+        new Option(2).leadsTo(856, true, o -> o.index == 1);
+        new Option(3).leadsTo(858, false, o -> o.index == 1);
 
         new CustomOption(1, "creep protestors (more with sleaze damage/sleaze spell damage)");
         new CustomOption(2, "scare protestors (more with lynyrd gear)");
@@ -817,8 +817,8 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
 
         this.customName = "War Hippy Camp Cartography";
 
-        new Option(1).leadsTo(139, false, (Option o) -> true);
-        new Option(2).leadsTo(140, false, (Option o) -> true);
+        new Option(1).leadsTo(139, false, o -> true);
+        new Option(2).leadsTo(140, false, o -> true);
         new Option(3);
 
         new CustomOption(1, "get muscle/get ferret bait/fight a war hippy (space) cadet");
@@ -830,9 +830,9 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
       void visitChoice(GenericRequest request) {
         Option option = getOption(3);
         if (EquipmentDatabase.getOutfit(OutfitPool.WAR_FRAT_OUTFIT).isWearing()) {
-          option.leadsTo(142, false, (Option o) -> true);
+          option.leadsTo(142, false, o -> true);
         } else {
-          option.leadsTo(141, false, (Option o) -> true);
+          option.leadsTo(141, false, o -> true);
         }
       }
 
@@ -848,9 +848,9 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
 
         this.customName = "War Frat House Cartography";
 
-        new Option(1).leadsTo(143, false, (Option o) -> true);
+        new Option(1).leadsTo(143, false, o -> true);
         new Option(2);
-        new Option(3).leadsTo(144, false, (Option o) -> true);
+        new Option(3).leadsTo(144, false, o -> true);
 
         new CustomOption(1, "get muscle/get sake bombs/fight a war pledge");
         new CustomOption(2, "get muscle/get items/start the war");
@@ -861,9 +861,9 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
       void visitChoice(GenericRequest request) {
         Option option = getOption(2);
         if (EquipmentDatabase.getOutfit(OutfitPool.WAR_HIPPY_OUTFIT).isWearing()) {
-          option.leadsTo(146, false, (Option o) -> true);
+          option.leadsTo(146, false, o -> true);
         } else {
-          option.leadsTo(145, false, (Option o) -> true);
+          option.leadsTo(145, false, o -> true);
         }
       }
 

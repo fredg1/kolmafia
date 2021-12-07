@@ -734,7 +734,7 @@ class CADatabase200to299 extends ChoiceAdventureDatabase {
       void setup() {
         new Option(1, "hats/pants/accessories").leadsTo(248);
         new Option(2, "combat items/instruments/hobo monkey/free stats").leadsTo(253);
-        new Option(3).leadsTo(247, false, (Option o) -> o.index == 1);
+        new Option(3).leadsTo(247, false, o -> o.index == 1);
       }
     };
 
@@ -765,9 +765,9 @@ class CADatabase200to299 extends ChoiceAdventureDatabase {
 
     new ChoiceAdventure(248, "Garment District", "Hobopolis Town Square") { // decoded
       void setup() {
-        new Option(1).leadsTo(250, false, (Option o) -> o.index != 4);
-        new Option(2).leadsTo(251, false, (Option o) -> o.index != 4);
-        new Option(3).leadsTo(252, false, (Option o) -> o.index != 4);
+        new Option(1).leadsTo(250, false, o -> o.index != 4);
+        new Option(2).leadsTo(251, false, o -> o.index != 4);
+        new Option(3).leadsTo(252, false, o -> o.index != 4);
       }
     };
 
@@ -849,7 +849,7 @@ class CADatabase200to299 extends ChoiceAdventureDatabase {
 
     new ChoiceAdventure(253, "Housewares", "Hobopolis Town Square") { // decoded
       void setup() {
-        new Option(1).leadsTo(255, false, (Option o) -> o.index != 4);
+        new Option(1).leadsTo(255, false, o -> o.index != 4);
         new Option(2, "fight gang of hobo muggers");
         new Option(3, "instruments/hobo monkey/free stats").leadsTo(256, true);
       }
@@ -891,7 +891,7 @@ class CADatabase200to299 extends ChoiceAdventureDatabase {
     new ChoiceAdventure(256, "Entertainment", "Hobopolis Town Square") { // decoded
       void setup() {
         new Option(1);
-        new Option(2).leadsTo(259, true, (Option o) -> o.index != 3);
+        new Option(2).leadsTo(259, true, o -> o.index != 3);
         new Option(3, "fight gang of hobo muggers");
       }
 
@@ -908,9 +908,9 @@ class CADatabase200to299 extends ChoiceAdventureDatabase {
                 + classInstrument.getCount(KoLConstants.collection)
                 + InventoryManager.getEquippedCount(classInstrument)
             > 0) {
-          option.leadsTo(275, false, (Option o) -> o.index == 1);
+          option.leadsTo(275, false, o -> o.index == 1);
         } else {
-          option.leadsTo(258, true, (Option o) -> o.index == 1);
+          option.leadsTo(258, true, o -> o.index == 1);
         }
       }
     };
@@ -946,7 +946,7 @@ class CADatabase200to299 extends ChoiceAdventureDatabase {
 
     new ChoiceAdventure(259, "We'll Make Great...", "Hobopolis Town Square") { // decoded
       void setup() {
-        new Option(1).leadsTo(261, false, (Option o) -> o.index == 1);
+        new Option(1).leadsTo(261, false, o -> o.index == 1);
         new Option(2).turnCost(1);
         new Option(3, "fight gang of hobo muggers");
       }
@@ -988,8 +988,8 @@ class CADatabase200to299 extends ChoiceAdventureDatabase {
     new ChoiceAdventure(262, "Salud", "Hobopolis Town Square") { // decoded
       void setup() {
         new Option(1, "20 adv of Trepandation").turnCost(1).attachEffect("Trepandation");
-        new Option(2).leadsTo(264, false, (Option o) -> o.index != 3, " or ");
-        new Option(3).leadsTo(265, false, (Option o) -> true, "<br>");
+        new Option(2).leadsTo(264, false, o -> o.index != 3, " or ");
+        new Option(3).leadsTo(265, false, o -> true, "<br>");
       }
     };
 
@@ -1017,9 +1017,9 @@ class CADatabase200to299 extends ChoiceAdventureDatabase {
 
     new ChoiceAdventure(265, "Another Part of the Market", "Hobopolis Town Square") { // decoded
       void setup() {
-        new Option(1).leadsTo(267, false, (Option o) -> o.index != 3, " or ");
-        new Option(2).leadsTo(268, false, (Option o) -> o.index != 3, " or ");
-        new Option(3).leadsTo(269, false, (Option o) -> o.index != 2, " or ");
+        new Option(1).leadsTo(267, false, o -> o.index != 3, " or ");
+        new Option(2).leadsTo(268, false, o -> o.index != 3, " or ");
+        new Option(3).leadsTo(269, false, o -> o.index != 2, " or ");
       }
     };
 

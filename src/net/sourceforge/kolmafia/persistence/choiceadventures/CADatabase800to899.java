@@ -498,9 +498,9 @@ class CADatabase800to899 extends ChoiceAdventureDatabase {
       void setup() {
         this.customName = this.name;
 
-        new Option(1, "Shower Power", true).leadsTo(832, false, (Option o) -> true, " or ");
-        new Option(2, "Vendie, Vidi, Vici", true).leadsTo(833, false, (Option o) -> true, " or ");
-        new Option(3, "Back Room Dealings", true).leadsTo(834, false, (Option o) -> true, " or ");
+        new Option(1, "Shower Power", true).leadsTo(832, false, o -> true, " or ");
+        new Option(2, "Vendie, Vidi, Vici", true).leadsTo(833, false, o -> true, " or ");
+        new Option(3, "Back Room Dealings", true).leadsTo(834, false, o -> true, " or ");
         new Option(6, "skip adventure", true).entersQueue(false);
       }
     };
@@ -1151,9 +1151,9 @@ class CADatabase800to899 extends ChoiceAdventureDatabase {
 
         this.customName = this.name;
 
-        new Option(1).leadsTo(856, true, (Option o) -> o.index == 1);
-        new Option(2).leadsTo(857, true, (Option o) -> o.index == 1);
-        new Option(3).leadsTo(858, false, (Option o) -> o.index == 1);
+        new Option(1).leadsTo(856, true, o -> o.index == 1);
+        new Option(2).leadsTo(857, true, o -> o.index == 1);
+        new Option(3).leadsTo(858, false, o -> o.index == 1);
 
         new CustomOption(1, "This Looks Like a Good Bush for an Ambush");
         new CustomOption(2, "Bench Warrant");
@@ -1651,7 +1651,7 @@ class CADatabase800to899 extends ChoiceAdventureDatabase {
 
         new Option(1, "background history").leadsTo(86);
         new Option(2, "cooking recipe").turnCost(1);
-        new Option(3).leadsTo(88, true, (Option o) -> true);
+        new Option(3).leadsTo(88, true, o -> true);
         new Option(4, "skip adventure and banish both versions for 10 adventures")
             .entersQueue(false);
 

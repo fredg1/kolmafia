@@ -789,10 +789,10 @@ class CADatabase900to999 extends ChoiceAdventureDatabase {
 
     new ChoiceAdventure(923, "All Over the Map", "The Black Forest") {
       void setup() {
-        new Option(1).leadsTo(924, true, (Option o) -> true);
-        new Option(2).leadsTo(925, false, (Option o) -> o.index != 6);
-        new Option(3).leadsTo(926, false, (Option o) -> o.index != 6);
-        new Option(4).leadsTo(927, false, (Option o) -> o.index != 6);
+        new Option(1).leadsTo(924, true, o -> true);
+        new Option(2).leadsTo(925, false, o -> o.index != 6);
+        new Option(3).leadsTo(926, false, o -> o.index != 6);
+        new Option(4).leadsTo(927, false, o -> o.index != 6);
 
         new CustomOption(1, "Blackberry");
         new CustomOption(2, "Blacksmith");

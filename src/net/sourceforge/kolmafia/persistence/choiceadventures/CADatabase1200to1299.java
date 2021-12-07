@@ -318,8 +318,8 @@ class CADatabase1200to1299 extends ChoiceAdventureDatabase {
       void setup() {
         this.customName = this.name;
 
-        new Option(1).leadsTo(1212, true, (Option o) -> true);
-        new Option(2).leadsTo(1213, false, (Option o) -> true, " or ");
+        new Option(1).leadsTo(1212, true, o -> true);
+        new Option(2).leadsTo(1213, false, o -> true, " or ");
         new Option(3).attachItem(ItemPool.SPRINKLES, -100000, MANUAL);
 
         new CustomOption(1, "enter Seedy Seedy Seedy");

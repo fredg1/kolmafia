@@ -79,7 +79,7 @@ class CADatabase100to199 extends ChoiceAdventureDatabase {
         new Option(1, "mysticality substats (+ w/ antique hand mirror)", true)
             .turnCost(1)
             .attachItem(ItemPool.ANTIQUE_HAND_MIRROR);
-        new Option(2).leadsTo(107, false, (Option o) -> true);
+        new Option(2).leadsTo(107, false, o -> true);
         new Option(3, "guy made of bees", true);
 
         new CustomOption(2, "other options");

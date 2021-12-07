@@ -360,12 +360,12 @@ class CADatabase700to799 extends ChoiceAdventureDatabase {
         this.customOrder = 1;
 
         // The Kitchen
-        new Option(1).leadsTo(722, true, (Option o) -> o.index != 6);
+        new Option(1).leadsTo(722, true, o -> o.index != 6);
         // The Cellar
-        new Option(2).leadsTo(723, false, (Option o) -> o.index != 6);
+        new Option(2).leadsTo(723, false, o -> o.index != 6);
         // The Attic (locked)
         new Option(3, "possibly locked")
-            .leadsTo(724, true, (Option o) -> o.index != 6)
+            .leadsTo(724, true, o -> o.index != 6)
             .attachItem(ItemPool.DREADSYLVANIAN_SKELETON_KEY);
         new Option(5, "learn shortcut", true)
             .turnCost(1)
@@ -495,13 +495,13 @@ class CADatabase700to799 extends ChoiceAdventureDatabase {
         this.customOrder = 2;
 
         // Climb tree (muscle only)
-        new Option(1).leadsTo(726, false, (Option o) -> o.index != 6);
+        new Option(1).leadsTo(726, false, o -> o.index != 6);
         // Fire Tower (locked)
         new Option(2, "possibly locked")
-            .leadsTo(727, false, (Option o) -> o.index != 6)
+            .leadsTo(727, false, o -> o.index != 6)
             .attachItem(ItemPool.DREADSYLVANIAN_SKELETON_KEY);
         // Base of tree
-        new Option(3).leadsTo(728, true, (Option o) -> o.index != 6);
+        new Option(3).leadsTo(728, true, o -> o.index != 6);
         new Option(5, "learn shortcut", true)
             .turnCost(1)
             .attachItem(ItemPool.GHOST_PENCIL, -1, MANUAL, new DisplayAll(NEED, AT_LEAST, 1));
@@ -620,11 +620,11 @@ class CADatabase700to799 extends ChoiceAdventureDatabase {
         this.customOrder = 3;
 
         // Hot
-        new Option(1).leadsTo(730, false, (Option o) -> o.index != 6);
+        new Option(1).leadsTo(730, false, o -> o.index != 6);
         // Cold
-        new Option(2).leadsTo(731, false, (Option o) -> o.index != 6);
+        new Option(2).leadsTo(731, false, o -> o.index != 6);
         // Smelly
-        new Option(3).leadsTo(732, false, (Option o) -> o.index != 6);
+        new Option(3).leadsTo(732, false, o -> o.index != 6);
         new Option(5, "learn shortcut", true)
             .turnCost(1)
             .attachItem(ItemPool.GHOST_PENCIL, -1, MANUAL, new DisplayAll(NEED, AT_LEAST, 1));
@@ -705,12 +705,12 @@ class CADatabase700to799 extends ChoiceAdventureDatabase {
 
         // Schoolhouse (locked)
         new Option(1, "possibly locked")
-            .leadsTo(734, false, (Option o) -> o.index != 6)
+            .leadsTo(734, false, o -> o.index != 6)
             .attachItem(ItemPool.DREADSYLVANIAN_SKELETON_KEY);
         // Blacksmith
-        new Option(2).leadsTo(735, true, (Option o) -> o.index != 6);
+        new Option(2).leadsTo(735, true, o -> o.index != 6);
         // Gallows
-        new Option(3).leadsTo(736, true, (Option o) -> o.index != 6 && o.index != 3);
+        new Option(3).leadsTo(736, true, o -> o.index != 6 && o.index != 3);
         new Option(5, "learn shortcut", true)
             .turnCost(1)
             .attachItem(ItemPool.GHOST_PENCIL, -1, MANUAL, new DisplayAll(NEED, AT_LEAST, 1));
@@ -801,7 +801,7 @@ class CADatabase700to799 extends ChoiceAdventureDatabase {
     new ChoiceAdventure(736, "Good Noose, Everyone!", "Dreadsylvanian Village") {
       void setup() {
         new Option(1, "-spooky").turnCost(1);
-        new Option(2).leadsTo(765, true, (Option o) -> o.index == 1);
+        new Option(2).leadsTo(765, true, o -> o.index == 1);
         new Option(3, "refresh the trap door").entersQueue(false);
         new Option(4, "help clannie gain an item");
         new Option(6, "Return to The Village Square").leadsTo(733, true);
@@ -829,11 +829,11 @@ class CADatabase700to799 extends ChoiceAdventureDatabase {
         this.customOrder = 5;
 
         // Sewers
-        new Option(1).leadsTo(738, false, (Option o) -> o.index != 6);
+        new Option(1).leadsTo(738, false, o -> o.index != 6);
         // Tenement
-        new Option(2).leadsTo(740, false, (Option o) -> o.index != 6);
+        new Option(2).leadsTo(740, false, o -> o.index != 6);
         // Ticking Shack (moxie only)
-        new Option(3).leadsTo(739, false, (Option o) -> o.index != 6);
+        new Option(3).leadsTo(739, false, o -> o.index != 6);
         new Option(5, "learn shortcut", true)
             .turnCost(1)
             .attachItem(ItemPool.GHOST_PENCIL, -1, MANUAL, new DisplayAll(NEED, AT_LEAST, 1));
@@ -931,12 +931,12 @@ class CADatabase700to799 extends ChoiceAdventureDatabase {
         this.customOrder = 6;
 
         // Cemetery
-        new Option(1).leadsTo(742, false, (Option o) -> o.index != 6);
+        new Option(1).leadsTo(742, false, o -> o.index != 6);
         // Servants' Quarters
-        new Option(2).leadsTo(743, true, (Option o) -> o.index != 6);
+        new Option(2).leadsTo(743, true, o -> o.index != 6);
         // Master Suite (locked)
         new Option(3, "possibly locked")
-            .leadsTo(744, false, (Option o) -> o.index != 6)
+            .leadsTo(744, false, o -> o.index != 6)
             .attachItem(ItemPool.DREADSYLVANIAN_SKELETON_KEY);
         new Option(5, "learn shortcut", true)
             .turnCost(1)
@@ -1071,12 +1071,12 @@ class CADatabase700to799 extends ChoiceAdventureDatabase {
 
         // Ballroom (locked)
         new Option(1, "possibly locked")
-            .leadsTo(746, false, (Option o) -> o.index != 6)
+            .leadsTo(746, false, o -> o.index != 6)
             .attachItem(ItemPool.DREADSYLVANIAN_SKELETON_KEY);
         // Kitchen
-        new Option(2).leadsTo(747, false, (Option o) -> o.index != 6);
+        new Option(2).leadsTo(747, false, o -> o.index != 6);
         // Dining Room
-        new Option(3).leadsTo(748, true, (Option o) -> o.index != 6);
+        new Option(3).leadsTo(748, true, o -> o.index != 6);
         new Option(5, "learn shortcut", true)
             .turnCost(1)
             .attachItem(ItemPool.GHOST_PENCIL, -1, MANUAL, new DisplayAll(NEED, AT_LEAST, 1));
@@ -1191,12 +1191,12 @@ class CADatabase700to799 extends ChoiceAdventureDatabase {
 
         // Laboratory (locked)
         new Option(1, "possibly locked")
-            .leadsTo(750, true, (Option o) -> o.index != 6)
+            .leadsTo(750, true, o -> o.index != 6)
             .attachItem(ItemPool.DREADSYLVANIAN_SKELETON_KEY);
         // Books (mysticality only)
-        new Option(2).leadsTo(751, true, (Option o) -> o.index != 6);
+        new Option(2).leadsTo(751, true, o -> o.index != 6);
         // Bedroom
-        new Option(3).leadsTo(752, false, (Option o) -> o.index != 6);
+        new Option(3).leadsTo(752, false, o -> o.index != 6);
         new Option(5, "learn shortcut", true)
             .turnCost(1)
             .attachItem(ItemPool.GHOST_PENCIL, -1, MANUAL, new DisplayAll(NEED, AT_LEAST, 1));
@@ -1336,11 +1336,11 @@ class CADatabase700to799 extends ChoiceAdventureDatabase {
         this.customOrder = 9;
 
         // Prison
-        new Option(1).leadsTo(754, false, (Option o) -> o.index != 6);
+        new Option(1).leadsTo(754, false, o -> o.index != 6);
         // Boiler Room
-        new Option(2).leadsTo(755, false, (Option o) -> o.index != 6);
+        new Option(2).leadsTo(755, false, o -> o.index != 6);
         // Guard room
-        new Option(3).leadsTo(756, false, (Option o) -> o.index != 6);
+        new Option(3).leadsTo(756, false, o -> o.index != 6);
         new Option(5, "learn shortcut", true)
             .turnCost(1)
             .attachItem(ItemPool.GHOST_PENCIL, -1, MANUAL, new DisplayAll(NEED, AT_LEAST, 1));

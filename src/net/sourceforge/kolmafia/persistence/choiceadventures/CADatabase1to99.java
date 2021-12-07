@@ -130,7 +130,7 @@ class CADatabase1to99 extends ChoiceAdventureDatabase {
         Option option = getOption(1);
 
         if (INEXPLICABLY_GLOWING_ROCK.getCount(KoLConstants.inventory) > 0) {
-          option.leadsTo(7, true, (Option o) -> o.index == 1);
+          option.leadsTo(7, true, o -> o.index == 1);
         } else {
           option.leadsTo(6);
         }

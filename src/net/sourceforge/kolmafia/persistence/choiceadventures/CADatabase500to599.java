@@ -46,9 +46,9 @@ class CADatabase500to599 extends ChoiceAdventureDatabase {
 
         this.customName = "Spooky Forest";
 
-        new Option(1).leadsTo(503, true, (Option o) -> true);
-        new Option(2).leadsTo(505, true, (Option o) -> true);
-        new Option(3).leadsTo(506, true, (Option o) -> true);
+        new Option(1).leadsTo(503, true, o -> true);
+        new Option(2).leadsTo(505, true, o -> true);
+        new Option(3).leadsTo(506, true, o -> true);
 
         new CustomOption(
             1,
@@ -398,7 +398,7 @@ class CADatabase500to599 extends ChoiceAdventureDatabase {
       void setup() {
         new Option(1).turnCost(1);
         new Option(2);
-        new Option(3).leadsTo(46, false, (Option o) -> true);
+        new Option(3).leadsTo(46, false, o -> true);
       }
 
       @Override
@@ -441,7 +441,7 @@ class CADatabase500to599 extends ChoiceAdventureDatabase {
             .turnCost(1)
             .attachItem(ItemPool.SPOOKY_FERTILIZER, 1, AUTO);
         new Option(3)
-            .leadsTo(507, false, (Option o) -> o.index == 1)
+            .leadsTo(507, false, o -> o.index == 1)
             .attachItem(ItemPool.TREE_HOLED_COIN, new DisplayAll(NEED, AT_LEAST, 1));
       }
 
@@ -2030,9 +2030,9 @@ class CADatabase500to599 extends ChoiceAdventureDatabase {
       void setup() {
         this.isSuperlikely = true;
 
-        new Option(1).leadsTo(579, true, (Option o) -> !o.spoilerText.equals("skip adventure"));
+        new Option(1).leadsTo(579, true, o -> !o.spoilerText.equals("skip adventure"));
         new Option(2, "Hidden Heart of the Hidden Temple", true).leadsTo(580, true);
-        new Option(3).leadsTo(581, true, (Option o) -> !o.spoilerText.equals("skip adventure"));
+        new Option(3).leadsTo(581, true, o -> !o.spoilerText.equals("skip adventure"));
 
         new CustomOption(1, "Such Great Heights");
         new CustomOption(3, "Such Great Depths");

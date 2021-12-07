@@ -1301,8 +1301,8 @@ class CADatabase1000to1099 extends ChoiceAdventureDatabase {
     new ChoiceAdventure(1061, "Heart of Madness", "Madness Bakery") {
       void setup() {
         new Option(1, "try to enter office", true);
-        new Option(2, "bagel machine", true).leadsTo(1080, false, (Option o) -> o.index == 1);
-        new Option(3, "popular machine", true).leadsTo(1084, false, (Option o) -> o.index == 1);
+        new Option(2, "bagel machine", true).leadsTo(1080, false, o -> o.index == 1);
+        new Option(3, "popular machine", true).leadsTo(1084, false, o -> o.index == 1);
         new Option(4, "learn recipe", true).turnCost(1);
         new Option(5, "~15 mysticality substats", true).turnCost(1);
       }

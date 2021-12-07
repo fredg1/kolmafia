@@ -601,10 +601,10 @@ class CADatabase1300to1399 extends ChoiceAdventureDatabase {
       void setup() {
         this.customName = "Neverending Party Pause";
 
-        new Option(1).leadsTo(1325, true, (Option o) -> true);
-        new Option(2).leadsTo(1326, true, (Option o) -> true);
-        new Option(3).leadsTo(1327, true, (Option o) -> true);
-        new Option(4).leadsTo(1328, true, (Option o) -> true);
+        new Option(1).leadsTo(1325, true, o -> true);
+        new Option(2).leadsTo(1326, true, o -> true);
+        new Option(3).leadsTo(1327, true, o -> true);
+        new Option(4).leadsTo(1328, true, o -> true);
         new Option(5, "fight random partier", true);
 
         new CustomOption(1, "Bedroom");

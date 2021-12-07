@@ -243,9 +243,9 @@ class CADatabase300to399 extends ChoiceAdventureDatabase {
 
     new ChoiceAdventure(312, "Into the Outpost", "The Mer-Kin Outpost") {
       void setup() {
-        new Option(1).leadsTo(313, true, (Option o) -> o.index != 4);
-        new Option(2).leadsTo(314, true, (Option o) -> o.index != 4);
-        new Option(3).leadsTo(315, true, (Option o) -> o.index != 4);
+        new Option(1).leadsTo(313, true, o -> o.index != 4);
+        new Option(2).leadsTo(314, true, o -> o.index != 4);
+        new Option(3).leadsTo(315, true, o -> o.index != 4);
         new Option(4, "skip adventure").entersQueue(false);
       }
     };

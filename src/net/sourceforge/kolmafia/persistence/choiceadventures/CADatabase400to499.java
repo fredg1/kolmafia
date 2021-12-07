@@ -112,18 +112,18 @@ class CADatabase400to499 extends ChoiceAdventureDatabase {
 
     new ChoiceAdventure(411, "Hallway Left", "The Island Barracks") {
       void setup() {
-        new Option(1).leadsTo(413, true, (Option o) -> o.index != 4);
-        new Option(2).leadsTo(414, true, (Option o) -> o.index != 4);
-        new Option(3).leadsTo(415, true, (Option o) -> o.index != 4);
+        new Option(1).leadsTo(413, true, o -> o.index != 4);
+        new Option(2).leadsTo(414, true, o -> o.index != 4);
+        new Option(3).leadsTo(415, true, o -> o.index != 4);
         new Option(4, "leave barrack (1)").turnCost(1);
       }
     };
 
     new ChoiceAdventure(412, "Hallway Right", "The Island Barracks") {
       void setup() {
-        new Option(1).leadsTo(416, true, (Option o) -> o.index != 4);
-        new Option(2).leadsTo(417, true, (Option o) -> o.index != 4);
-        new Option(3).leadsTo(418, true, (Option o) -> o.index != 4);
+        new Option(1).leadsTo(416, true, o -> o.index != 4);
+        new Option(2).leadsTo(417, true, o -> o.index != 4);
+        new Option(3).leadsTo(418, true, o -> o.index != 4);
         new Option(4, "leave barrack (1)").turnCost(1);
       }
     };
@@ -447,7 +447,7 @@ class CADatabase400to499 extends ChoiceAdventureDatabase {
         new Option(4, "Ittah bittah hookah", true)
             .attachItem(ItemPool.REFLECTION_OF_MAP, -1, MANUAL, new NoDisplay())
             .attachItem("ittah bittah hookah")
-            .leadsTo(450, false, (Option o) -> o.index == 1);
+            .leadsTo(450, false, o -> o.index == 1);
         new Option(5, "get a chess cookie")
             .attachItem(ItemPool.REFLECTION_OF_MAP, -1, MANUAL, new NoDisplay())
             .leadsTo(443)
@@ -470,9 +470,9 @@ class CADatabase400to499 extends ChoiceAdventureDatabase {
 
         Option option = getOption(1);
         if (myClass == AscensionClass.SEAL_CLUBBER) {
-          option.leadsTo(444, false, (Option o) -> true, " or ");
+          option.leadsTo(444, false, o -> true, " or ");
         } else if (myClass == AscensionClass.PASTAMANCER) {
-          option.leadsTo(445, false, (Option o) -> true, " or ");
+          option.leadsTo(445, false, o -> true, " or ");
         } else {
           option
               .turnCost(1)
@@ -482,9 +482,9 @@ class CADatabase400to499 extends ChoiceAdventureDatabase {
 
         option = getOption(2);
         if (myClass == AscensionClass.ACCORDION_THIEF) {
-          option.leadsTo(446, false, (Option o) -> true, " or ");
+          option.leadsTo(446, false, o -> true, " or ");
         } else if (myClass == AscensionClass.SAUCEROR) {
-          option.leadsTo(447, false, (Option o) -> true, " or ");
+          option.leadsTo(447, false, o -> true, " or ");
         } else {
           option
               .turnCost(1)
@@ -494,9 +494,9 @@ class CADatabase400to499 extends ChoiceAdventureDatabase {
 
         option = getOption(3);
         if (myClass == AscensionClass.TURTLE_TAMER) {
-          option.leadsTo(448, false, (Option o) -> true, " or ");
+          option.leadsTo(448, false, o -> true, " or ");
         } else if (myClass == AscensionClass.DISCO_BANDIT) {
-          option.leadsTo(449, false, (Option o) -> true, " or ");
+          option.leadsTo(449, false, o -> true, " or ");
         } else {
           option.text("fight croqueteer");
         }
