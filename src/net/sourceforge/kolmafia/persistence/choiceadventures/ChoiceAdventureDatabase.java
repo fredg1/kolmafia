@@ -2,6 +2,7 @@ package net.sourceforge.kolmafia.persistence.choiceadventures;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -35,6 +36,7 @@ public class ChoiceAdventureDatabase {
   ChoiceAdventureDatabase() {}
 
   private static final Map<Integer, ChoiceAdventure> database = new TreeMap<>();
+  static final List<Integer> duplicates = new LinkedList<>();
 
   public class ChoiceAdventure {
     /**
@@ -437,6 +439,7 @@ public class ChoiceAdventureDatabase {
         // Don't allow duplicates; it must have been a mistake.
         RequestLogger.printLine(
             "<font color=red>Duplicate Choice Adventure " + this.choice + "</font>");
+        ChoiceAdventureDatabase.duplicates.add(this.choice);
         return;
       }
 
