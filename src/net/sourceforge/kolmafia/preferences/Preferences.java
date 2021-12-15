@@ -175,6 +175,7 @@ public class Preferences {
         "crimbotPropulsion",
         "crimboTreeDays",
         "crudeMonster",
+        "crystalBallPredictions",
         "csServicesPerformed",
         "cubelingProgress",
         "currentEasyBountyItem",

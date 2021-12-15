@@ -1023,13 +1023,9 @@ class CADatabase1000to1099 extends ChoiceAdventureDatabase {
             answer = "Music.";
             break;
           default:
-            answer = null;
-        }
-
-        // Only standard classes can join the guild, so we
-        // should not fail. But, if we do, cope.
-        if (answer == null) {
-          return "0";
+            // Only standard classes can join the guild, so we
+            // should not fail. But, if we do, cope.
+            return "0";
         }
 
         // Iterate over the option strings and find the one
@@ -1954,13 +1950,9 @@ class CADatabase1000to1099 extends ChoiceAdventureDatabase {
             answer = "Bash the wall with your accordion.";
             break;
           default:
-            answer = null;
-        }
-
-        // Only standard classes can join the guild, so we
-        // should not fail. But, if we do, cope.
-        if (answer == null) {
-          return "0";
+            // Only standard classes can join the guild, so we
+            // should not fail. But, if we do, cope.
+            return "0";
         }
 
         // Iterate over the option strings and find the one
