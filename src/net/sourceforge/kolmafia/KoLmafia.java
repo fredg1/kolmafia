@@ -14,6 +14,7 @@ import java.math.BigInteger;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.util.List;
+import java.util.Set;
 import java.util.TimeZone;
 import javax.swing.JEditorPane;
 import javax.swing.JFrame;
@@ -149,20 +150,20 @@ public abstract class KoLmafia {
   public static KoLAdventure currentAdventure;
   public static String statDay = "None";
 
-  public static boolean useAmazonImages = true;
-
-  public static final String AMAZON_IMAGE_SERVER =
-      "https://s3.amazonaws.com/images.kingdomofloathing.com";
-  public static final String AMAZON_IMAGE_SERVER_PATH = AMAZON_IMAGE_SERVER + "/";
-  public static final String KOL_IMAGE_SERVER = "http://images.kingdomofloathing.com";
-  public static final String KOL_IMAGE_SERVER_PATH = KOL_IMAGE_SERVER + "/";
+  private static final String PREFERRED_IMAGE_SERVER = "https://d2uyhvukfffg5a.cloudfront.net";
+  private static final String PREFERRED_IMAGE_SERVER_PATH = PREFERRED_IMAGE_SERVER + "/";
+  public static final Set<String> IMAGE_SERVER_PATHS =
+      Set.of(
+          PREFERRED_IMAGE_SERVER_PATH,
+          "https://s3.amazonaws.com/images.kingdomofloathing.com/",
+          "http://images.kingdomofloathing.com/");
 
   public static String imageServerPrefix() {
-    return KoLmafia.useAmazonImages ? AMAZON_IMAGE_SERVER : KOL_IMAGE_SERVER;
+    return PREFERRED_IMAGE_SERVER;
   }
 
   public static String imageServerPath() {
-    return KoLmafia.useAmazonImages ? AMAZON_IMAGE_SERVER_PATH : KOL_IMAGE_SERVER_PATH;
+    return PREFERRED_IMAGE_SERVER_PATH;
   }
 
   private static boolean acquireFileLock(final String suffix) {
@@ -1749,35 +1750,46 @@ public abstract class KoLmafia {
       }
 
       int previousLimit = currentRequest.getLimit();
-      currentRequest.setLimit(
+      int toPurchase =
           Math.min(
               (int) Math.min(Integer.MAX_VALUE, currentRequest.getAvailableMeat() / currentPrice),
-              Math.min(previousLimit, desiredCount - currentCount)));
+              Math.min(previousLimit, desiredCount - currentCount));
+      currentRequest.setLimit(toPurchase);
 
       RequestThread.postRequest(currentRequest);
-
-      // We've purchased as many as we will from this store
-
-      if (KoLmafia.permitsContinue()) {
-        if (currentRequest.getQuantity() == currentRequest.getLimit()) {
-          results.remove(currentRequest);
-        } else if (currentRequest.getQuantity() == PurchaseRequest.MAX_QUANTITY) {
-          currentRequest.setLimit(PurchaseRequest.MAX_QUANTITY);
-        } else {
-          if (currentRequest.getLimit() == previousLimit) {
-            currentRequest.setCanPurchase(false);
-          }
-
-          currentRequest.setQuantity(currentRequest.getQuantity() - currentRequest.getLimit());
-          currentRequest.setLimit(previousLimit);
-        }
-      } else {
-        currentRequest.setLimit(previousLimit);
-      }
 
       // Update how many of the item we have post-purchase
       int purchased = item.getCount(destination) - currentCount;
       remaining -= purchased;
+
+      // We've purchased as many as we will from this store
+
+      // Restore original limit
+      currentRequest.setLimit(previousLimit);
+
+      // If purchase succeeded.
+      if (KoLmafia.permitsContinue()) {
+        // If original limit was less than original quantity, we have purchased some of our daily
+        // limit
+        if (previousLimit < currentRequest.getQuantity()) {
+          currentRequest.setLimit(previousLimit - purchased);
+
+          // If we have purchased the store's daily limit, done with store today.
+          if (previousLimit == purchased) {
+            currentRequest.setCanPurchase(false);
+          }
+        }
+
+        // If this is not an NPC store, remove purchased items
+        if (currentRequest.getQuantity() != PurchaseRequest.MAX_QUANTITY) {
+          currentRequest.setQuantity(currentRequest.getQuantity() - purchased);
+        }
+
+        // If store is now empty. remove from result list
+        if (currentRequest.getQuantity() == 0) {
+          results.remove(currentRequest);
+        }
+      }
     }
 
     if (remaining == 0 || maxPurchases == Integer.MAX_VALUE) {

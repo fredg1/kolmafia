@@ -7,7 +7,6 @@ import java.util.Iterator;
 import java.util.List;
 import net.sourceforge.kolmafia.RequestLogger;
 import net.sourceforge.kolmafia.textui.AshRuntime;
-import net.sourceforge.kolmafia.textui.parsetree.Type.BadType;
 import org.eclipse.lsp4j.Location;
 
 public abstract class Function extends Symbol {
@@ -378,7 +377,7 @@ public abstract class Function extends Symbol {
 
   public static class BadFunction extends UserDefinedFunction implements BadNode {
     public BadFunction(final String name) {
-      super(name, new BadType(null, null), new ArrayList<>(), null);
+      super(name, new Type.BadType(null, null), new ArrayList<>(), null);
     }
   }
 }

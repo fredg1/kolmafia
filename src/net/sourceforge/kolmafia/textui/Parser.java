@@ -1,6 +1,5 @@
 package net.sourceforge.kolmafia.textui;
 
-import static org.eclipse.lsp4j.DiagnosticSeverity.*;
 import static net.sourceforge.kolmafia.textui.parsetree.AggregateType.badAggregateType;
 import static net.sourceforge.kolmafia.textui.parsetree.VariableReference.badVariableReference;
 
@@ -193,13 +192,7 @@ public class Parser {
           "Parser was not properly initialized before parsing was attempted");
     }
 
-    Token firstToken = this.currentToken();
-    Scope scope = this.parseFile(null);
-
-    Location scriptLocation = this.makeLocation(firstToken, this.peekPreviousToken());
-    scope.setScopeLocation(scriptLocation);
-
-    return scope;
+    return this.parseFile(null);
   }
 
   public String getFileName() {
@@ -212,6 +205,10 @@ public class Parser {
 
   public URI getUri() {
     return this.fileUri;
+  }
+
+  public String getStringUri() {
+    return this.fileUri != null ? this.fileUri.toString() : this.istream.toString();
   }
 
   public String getScriptName() {
@@ -453,10 +450,10 @@ public class Parser {
   }
 
   private Scope parseFile(final Scope startScope) throws InterruptedException {
-    Scope scope =
-        startScope != null
-            ? startScope
-            : new Scope((VariableList) null, Parser.getExistingFunctionScope());
+    Scope result =
+        startScope == null
+            ? new Scope((VariableList) null, Parser.getExistingFunctionScope())
+            : startScope;
 
     this.parseScriptName();
     this.parseNotify();
@@ -464,17 +461,21 @@ public class Parser {
 
     Directive importDirective;
     while ((importDirective = this.parseImport()) != null) {
-      scope =
-          this.importFile(importDirective.value, scope, this.makeLocation(importDirective.range));
+      result =
+          this.importFile(importDirective.value, result, this.makeLocation(importDirective.range));
     }
 
-    this.parseScope(scope, null, scope.getParentScope(), true, false, false);
+    Token firstToken = this.currentToken();
+    this.parseScope(result, null, result.getParentScope(), true, false, false);
+
+    Location scriptLocation = this.makeLocation(firstToken, this.peekPreviousToken());
+    result.setScopeLocation(scriptLocation);
 
     if (this.currentLine.nextLine != null) {
-      this.error("Script parsing error; thought we reached the end of the file");
+      this.error("Script parsing error", "thought we reached the end of the file");
     }
 
-    return scope;
+    return result;
   }
 
   private Scope parseScope(
@@ -506,9 +507,9 @@ public class Parser {
 
         // If we're at the top scope of a file, and we reached a node we
         // couldn't parse, just read the current token and continue
-        this.readToken();
+        this.error(this.currentToken(), "Empty or unknown node");
 
-        this.error(this.peekLastToken(), "Empty or unknown node");
+        this.readToken();
         continue;
       }
 
@@ -2802,11 +2803,16 @@ public class Parser {
         this.error(name, "Key variable name expected");
 
         if (this.currentToken().equals(",")) {
+          // the variable name is missing, but they are not done
           this.readToken(); // ,
           continue;
         }
 
-        this.readToken(); // unknown
+        if (name.equalsIgnoreCase("in") && !"in".equalsIgnoreCase(this.nextToken())) {
+          break; // the variable name is missing, and they are done
+        }
+
+        this.readToken(); // unknown; skip
         break;
       } else if (Parser.isReservedWord(name.content)) {
         this.error(name, "Reserved word '" + name + "' cannot be a key variable name");
@@ -3847,7 +3853,7 @@ public class Parser {
 
       lhs = this.autoCoerceValue(DataTypes.BOOLEAN_TYPE, lhs, scope);
       lhs = new Operation(lhs, oper);
-      if (!lhs.getType().isBad() && !lhs.getType().equals(DataTypes.BOOLEAN_TYPE)) {
+      if (!lhs.getType().equals(DataTypes.BOOLEAN_TYPE) && !lhs.getType().isBad()) {
         this.error(lhs.getLocation(), "\"!\" operator requires a boolean value");
       }
     } else if (operator.equals("~")) {
@@ -3940,8 +3946,8 @@ public class Parser {
         Evaluable conditional = lhs;
 
         if (!expressionError
-            && !conditional.getType().isBad()
-            && !conditional.getType().equals(DataTypes.BOOLEAN_TYPE)) {
+            && !conditional.getType().equals(DataTypes.BOOLEAN_TYPE)
+            && !conditional.getType().isBad()) {
           this.error(
               conditional.getLocation(),
               "Non-boolean expression " + conditional + " (" + conditional.getType() + ")");
@@ -4655,12 +4661,12 @@ public class Parser {
 
       char c = line.charAt(i);
       if (c == '\\') {
-        if (i + 1 == line.length()) {
+        if (i == line.length() - 1) {
           // Will throw an error at the start of the next loop
           continue;
         }
 
-        resultString.append(line.charAt(i));
+        resultString.append(line.charAt(++i));
       } else if (c == '[') {
         level++;
         resultString.append(c);
@@ -4727,11 +4733,7 @@ public class Parser {
             list.add(this.parseLiteral(type, element, currentElementLocation));
           }
 
-          if (list.size() == 0) {
-            // Empty list - caller will interpret this specially
-            return null;
-          }
-          return new PluralValue(type, list);
+          break;
         }
 
         this.currentLine = this.currentLine.nextLine;
@@ -4807,13 +4809,16 @@ public class Parser {
           this.currentToken().setType(SemanticTokenTypes.Enum);
         }
         this.readToken(); // read ]
-        if (list.size() == 0) {
-          // Empty list - caller will interpret this specially
-          return null;
-        }
-        return new PluralValue(type, list);
+
+        break;
       }
     }
+
+    if (list.size() == 0) {
+      // Empty list - caller will interpret this specially
+      return null;
+    }
+    return new PluralValue(type, list);
   }
 
   private Operator parseOperator(final Token oper) {
@@ -5532,8 +5537,7 @@ public class Parser {
   }
 
   private Location makeLocation(final Range range) {
-    String uri = this.fileUri != null ? this.fileUri.toString() : this.istream.toString();
-    return new Location(uri, range);
+    return new Location(this.getStringUri(), range);
   }
 
   private static Location makeLocation(final Location start, final Range end) {
@@ -5660,54 +5664,65 @@ public class Parser {
   }
 
   public class AshDiagnostic {
-    final Range range;
+    final Location location;
     final DiagnosticSeverity severity;
-    final String message1;
-    final String message2;
+    final String message;
+    final List<String> additionalMessages;
     List<DiagnosticRelatedInformation> relatedInformation;
-
-    private AshDiagnostic(
-        final Location location, final DiagnosticSeverity severity, final String message) {
-      this(location, severity, message, "");
-    }
 
     private AshDiagnostic(
         final Location location,
         final DiagnosticSeverity severity,
-        final String message1,
-        final String message2) {
-      this.range = location.getRange();
+        final String message,
+        final String... additionalMessages) {
+      // First, make sure that its Location corresponds to the Parser that submitted it
+      if (!Parser.this.getStringUri().equals(location.getUri())) {
+        throw new IllegalArgumentException();
+      }
+
+      this.location = location;
       this.severity = severity;
-      this.message1 = message1;
-      this.message2 = message2;
+      this.message = message;
+      this.additionalMessages = new ArrayList<>();
+      for (final String additionalMessage : additionalMessages) {
+        this.additionalMessages.add(additionalMessage);
+      }
     }
 
     public String toString() {
       StringBuilder result = new StringBuilder();
 
-      result.append(this.message1);
+      result.append(this.message);
       result.append(" (");
 
-      result.append(Parser.getFileAndRange(Parser.this.shortFileName, this.range));
+      result.append(Parser.getFileAndRange(Parser.this.shortFileName, this.location.getRange()));
 
       result.append(")");
 
-      if (this.message2 != null && this.message2.length() > 0) {
-        result.append(" " + message2);
+      for (final String additionalMessage : this.additionalMessages) {
+        result.append(" ");
+        result.append(additionalMessage);
       }
 
       return result.toString();
     }
 
     public Diagnostic toLspDiagnostic() {
-      String message = this.message1;
+      StringBuilder message = new StringBuilder();
 
-      if (message2 != null && message2.length() > 0) {
-        message += KoLConstants.LINE_BREAK + message2;
+      message.append(this.message);
+
+      for (final String additionalMessage : this.additionalMessages) {
+        message.append(KoLConstants.LINE_BREAK);
+        message.append(additionalMessage);
       }
 
-      Diagnostic diagnostic =
-          new Diagnostic(this.range, message, this.severity, StaticEntity.getVersion());
+      final Diagnostic diagnostic =
+          new Diagnostic(
+              this.location.getRange(),
+              message.toString(),
+              this.severity,
+              StaticEntity.getVersion());
 
       if (this.relatedInformation != null) {
         diagnostic.setRelatedInformation(relatedInformation);
@@ -5805,90 +5820,51 @@ public class Parser {
     }
   }
 
-  public final void error(final String msg) {
-    this.error(msg, "");
+  public final void error(final String msg, final String... otherInfo) {
+    this.error(this.getCurrentPosition(), msg, otherInfo);
   }
 
-  public final void error(final String msg1, final String msg2) {
-    this.error(this.getCurrentPosition(), msg1, msg2);
+  public final void error(final Position start, final String msg, final String... otherInfo) {
+    this.error(this.rangeToHere(start), msg, otherInfo);
   }
 
-  public final void error(final Position start, final String msg) {
-    this.error(start, msg, "");
-  }
-
-  public final void error(final Position start, final String msg1, final String msg2) {
-    this.error(this.rangeToHere(start), msg1, msg2);
-  }
-
-  public final void error(final Range range, final String msg) {
-    this.error(range, msg, "");
-  }
-
-  public final void error(final Range range, final String msg1, final String msg2) {
-    this.error(this.makeLocation(range), msg1, msg2);
-  }
-
-  public final void error(final Range start, final Range end, final String msg) {
-    this.error(start, end, msg, "");
+  public final void error(final Range range, final String msg, final String... otherInfo) {
+    this.error(this.makeLocation(range), msg, otherInfo);
   }
 
   public final void error(
-      final Range start, final Range end, final String msg1, final String msg2) {
-    this.error(Parser.mergeRanges(start, end), msg1, msg2);
+      final Range start, final Range end, final String msg, final String... otherInfo) {
+    this.error(Parser.mergeRanges(start, end), msg, otherInfo);
   }
 
-  public final void error(final Location location, final String msg) {
-    this.error(location, msg, "");
-  }
-
-  public final void error(final Location location, final String msg1, final String msg2) {
+  public final void error(final Location location, final String msg, final String... otherInfo) {
     this.diagnostics.add(
         new AshDiagnostic(
-            location != null ? location : this.makeZeroWidthLocation(), Error, msg1, msg2));
+            location != null ? location : this.makeZeroWidthLocation(),
+            DiagnosticSeverity.Error,
+            msg,
+            otherInfo));
   }
 
-  public final void warning(final String msg) {
-    this.warning(msg, "");
+  public final void warning(final String msg, final String... otherInfo) {
+    this.warning(this.getCurrentPosition(), msg, otherInfo);
   }
 
-  public final void warning(final String msg1, final String msg2) {
-    this.warning(this.getCurrentPosition(), msg1, msg2);
+  public final void warning(final Position start, final String msg, final String... otherInfo) {
+    this.warning(this.rangeToHere(start), msg, otherInfo);
   }
 
-  public final void warning(final Position start, final String msg) {
-    this.warning(start, msg, "");
+  public final void warning(final Range range, final String msg, final String... otherInfo) {
+    this.warning(this.makeLocation(range), msg, otherInfo);
   }
 
-  public final void warning(final Position start, final String msg1, final String msg2) {
-    this.warning(this.rangeToHere(start), msg1, msg2);
-  }
-
-  public final void warning(final Range range, final String msg) {
-    this.warning(range, msg, "");
-  }
-
-  public final void warning(final Range range, final String msg1, final String msg2) {
-    this.warning(this.makeLocation(range), msg1, msg2);
-  }
-
-  public final void warning(final Range start, final Range end, final String msg) {
-    this.warning(start, end, msg, "");
-  }
-
-  public final void warning(
-      final Range start, final Range end, final String msg1, final String msg2) {
-    this.warning(Parser.mergeRanges(start, end), msg1, msg2);
-  }
-
-  public final void warning(final Location location, final String msg) {
-    this.warning(location, msg, "");
-  }
-
-  public final void warning(final Location location, final String msg1, final String msg2) {
+  public final void warning(final Location location, final String msg, final String... otherInfo) {
     this.diagnostics.add(
         new AshDiagnostic(
-            location != null ? location : this.makeZeroWidthLocation(), Warning, msg1, msg2));
+            location != null ? location : this.makeZeroWidthLocation(),
+            DiagnosticSeverity.Warning,
+            msg,
+            otherInfo));
   }
 
   private static void appendFunctionCall(

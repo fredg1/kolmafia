@@ -1,10 +1,12 @@
 package net.sourceforge.kolmafia.textui;
 
-import static org.eclipse.lsp4j.DiagnosticSeverity.*;
+import static org.eclipse.lsp4j.DiagnosticSeverity.Error;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -50,7 +52,8 @@ public class ParserTest {
     testValidScript((ValidScriptData) script, scope, firstError);
   }
 
-  private static void testInvalidScript(final InvalidScriptData script, final Scope scope, final String error) {
+  private static void testInvalidScript(
+      final InvalidScriptData script, final Scope scope, final String error) {
     assertThat(script.desc, error, startsWith(script.errorText));
 
     if (script.errorLocationString != null) {
@@ -58,7 +61,8 @@ public class ParserTest {
     }
   }
 
-  private static void testValidScript(final ValidScriptData script, final Scope scope, final String error) {
+  private static void testValidScript(
+      final ValidScriptData script, final Scope scope, final String error) {
     assertNull(error, script.desc);
     assertEquals(script.tokens, getTokensContents(script.parser), script.desc);
     assertEquals(script.positions, getTokensPositions(script.parser), script.desc);
@@ -96,6 +100,40 @@ public class ParserTest {
     }
 
     assertEquals(expectedRange, actualRange);
+  }
+
+  @Test
+  public void testMultipleDiagnosticsPerParser() {
+    final String script =
+        "import fake/path"
+            + "\nstring foobar(string... foo, int bar) {"
+            + "\n    continue;"
+            + "\n}";
+    final ByteArrayInputStream istream =
+        new ByteArrayInputStream(script.getBytes(StandardCharsets.UTF_8));
+    final Parser parser = new Parser(null, istream, null);
+
+    try {
+      parser.parse();
+    } catch (InterruptedException e) {
+      fail("error during parsing");
+      return;
+    }
+
+    final List<Parser.AshDiagnostic> diagnostics = parser.getDiagnostics();
+    assertEquals(4, diagnostics.size());
+
+    assertEquals("fake/path could not be found", diagnostics.get(0).message);
+    ParserTest.assertLocationEquals(1, 1, 1, 17, diagnostics.get(0).location);
+
+    assertEquals("The vararg parameter must be the last one", diagnostics.get(1).message);
+    ParserTest.assertLocationEquals(2, 30, 2, 33, diagnostics.get(1).location);
+
+    assertEquals("Encountered 'continue' outside of loop", diagnostics.get(2).message);
+    ParserTest.assertLocationEquals(3, 5, 3, 13, diagnostics.get(2).location);
+
+    assertEquals("Missing return value", diagnostics.get(3).message);
+    ParserTest.assertLocationEquals(2, 8, 2, 38, diagnostics.get(3).location);
   }
 
   public static Stream<Arguments> mergeLocationsData() {

@@ -1,6 +1,6 @@
 package net.sourceforge.kolmafia.textui;
 
-import static org.eclipse.lsp4j.DiagnosticSeverity.*;
+import static org.eclipse.lsp4j.DiagnosticSeverity.Error;
 
 import java.io.File;
 import java.io.InputStream;
