@@ -2054,8 +2054,7 @@ public class Parser {
           });
     }
 
-    if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE)
-        && !condition.getType().isBad()) {
+    if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE) && !condition.getType().isBad()) {
       Location errorLocation = condition.getLocation();
 
       conditionalErrors.submitError(
@@ -2137,8 +2136,7 @@ public class Parser {
                 });
           }
 
-          if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE)
-              && !condition.getType().isBad()) {
+          if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE) && !condition.getType().isBad()) {
             Location errorLocation = condition.getLocation();
 
             elseErrors.submitError(
@@ -2267,8 +2265,7 @@ public class Parser {
           });
     }
 
-    if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE)
-        && !condition.getType().isBad()) {
+    if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE) && !condition.getType().isBad()) {
       Location errorLocation = condition.getLocation();
 
       whileErrors.submitError(
@@ -2335,8 +2332,7 @@ public class Parser {
       repeatError = true;
     }
 
-    if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE)
-        && !condition.getType().isBad()) {
+    if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE) && !condition.getType().isBad()) {
       Location errorLocation = condition.getLocation();
 
       if (!repeatError) {
@@ -3205,8 +3201,7 @@ public class Parser {
       javaForError = javaForSyntaxError = true;
     }
 
-    if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE)
-        && !condition.getType().isBad()) {
+    if (!condition.getType().equals(DataTypes.BOOLEAN_TYPE) && !condition.getType().isBad()) {
       Location errorLocation = condition.getLocation();
 
       if (!javaForError) {
@@ -3512,23 +3507,17 @@ public class Parser {
         name.addModifier(SemanticTokenModifiers.DefaultLibrary);
       }
     } else {
-      target = new BadFunction(name.content);
-
       // Don't make an error if the function couldn't be found
       // because the user messed up one of the parameters
       // (since that means we already made one earlier)
-      boolean error = true;
+      boolean alreadyErrored =
+          params.stream().anyMatch(param -> param != null && param.getType().isBad());
 
-      for (Evaluable param : params) {
-        if (param != null && param.getType().isBad()) {
-          error = false;
-          break;
-        }
-      }
-
-      if (error) {
+      if (!alreadyErrored) {
         this.undefinedFunctionError(name, params);
       }
+
+      target = new BadFunction(name.content);
     }
 
     return new FunctionCall(functionCallLocation, target, params, this);
@@ -3859,9 +3848,9 @@ public class Parser {
       }
 
       lhs = new Operation(lhs, oper);
-      if (!lhs.getType().isBad()
-          && !lhs.getType().equals(DataTypes.INT_TYPE)
-          && !lhs.getType().equals(DataTypes.BOOLEAN_TYPE)) {
+      if (!lhs.getType().equals(DataTypes.INT_TYPE)
+          && !lhs.getType().equals(DataTypes.BOOLEAN_TYPE)
+          && !lhs.getType().isBad()) {
         this.error(lhs.getLocation(), "\"~\" operator requires an integer or boolean value");
       }
     } else if (operator.equals("-")) {
@@ -3880,9 +3869,9 @@ public class Parser {
         }
 
         lhs = new Operation(lhs, oper);
-        if (!lhs.getType().isBad()
-            && !lhs.getType().equals(DataTypes.INT_TYPE)
-            && !lhs.getType().equals(DataTypes.FLOAT_TYPE)) {
+        if (!lhs.getType().equals(DataTypes.INT_TYPE)
+            && !lhs.getType().equals(DataTypes.FLOAT_TYPE)
+            && !lhs.getType().isBad()) {
           this.error(lhs.getLocation(), "\"-\" operator requires an integer or float value");
         }
       }
@@ -4904,7 +4893,8 @@ public class Parser {
 
         if (!(type instanceof AggregateType)) {
           if (!variableReferenceError && !type.isBad()) {
-            Location location = Parser.makeLocation(current.getLocation(), this.peekPreviousToken());
+            Location location =
+                Parser.makeLocation(current.getLocation(), this.peekPreviousToken());
             String message;
             if (indices.isEmpty()) {
               message = "Variable '" + varRef.getName() + "' cannot be indexed";
