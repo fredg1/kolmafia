@@ -381,6 +381,8 @@ public class MallSearchRequest extends GenericRequest {
       String itemListResult = itemMatcher.group(4);
       Matcher linkMatcher = MallSearchRequest.STOREDETAIL_PATTERN.matcher(itemListResult);
 
+      List<String> forbidden = MallPurchaseRequest.getForbiddenStores();
+
       while (linkMatcher.find()) {
         String linkText = linkMatcher.group();
         Matcher quantityMatcher = MallSearchRequest.LISTQUANTITY_PATTERN.matcher(linkText);
@@ -409,6 +411,11 @@ public class MallSearchRequest extends GenericRequest {
         }
 
         int shopId = StringUtilities.parseInt(detailsMatcher.group(1));
+
+        // If we are ignoring this store, skip it.
+        if (forbidden.contains(String.valueOf(shopId))) {
+          continue;
+        }
 
         // If we have tried to purchase from this store this session
         // and discovered that it is disabled or ignoring you, skip it.
