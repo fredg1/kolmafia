@@ -1504,7 +1504,7 @@ public class Parser {
         } else {
           lhs = this.parseAggregateLiteral(scope, badAggregateType());
 
-          if (!dataType.isBad()) {
+          if (!aggr.isBad()) {
             Location errorLocation =
                 lhs != null ? lhs.getLocation() : this.makeLocation(this.peekLastToken());
 
@@ -1618,7 +1618,7 @@ public class Parser {
         } else {
           rhs = this.parseAggregateLiteral(scope, badAggregateType());
 
-          if (!dataType.isBad()) {
+          if (!aggr.isBad()) {
             Location errorLocation =
                 rhs != null ? rhs.getLocation() : this.makeLocation(this.peekLastToken());
 
@@ -1756,22 +1756,18 @@ public class Parser {
         indexType = indexType.reference(this.makeLocation(indexToken));
 
         if (!indexType.isPrimitive()) {
-          if (!dataType.isBad()) {
-            aggregateTypeErrors.submitError(
-                () -> {
-                  this.error(indexToken, "Index type '" + indexToken + "' is not a primitive type");
-                });
-          }
+          aggregateTypeErrors.submitError(
+              () -> {
+                this.error(indexToken, "Index type '" + indexToken + "' is not a primitive type");
+              });
 
           indexType = new BadType(indexToken.content, this.makeLocation(indexToken));
         }
       } else {
-        if (!dataType.isBad()) {
-          aggregateTypeErrors.submitError(
-              () -> {
-                this.error(indexToken, "Invalid type name '" + indexToken + "'");
-              });
-        }
+        aggregateTypeErrors.submitError(
+            () -> {
+              this.error(indexToken, "Invalid type name '" + indexToken + "'");
+            });
 
         indexToken.setType(SemanticTokenTypes.Type);
         indexType = new BadType(indexToken.content, this.makeLocation(indexToken));
@@ -1779,12 +1775,10 @@ public class Parser {
 
       this.readToken(); // type name
     } else {
-      if (!dataType.isBad()) {
-        aggregateTypeErrors.submitSyntaxError(
-            () -> {
-              this.error(indexToken, "Missing index token");
-            });
-      }
+      aggregateTypeErrors.submitSyntaxError(
+          () -> {
+            this.error(indexToken, "Missing index token");
+          });
 
       Type type = new AggregateType(dataType, new BadType(null, null));
 
@@ -2853,7 +2847,9 @@ public class Parser {
       Location errorLocation =
           aggregate != null ? aggregate.getLocation() : this.makeLocation(this.currentToken());
 
-      this.error(errorLocation, "Aggregate reference expected");
+      if (aggregate == null || !aggregate.getType().isBad()) {
+        this.error(errorLocation, "Aggregate reference expected");
+      }
 
       aggregate = Value.locate(errorLocation, Value.BAD_VALUE);
     }
@@ -3240,7 +3236,7 @@ public class Parser {
           Location errorLocation =
               value != null ? value.getLocation() : this.makeLocation(this.currentToken());
 
-          if (!javaForSyntaxError && (value == null || !value.evaluatesTo(Value.BAD_VALUE))) {
+          if (!javaForSyntaxError) {
             this.error(errorLocation, "Variable reference expected");
           }
           javaForError = javaForSyntaxError = true;
@@ -3363,12 +3359,10 @@ public class Parser {
     }
 
     if (!(type instanceof RecordType)) {
-      if (type == null || !type.isBad()) {
-        if (!newRecordSyntaxError) {
-          this.error(name, "'" + name + "' is not a record type");
-        }
-        newRecordError = newRecordSyntaxError = true;
+      if (!newRecordSyntaxError) {
+        this.error(name, "'" + name + "' is not a record type");
       }
+      newRecordError = newRecordSyntaxError = true;
 
       type = new BadRecordType(null, this.makeLocation(name));
     }
@@ -3638,9 +3632,7 @@ public class Parser {
         Location errorLocation =
             name != null ? name.getLocation() : this.makeLocation(this.currentToken());
 
-        if (name == null || !name.evaluatesTo(Value.BAD_VALUE)) {
-          this.error(errorLocation, "Variable reference expected for function name");
-        }
+        this.error(errorLocation, "Variable reference expected for function name");
 
         name = badVariableReference(errorLocation);
       }
@@ -3781,9 +3773,7 @@ public class Parser {
       Location errorLocation =
           lhs != null ? lhs.getLocation() : this.makeLocation(this.currentToken());
 
-      if (lhs == null || !lhs.evaluatesTo(Value.BAD_VALUE)) {
-        this.error(errorLocation, "Variable reference expected");
-      }
+      this.error(errorLocation, "Variable reference expected");
 
       lhs = badVariableReference(errorLocation);
     }
