@@ -544,7 +544,7 @@ public class Parser {
 
       Function f = this.parseFunction(t, result);
       if (f != null) {
-        if ("main".equalsIgnoreCase(f.getName())) {
+        if (f.getName().equalsIgnoreCase("main")) {
           if (parentScope.getParentScope() == null) {
             this.mainMethod = f;
           } else {
