@@ -4549,8 +4549,7 @@ public class Parser {
         plurals = true;
       }
 
-      name.setType(
-          plurals ? SemanticTokenTypes.Enum : SemanticTokenTypes.EnumMember);
+      name.setType(plurals ? SemanticTokenTypes.Enum : SemanticTokenTypes.EnumMember);
       this.readToken();
     }
 

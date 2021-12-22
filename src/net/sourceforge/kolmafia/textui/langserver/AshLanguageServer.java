@@ -2,14 +2,15 @@ package net.sourceforge.kolmafia.textui.langserver;
 
 import java.io.File;
 import java.io.IOException;
-
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
-
+import java.util.concurrent.Executors;
+import net.sourceforge.kolmafia.StaticEntity;
+import net.sourceforge.kolmafia.textui.langserver.textdocumentservice.AshTextDocumentService;
+import net.sourceforge.kolmafia.textui.langserver.workspaceservice.AshWorkspaceService;
 import org.eclipse.lsp4j.ClientCapabilities;
 import org.eclipse.lsp4j.InitializeParams;
 import org.eclipse.lsp4j.InitializeResult;
@@ -23,132 +24,125 @@ import org.eclipse.lsp4j.services.LanguageServer;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.eclipse.lsp4j.services.WorkspaceService;
 
-import net.sourceforge.kolmafia.StaticEntity;
-
-import net.sourceforge.kolmafia.textui.langserver.textdocumentservice.AshTextDocumentService;
-import net.sourceforge.kolmafia.textui.langserver.workspaceservice.AshWorkspaceService;
-
 /**
- * The thread in charge of listening for the client's messages.
- * Its methods all quickly delegate to other threads, because we want to avoid
- * blocking the reading of new messages.
- * <p>
- * Was made abstract, because the actual class to use is {@link StateCheckWrappers.AshLanguageServer}.
+ * The thread in charge of listening for the client's messages. Its methods all quickly delegate to
+ * other threads, because we want to avoid blocking the reading of new messages.
+ *
+ * <p>Was made abstract, because the actual class to use is {@link
+ * StateCheckWrappers.AshLanguageServer}.
  */
-public abstract class AshLanguageServer
-	implements LanguageClientAware, LanguageServer
-{
-	/** The Launcher */
-	public static void main( String[] args )
-		throws IOException
-	{
-		AshLanguageServer server = new StateCheckWrappers.AshLanguageServer();
+public abstract class AshLanguageServer implements LanguageClientAware, LanguageServer {
+  /** The Launcher */
+  public static void main(String[] args) throws IOException {
+    AshLanguageServer server = new StateCheckWrappers.AshLanguageServer();
 
-		final Launcher<LanguageClient> launcher = LSPLauncher.createServerLauncher( server, System.in, System.out );
-		server.connect( launcher.getRemoteProxy() );
-		launcher.startListening();
-	}
+    final Launcher<LanguageClient> launcher =
+        LSPLauncher.createServerLauncher(server, System.in, System.out);
+    server.connect(launcher.getRemoteProxy());
+    launcher.startListening();
+  }
 
-	/* The server */
+  /* The server */
 
-	private ServerState state = ServerState.STARTED;
+  private ServerState state = ServerState.STARTED;
 
-	enum ServerState
-	{
-		STARTED,
-		INITIALIZED,
-		SHUTDOWN
-	}
+  enum ServerState {
+    STARTED,
+    INITIALIZED,
+    SHUTDOWN
+  }
 
-	public final ServerState getState()
-	{
-		return this.state;
-	}
+  public final ServerState getState() {
+    return this.state;
+  }
 
-	protected abstract boolean notInitialized();
-	protected abstract boolean wasShutdown();
-	protected abstract boolean isActive();
-	protected abstract void initializeCheck();
-	protected abstract void shutdownCheck();
-	protected abstract void stateCheck();
+  protected abstract boolean notInitialized();
 
-	public LanguageClient client;
-	public ClientCapabilities clientCapabilities;
+  protected abstract boolean wasShutdown();
 
-	public final AshTextDocumentService textDocumentService = new StateCheckWrappers.AshTextDocumentService( this );
-	public final AshWorkspaceService workspaceService = new StateCheckWrappers.AshWorkspaceService( this );
+  protected abstract boolean isActive();
 
-	public final ExecutorService executor = Executors.newCachedThreadPool();
-	public final FilesMonitor monitor = new FilesMonitor( this );
+  protected abstract void initializeCheck();
 
-	public final Map<File, Script> scripts = Collections.synchronizedMap( new Hashtable<>( 20 ) );
+  protected abstract void shutdownCheck();
 
+  protected abstract void stateCheck();
 
-	@Override
-	public void connect( LanguageClient client )
-	{
-		this.client = client;
-	}
+  public LanguageClient client;
+  public ClientCapabilities clientCapabilities;
 
-	@Override
-	public CompletableFuture<InitializeResult> initialize( InitializeParams params )
-	{
-		this.state = ServerState.INITIALIZED;
+  public final AshTextDocumentService textDocumentService =
+      new StateCheckWrappers.AshTextDocumentService(this);
+  public final AshWorkspaceService workspaceService =
+      new StateCheckWrappers.AshWorkspaceService(this);
 
-		this.clientCapabilities = params.getCapabilities();
-		// params.getTrace(); for when we implement trace
-		// params.getClientInfo(); do we need/care about that?
-		// params.getWorkspaceFolders(); look into this later
+  public final ExecutorService executor = Executors.newCachedThreadPool();
+  public final FilesMonitor monitor = new FilesMonitor(this);
 
-		this.executor.execute( () -> {
-			this.monitor.scan();
-		} );
+  public final Map<File, Script> scripts = Collections.synchronizedMap(new Hashtable<>(20));
 
-		return CompletableFuture.supplyAsync( () -> {
-			final ServerCapabilities capabilities = new ServerCapabilities();
+  @Override
+  public void connect(LanguageClient client) {
+    this.client = client;
+  }
 
-			this.textDocumentService.setCapabilities( capabilities );
-			this.workspaceService.setCapabilities( capabilities );
+  @Override
+  public CompletableFuture<InitializeResult> initialize(InitializeParams params) {
+    this.state = ServerState.INITIALIZED;
 
-			final ServerInfo info = new ServerInfo( StaticEntity.getVersion() );
+    this.clientCapabilities = params.getCapabilities();
+    // params.getTrace(); for when we implement trace
+    // params.getClientInfo(); do we need/care about that?
+    // params.getWorkspaceFolders(); look into this later
 
-			return new InitializeResult( capabilities, info );
-		}, this.executor );
-	}
+    this.executor.execute(
+        () -> {
+          this.monitor.scan();
+        });
 
-	@Override
-	public CompletableFuture<Object> shutdown()
-	{
-		this.state = ServerState.SHUTDOWN;
+    return CompletableFuture.supplyAsync(
+        () -> {
+          final ServerCapabilities capabilities = new ServerCapabilities();
 
-		return CompletableFuture.supplyAsync( () -> {
-			for ( final Script script : this.scripts.values() )
-			{
-				if ( script.handler != null )
-				{
-					script.handler.close();
-				}
-			}
+          this.textDocumentService.setCapabilities(capabilities);
+          this.workspaceService.setCapabilities(capabilities);
 
-			return null;
-		}, this.executor );
-	}
+          final ServerInfo info = new ServerInfo(StaticEntity.getVersion());
 
-	@Override
-	public void exit()
-	{
-		System.exit( this.state == ServerState.SHUTDOWN ? 0 : 1 );
-	}
+          return new InitializeResult(capabilities, info);
+        },
+        this.executor);
+  }
 
-	@Override
-	public TextDocumentService getTextDocumentService()
-	{
-		return this.textDocumentService;
-	}
+  @Override
+  public CompletableFuture<Object> shutdown() {
+    this.state = ServerState.SHUTDOWN;
 
-	@Override
-	public WorkspaceService getWorkspaceService()
-	{
-		return this.workspaceService;
-	}
+    return CompletableFuture.supplyAsync(
+        () -> {
+          for (final Script script : this.scripts.values()) {
+            if (script.handler != null) {
+              script.handler.close();
+            }
+          }
+
+          return null;
+        },
+        this.executor);
+  }
+
+  @Override
+  public void exit() {
+    System.exit(this.state == ServerState.SHUTDOWN ? 0 : 1);
+  }
+
+  @Override
+  public TextDocumentService getTextDocumentService() {
+    return this.textDocumentService;
+  }
+
+  @Override
+  public WorkspaceService getWorkspaceService() {
+    return this.workspaceService;
+  }
 }
