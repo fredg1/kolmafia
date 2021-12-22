@@ -41,7 +41,7 @@ public abstract class CompositeValue extends Value {
     return Arrays.asList(this.keys()).iterator();
   }
 
-  public Value initialValue(final Value key) {
+  public Value initialValue(final Object key) {
     return ((CompositeType) this.type).getDataType(key).initialValue();
   }
 
