@@ -1762,7 +1762,7 @@ class CADatabase600to699 extends ChoiceAdventureDatabase {
 
         if (KoLCharacter.hasEquipped(ItemPool.RING_OF_DETECT_BORING_DOORS)) {
           return "2";
-        } else if (decision == "2") {
+        } else if (decision.equals("2")) {
           // they wanted the boring door, but it's unavailable
           return "3";
         }
@@ -1800,7 +1800,7 @@ class CADatabase600to699 extends ChoiceAdventureDatabase {
 
         if (KoLCharacter.hasEquipped(ItemPool.RING_OF_DETECT_BORING_DOORS)) {
           return "2";
-        } else if (decision == "2") {
+        } else if (decision.equals("2")) {
           // they wanted the boring door, but it's unavailable
           return "3";
         }
@@ -1974,10 +1974,10 @@ class CADatabase600to699 extends ChoiceAdventureDatabase {
 
         boolean hasPole = ELEVEN_FOOT_POLE.getCount(KoLConstants.inventory) > 0;
 
-        if (decision == "2") {
+        if (decision.equals("2")) {
           return hasPole ? "2" : "3";
         }
-        if (decision == "4") {
+        if (decision.equals("4")) {
           return hasPole ? "2" : "1";
         }
 

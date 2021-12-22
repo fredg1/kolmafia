@@ -994,7 +994,7 @@ class CADatabase1200to1299 extends ChoiceAdventureDatabase {
 
       @Override
       String getDecision(String responseText, String decision, int stepCount) {
-        if (decision == "1" || decision == "2") {
+        if (decision.equals("1") || decision.equals("2")) {
           if (responseText.contains("Drill out a core sample")) {
             return "2";
           }
@@ -1022,7 +1022,7 @@ class CADatabase1200to1299 extends ChoiceAdventureDatabase {
 
       @Override
       String getDecision(String responseText, String decision, int stepCount) {
-        if (decision == "2" || decision == "3") {
+        if (decision.equals("2") || decision.equals("3")) {
           if (responseText.contains("Carefully extract a sample")) {
             return "3";
           }
@@ -1052,7 +1052,7 @@ class CADatabase1200to1299 extends ChoiceAdventureDatabase {
 
       @Override
       String getDecision(String responseText, String decision, int stepCount) {
-        if (decision == "2" || decision == "3") {
+        if (decision.equals("2") || decision.equals("3")) {
           if (responseText.contains("Extract a sample")) {
             return "3";
           }
@@ -1082,7 +1082,7 @@ class CADatabase1200to1299 extends ChoiceAdventureDatabase {
 
       @Override
       String getDecision(String responseText, String decision, int stepCount) {
-        if (decision == "2" || decision == "3") {
+        if (decision.equals("2") || decision.equals("3")) {
           if (responseText.contains("Extract a sample")) {
             return "3";
           }
@@ -1108,7 +1108,7 @@ class CADatabase1200to1299 extends ChoiceAdventureDatabase {
 
       @Override
       String getDecision(String responseText, String decision, int stepCount) {
-        if (decision == "2" || decision == "3") {
+        if (decision.equals("2") || decision.equals("3")) {
           if (responseText.contains("Extract some DNA")) {
             return "3";
           }
@@ -1135,7 +1135,7 @@ class CADatabase1200to1299 extends ChoiceAdventureDatabase {
 
       @Override
       String getDecision(String responseText, String decision, int stepCount) {
-        if (decision == "2" || decision == "3") {
+        if (decision.equals("2") || decision.equals("3")) {
           if (responseText.contains("Extract some DNA")) {
             return "3";
           }
@@ -1161,7 +1161,7 @@ class CADatabase1200to1299 extends ChoiceAdventureDatabase {
 
       @Override
       String getDecision(String responseText, String decision, int stepCount) {
-        if (decision == "2" || decision == "3") {
+        if (decision.equals("2") || decision.equals("3")) {
           if (responseText.contains("Extract some DNA")) {
             return "3";
           }

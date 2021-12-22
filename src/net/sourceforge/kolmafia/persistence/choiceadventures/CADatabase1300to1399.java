@@ -1071,7 +1071,7 @@ class CADatabase1300to1399 extends ChoiceAdventureDatabase {
           String find = matcher.group(0);
           String monsterName = Preferences.getString("_voteMonster" + count++);
 
-          if (monsterName == "") {
+          if (monsterName.isEmpty()) {
             continue;
           }
 
@@ -1610,7 +1610,7 @@ class CADatabase1300to1399 extends ChoiceAdventureDatabase {
       @Override
       void postChoice2(GenericRequest request, int decision) {
         if (decision == 1) {
-          if (Preferences.getString("doctorBagQuestItem") == "") {
+          if (Preferences.getString("doctorBagQuestItem").isEmpty()) {
             // We didn't recognize quest request.responseText, so get it from quest log
             RequestThread.postRequest(new QuestLogRequest());
           }
@@ -2968,13 +2968,13 @@ class CADatabase1300to1399 extends ChoiceAdventureDatabase {
     String ship = Preferences.getString("_prPirateShip");
     int travelTime;
 
-    if (ship == "Frigate" || ship == "Galleon") {
+    if (ship.equals("Frigate") || ship.equals("Galleon")) {
       travelTime = 7;
-    } else if (ship == "Caravel") {
+    } else if (ship.equals("Caravel")) {
       travelTime = 6;
-    } else if (ship == "Clipper") {
+    } else if (ship.equals("Clipper")) {
       travelTime = 4;
-    } else if (ship == "Man o' War") {
+    } else if (ship.equals("Man o' War")) {
       travelTime = 9;
     } else {
       travelTime = 7; // assume default

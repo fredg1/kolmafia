@@ -489,7 +489,7 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
 
           Preferences.setBoolean(
               "_guzzlrQuestAbandoned",
-              ChoiceManager.findChoiceDecisionIndex("Abandon Client", request.responseText) == "0");
+              ChoiceManager.findChoiceDecisionIndex("Abandon Client", request.responseText).equals("0"));
 
           return;
         }
@@ -497,7 +497,7 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
         // If we have unlocked Gold Tier but cannot accept one, we must have already accepted three.
         boolean unlockedGoldTier = Preferences.getInteger("guzzlrBronzeDeliveries") >= 5;
         if (unlockedGoldTier
-            && ChoiceManager.findChoiceDecisionIndex("Gold Tier", request.responseText) == "0") {
+            && ChoiceManager.findChoiceDecisionIndex("Gold Tier", request.responseText).equals("0")) {
           Preferences.setInteger("_guzzlrGoldDeliveries", 3);
         }
 
@@ -506,7 +506,7 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
         boolean unlockedPlatinumTier = Preferences.getInteger("guzzlrGoldDeliveries") >= 5;
         if (unlockedPlatinumTier
             && ChoiceManager.findChoiceDecisionIndex("Platinum Tier", request.responseText)
-                == "0") {
+                .equals("0")) {
           Preferences.setInteger("_guzzlrPlatinumDeliveries", 1);
         }
       }
@@ -549,8 +549,7 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
             // Increment the number of gold or platinum deliveries STARTED today
             if (!tier.equals("bronze")) {
               Preferences.increment(
-                  "_guzzlr" + StringUtilities.toTitleCase(tier) + "Deliveries",
-                  tier == "gold" ? 3 : 1);
+                  "_guzzlr" + StringUtilities.toTitleCase(tier) + "Deliveries", 1);
             }
 
             if (boozeMatcher.find()) {
@@ -558,8 +557,8 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
               Preferences.setString("guzzlrQuestBooze", ItemDatabase.getItemName(itemId));
             }
 
-            if (Preferences.getString("guzzlrQuestBooze") == ""
-                || Preferences.getString("guzzlrQuestLocation") == "") {
+            if (Preferences.getString("guzzlrQuestBooze").isEmpty()
+                || Preferences.getString("guzzlrQuestLocation").isEmpty()) {
               RequestThread.postRequest(new QuestLogRequest());
             }
 
@@ -1401,6 +1400,119 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
         if (decision != 6) {
           Preferences.increment("_coldMedicineConsults", 1, 5, false);
           Preferences.setInteger("_nextColdMedicineConsult", KoLCharacter.getTurnsPlayed() + 20);
+        }
+      }
+    };
+
+    new ChoiceAdventure(1456, "Experimental Sauna", null) {
+      void setup() {
+        new Option(1, "50 advs of Sauna-Fresh").turnCost(1).attachEffect("Sauna-Fresh");
+        new Option(2);
+      }
+    };
+
+    new ChoiceAdventure(1457, "Food Lab", null) {
+      void setup() {
+        new Option(1)
+            .attachItem("[experimental crimbo food]", 1, AUTO)
+            .attachItem(ItemPool.GOOIFIED_ANIMAL_MATTER, -5, MANUAL);
+        new Option(2);
+      }
+
+      @Override
+      void postChoice1(GenericRequest request, int decision) {
+        if (decision == 1 && !request.responseText.contains("You acquire an item")) {
+          this.choiceFailed();
+        }
+      }
+    };
+
+    new ChoiceAdventure(1458, "Nog Lab", null) {
+      void setup() {
+        new Option(1)
+            .attachItem("[experimental crimbo booze]", 1, AUTO)
+            .attachItem(ItemPool.GOOIFIED_VEGETABLE_MATTER, -5, MANUAL);
+        new Option(2);
+      }
+
+      @Override
+      void postChoice1(GenericRequest request, int decision) {
+        if (decision == 1 && !request.responseText.contains("You acquire an item")) {
+          this.choiceFailed();
+        }
+      }
+    };
+
+    new ChoiceAdventure(1459, "Chem Lab", null) {
+      void setup() {
+        new Option(1)
+            .attachItem("[experimental crimbo spleen]", 1, AUTO)
+            .attachItem(ItemPool.GOOIFIED_MINERAL_MATTER, -5, MANUAL);
+        new Option(2);
+      }
+
+      @Override
+      void postChoice1(GenericRequest request, int decision) {
+        if (decision == 1 && !request.responseText.contains("You acquire an item")) {
+          this.choiceFailed();
+        }
+      }
+    };
+
+    new ChoiceAdventure(1460, "Gift Fabrication Lab", null) {
+      void setup() {
+        this.canWalkFromChoice = true;
+
+        this.customName = "Site Alpha Toy Lab";
+        this.customZones.add("Crimbo21");
+
+        new Option(1, "fleshy putty, third ear or festive egg sack", true)
+            .attachItem("fleshy putty", 1, AUTO, new DisplayAll("putty"))
+            .attachItem("third ear", 1, AUTO, new DisplayAll("third ear"))
+            .attachItem("festive egg sack", 1, AUTO, new DisplayAll("egg sack"))
+            .attachItem(ItemPool.GOOIFIED_ANIMAL_MATTER, -30, MANUAL, new NoDisplay());
+        new Option(2, "poisonsettia, peppermint-scented socks or the Crymbich Manuscript", true)
+            .attachItem("poisonsettia", 1, AUTO, new DisplayAll("poisonsettia"))
+            .attachItem("peppermint-scented socks", 1, AUTO, new DisplayAll("socks"))
+            .attachItem("the Crymbich Manuscript", 1, AUTO, new DisplayAll("Manuscript"))
+            .attachItem(ItemPool.GOOIFIED_VEGETABLE_MATTER, -30, MANUAL, new NoDisplay());
+        new Option(3, "projectile chemistry set, depleted Crimbonium football helmet or synthetic rock", true)
+            .attachItem("projectile chemistry set", 1, AUTO, new DisplayAll("chemistry set"))
+            .attachItem("depleted Crimbonium football helmet", 1, AUTO, new DisplayAll("helmet"))
+            .attachItem("synthetic rock", 1, AUTO, new DisplayAll("synthetic rock"))
+            .attachItem(ItemPool.GOOIFIED_MINERAL_MATTER, -30, MANUAL, new NoDisplay());
+        new Option(4, "&quot;caramel&quot; orange, self-repairing earmuffs or carnivorous potted plant", true)
+            .attachItem("&quot;caramel&quot; orange", 1, AUTO, new DisplayAll("orange"))
+            .attachItem("self-repairing earmuffs", 1, AUTO, new DisplayAll("earmuffs"))
+            .attachItem("carnivorous potted plant", 1, AUTO, new DisplayAll("potted plant"))
+            .attachItem(ItemPool.GOOIFIED_ANIMAL_MATTER, -15, MANUAL, new NoDisplay())
+            .attachItem(ItemPool.GOOIFIED_VEGETABLE_MATTER, -15, MANUAL, new NoDisplay());
+        new Option(5, "universal biscuit, yule hatchet or potato alarm clock", true)
+            .attachItem("universal biscuit", 1, AUTO, new DisplayAll("biscuit"))
+            .attachItem("yule hatchet", 1, AUTO, new DisplayAll("hatchet"))
+            .attachItem("potato alarm clock", 1, AUTO, new DisplayAll("clock"))
+            .attachItem(ItemPool.GOOIFIED_VEGETABLE_MATTER, -15, MANUAL, new NoDisplay())
+            .attachItem(ItemPool.GOOIFIED_MINERAL_MATTER, -15, MANUAL, new NoDisplay());
+        new Option(6, "lab-grown meat, golden fleece or boxed gumball machine", true)
+            .attachItem("lab-grown meat", 1, AUTO, new DisplayAll("meat"))
+            .attachItem("golden fleece", 1, AUTO, new DisplayAll("fleece"))
+            .attachItem("boxed gumball machine", 1, AUTO, new DisplayAll("machine"))
+            .attachItem(ItemPool.GOOIFIED_MINERAL_MATTER, -15, MANUAL, new NoDisplay())
+            .attachItem(ItemPool.GOOIFIED_ANIMAL_MATTER, -15, MANUAL, new NoDisplay());
+        new Option(7, "cloning kit, electric pants or can of mixed everything", true)
+            .attachItem("cloning kit", 1, AUTO, new DisplayAll("cloning kit"))
+            .attachItem("electric pants", 1, AUTO, new DisplayAll("pants"))
+            .attachItem("can of mixed everything", 1, AUTO, new DisplayAll("everything"))
+            .attachItem(ItemPool.GOOIFIED_ANIMAL_MATTER, -10, MANUAL, new NoDisplay())
+            .attachItem(ItemPool.GOOIFIED_VEGETABLE_MATTER, -10, MANUAL, new NoDisplay())
+            .attachItem(ItemPool.GOOIFIED_MINERAL_MATTER, -10, MANUAL, new NoDisplay());
+        new Option(8, "return to Site Alpha", true);
+      }
+
+      @Override
+      void postChoice1(GenericRequest request, int decision) {
+        if (decision != 8 && !request.responseText.contains("You acquire an item")) {
+          this.choiceFailed();
         }
       }
     };

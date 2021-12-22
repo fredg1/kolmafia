@@ -26,7 +26,7 @@ public class ShenCopperheadManager {
   public static final void postInitialShen(final GenericRequest request) {
     QuestDatabase.setQuestProgress(Quest.SHEN, "step1");
     Preferences.setInteger("shenInitiationDay", KoLCharacter.getCurrentDays());
-    if (Preferences.getString("shenQuestItem") == "") {
+    if (Preferences.getString("shenQuestItem").isEmpty()) {
       // We didn't recognize quest request.responseText before accepting quest, so get it from quest
       // log
       RequestThread.postRequest(new QuestLogRequest());

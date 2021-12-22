@@ -981,12 +981,12 @@ class CADatabase1000to1099 extends ChoiceAdventureDatabase {
         }
 
         String decision = this.getDecision(request.responseText, "0", Integer.MAX_VALUE);
-        if (decision == "0") {
+        if (decision.equals("0")) {
           return;
         }
 
         for (int i : new int[] {1, 2, 3}) {
-          getOption(i).text(decision == String.valueOf(i) ? "right answer" : "wrong answer");
+          getOption(i).text(decision.equals(String.valueOf(i)) ? "right answer" : "wrong answer");
         }
       }
 

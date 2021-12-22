@@ -21,6 +21,7 @@ import net.sourceforge.kolmafia.request.EatItemRequest;
 import net.sourceforge.kolmafia.request.GenericRequest;
 import net.sourceforge.kolmafia.session.BatManager;
 import net.sourceforge.kolmafia.session.ChoiceManager;
+import net.sourceforge.kolmafia.session.EncounterManager;
 import net.sourceforge.kolmafia.session.InventoryManager;
 import net.sourceforge.kolmafia.session.Limitmode;
 import net.sourceforge.kolmafia.utilities.StringUtilities;
@@ -1630,6 +1631,7 @@ class CADatabase1100to1199 extends ChoiceAdventureDatabase {
       void postChoice2(GenericRequest request, int decision) {
         if (decision == 1 && !request.getURLString().contains("monid=0")) {
           Preferences.increment("_timeSpinnerMinutesUsed", 3);
+          EncounterManager.ignoreSpecialMonsters();
         }
       }
     };
