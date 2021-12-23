@@ -2,6 +2,8 @@ package net.sourceforge.kolmafia.textui.langserver;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.Map;
@@ -33,13 +35,19 @@ import org.eclipse.lsp4j.services.WorkspaceService;
  */
 public abstract class AshLanguageServer implements LanguageClientAware, LanguageServer {
   /** The Launcher */
-  public static void main(String[] args) throws IOException {
-    AshLanguageServer server = new StateCheckWrappers.AshLanguageServer();
+  public static void main(String... args) throws IOException {
+    AshLanguageServer.launch(System.in, System.out);
+  }
 
-    final Launcher<LanguageClient> launcher =
-        LSPLauncher.createServerLauncher(server, System.in, System.out);
+  public static AshLanguageServer launch(final InputStream in, final OutputStream out) {
+    final AshLanguageServer server = new StateCheckWrappers.AshLanguageServer();
+
+    final Launcher<LanguageClient> launcher = LSPLauncher.createServerLauncher(server, in, out);
     server.connect(launcher.getRemoteProxy());
+
     launcher.startListening();
+
+    return server;
   }
 
   /* The server */
