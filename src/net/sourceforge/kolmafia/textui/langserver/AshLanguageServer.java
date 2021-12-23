@@ -42,7 +42,8 @@ public abstract class AshLanguageServer implements LanguageClientAware, Language
   public static AshLanguageServer launch(final InputStream in, final OutputStream out) {
     final AshLanguageServer server = new StateCheckWrappers.AshLanguageServer();
 
-    final Launcher<LanguageClient> launcher = LSPLauncher.createServerLauncher(server, in, out);
+    final Launcher<LanguageClient> launcher =
+        LSPLauncher.createServerLauncher(server, in, out, server.executor, null);
     server.connect(launcher.getRemoteProxy());
 
     launcher.startListening();
@@ -141,7 +142,7 @@ public abstract class AshLanguageServer implements LanguageClientAware, Language
 
   @Override
   public void exit() {
-    System.exit(this.state == ServerState.SHUTDOWN ? 0 : 1);
+    this.executor.shutdownNow();
   }
 
   @Override
