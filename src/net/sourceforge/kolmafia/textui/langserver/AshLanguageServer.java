@@ -4,6 +4,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.Map;
@@ -34,9 +37,16 @@ import org.eclipse.lsp4j.services.WorkspaceService;
  * StateCheckWrappers.AshLanguageServer}.
  */
 public abstract class AshLanguageServer implements LanguageClientAware, LanguageServer {
-  /** The Launcher */
+
+  /* The Launcher */
+
   public static void main(String... args) throws IOException {
-    AshLanguageServer.launch(System.in, System.out);
+    if (args.length > 0 && args[0].equals("socket")) {
+      Socket socket = new ServerSocket(60180, 25, InetAddress.getByName("127.0.0.1")).accept();
+      AshLanguageServer.launch(socket.getInputStream(), socket.getOutputStream());
+    } else {
+      AshLanguageServer.launch(System.in, System.out);
+    }
   }
 
   public static AshLanguageServer launch(final InputStream in, final OutputStream out) {
