@@ -1469,7 +1469,7 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
         new Option(1, "fleshy putty, third ear or festive egg sack", true)
             .attachItem("fleshy putty", 1, AUTO, new DisplayAll("putty"))
             .attachItem("third ear", 1, AUTO, new DisplayAll("third ear"))
-            .attachItem("festive egg sack", 1, AUTO, new DisplayAll("egg sack"))
+            .attachItem("festive egg sac", 1, AUTO, new DisplayAll("egg sac"))
             .attachItem(ItemPool.GOOIFIED_ANIMAL_MATTER, -30, MANUAL, new NoDisplay());
         new Option(2, "poisonsettia, peppermint-scented socks or the Crymbich Manuscript", true)
             .attachItem("poisonsettia", 1, AUTO, new DisplayAll("poisonsettia"))
