@@ -1466,7 +1466,7 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
         this.customName = "Site Alpha Toy Lab";
         this.customZones.add("Crimbo21");
 
-        new Option(1, "fleshy putty, third ear or festive egg sack", true)
+        new Option(1, "fleshy putty, third ear or festive egg sac", true)
             .attachItem("fleshy putty", 1, AUTO, new DisplayAll("putty"))
             .attachItem("third ear", 1, AUTO, new DisplayAll("third ear"))
             .attachItem("festive egg sac", 1, AUTO, new DisplayAll("egg sac"))
