@@ -110,7 +110,7 @@ public class FilesMonitor {
   }
 
   void scan(final File directory) {
-    for (final File file : Arrays.asList(DataUtilities.listFiles(directory))) {
+    for (final File file : DataUtilities.listFiles(directory)) {
       if (Thread.interrupted()) {
         break;
       }
