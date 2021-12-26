@@ -60,11 +60,15 @@ public class Script {
     private final Object parserSwapLock = new Object();
     private final Object parserThreadWaitingLock = new Object();
 
+    // Public class, private constructor
+    private Handler() {
+    }
+
     void refreshParsing() {
       this.parseFile(false);
     }
 
-    void parseFile(final boolean initialParsing) {
+    private void parseFile(final boolean initialParsing) {
       final String previousThreadName = Thread.currentThread().getName();
 
       synchronized (this.parserSwapLock) {
