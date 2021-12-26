@@ -9,10 +9,14 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Collections;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import net.sourceforge.kolmafia.StaticEntity;
 import net.sourceforge.kolmafia.textui.langserver.textdocumentservice.AshTextDocumentService;
 import net.sourceforge.kolmafia.textui.langserver.workspaceservice.AshWorkspaceService;
@@ -56,7 +60,10 @@ public abstract class AshLanguageServer implements LanguageClientAware, Language
         LSPLauncher.createServerLauncher(server, in, out, server.executor, null);
     server.connect(launcher.getRemoteProxy());
 
-    launcher.startListening();
+    // TODO find a way to rename the thread that will be created by startListening()
+    Future<Void> connectionListener = launcher.startListening();
+
+    server.listenForEarlyConnectionTermination(connectionListener);
 
     return server;
   }
@@ -164,6 +171,33 @@ public abstract class AshLanguageServer implements LanguageClientAware, Language
         it.remove();
       }
     }
+  }
+
+  /**
+   * Creates a thread running in parallel with the Language Server for its whole existence, with the
+   * task of listening for the early termination of the thread listening to the client.
+   *
+   * <p>An early termination is defined as the server's input stream being closed before receiving
+   * the {@code exit} notification.
+   *
+   * <p>This makes sure that {@link #exit} still gets called, preventing this process becoming a
+   * zombie process.
+   */
+  private void listenForEarlyConnectionTermination(final Future<Void> connectionListener) {
+    this.executor.execute(
+        () -> {
+          final String previousThreadName = Thread.currentThread().getName();
+          Thread.currentThread().setName("Language Server early connection termination listener");
+
+          try {
+            connectionListener.get();
+          } catch (InterruptedException | ExecutionException | CancellationException e) {
+          } finally {
+            this.exit();
+
+            Thread.currentThread().setName(previousThreadName);
+          }
+        });
   }
 
   @Override
