@@ -9,6 +9,10 @@ import java.util.List;
 import net.java.dev.spellcast.utilities.DataUtilities;
 import net.sourceforge.kolmafia.KoLConstants;
 
+/**
+ * Module in charge of the operations regarding our files, {@link Script scripts} and {@link
+ * Script.Handler handlers}, such as finding them, making them or traversing them.
+ */
 public class FilesMonitor {
   final AshLanguageServer parent;
 
@@ -16,6 +20,7 @@ public class FilesMonitor {
     this.parent = parent;
   }
 
+  /** Updates the information we have about a file based on information from the client. */
   public void updateFile(final File file, final String text, final int version) {
     if (file == null) {
       return;
@@ -66,6 +71,7 @@ public class FilesMonitor {
     }
   }
 
+  /** Returns the currently existing {@link Script.Handler handler(s)} for the given file. */
   List<Script.Handler> findHandlers(final File file) {
     final List<Script.Handler> handlers = new LinkedList<>();
 
@@ -82,6 +88,10 @@ public class FilesMonitor {
     return handlers;
   }
 
+  /**
+   * Returns the currently existing {@link Script.Handler handler(s)} for the given file. If there
+   * is none, immediately makes one.
+   */
   public List<Script.Handler> findOrMakeHandler(final File file) {
     final List<Script.Handler> handlers;
 
@@ -99,6 +109,10 @@ public class FilesMonitor {
     return handlers;
   }
 
+  /**
+   * Checks every sub-directory under our authority as a KoLmafia root folder, and ensures that
+   * every {@code .ash} file in them has a {@link Script.Handler handler}.
+   */
   void scan() {
     for (final File directory :
         Arrays.asList(
@@ -109,7 +123,11 @@ public class FilesMonitor {
     }
   }
 
-  void scan(final File directory) {
+  /**
+   * Ensures that every {@code .ash} file in the given directory (and sub-directories thereof) have
+   * a {@link Script.Handler handler}.
+   */
+  private void scan(final File directory) {
     for (final File file : DataUtilities.listFiles(directory)) {
       if (Thread.interrupted()) {
         break;
@@ -123,6 +141,7 @@ public class FilesMonitor {
     }
   }
 
+  /** Converts an encoded string representation of an URI into a File. */
   public static File URIToFile(String uri) {
     if (uri == null) {
       return null;
