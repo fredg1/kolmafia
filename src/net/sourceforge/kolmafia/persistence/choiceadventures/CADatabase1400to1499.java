@@ -1524,7 +1524,7 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
         new Option(1, "Increase goo intensity", true);
         new Option(2, "Decrease goo intensity", true);
         new Option(3, "Trade grey goo ring for gooified matter", true)
-            .attachItem(ItemPool.GREY_GOO_RING, -1, MANUAL, new DisplayAll("goo ring", NEED, AT_LEAST, 1));
+            .attachItem(ItemPool.GREY_GOO_RING, -1, MANUAL, new DisplayAll("goo ring", NEED, INV_ONLY_AT_LEAST, 1));
         new Option(4, "Do nothing", true);
         new Option(5, "Grab the cheer core. Just do it!", true);
       }
