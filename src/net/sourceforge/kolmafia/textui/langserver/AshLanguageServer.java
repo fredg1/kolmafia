@@ -139,12 +139,7 @@ public abstract class AshLanguageServer implements LanguageClientAware, Language
 
     return CompletableFuture.supplyAsync(
         () -> {
-          for (final Script script : this.scripts.values()) {
-            if (script.handler != null) {
-              script.handler.close();
-            }
-          }
-
+          this.close();
           return null;
         },
         this.executor);
@@ -153,6 +148,20 @@ public abstract class AshLanguageServer implements LanguageClientAware, Language
   @Override
   public void exit() {
     this.executor.shutdownNow();
+  }
+
+  private void close() {
+    synchronized (this.scripts) {
+      final Iterator<Script> it = this.scripts.values().iterator();
+      while (it.hasNext()) {
+        final Script script = it.next();
+        if (script.handler != null) {
+          script.handler.close();
+        }
+
+        it.remove();
+      }
+    }
   }
 
   @Override
