@@ -147,6 +147,8 @@ public abstract class AshLanguageServer implements LanguageClientAware, Language
 
   @Override
   public void exit() {
+    // Call close() in case the client didn't send a shutdown notification
+    this.close();
     this.executor.shutdownNow();
   }
 
