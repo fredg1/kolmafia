@@ -1516,6 +1516,47 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
         }
       }
     };
+
+    new ChoiceAdventure(1461, null, "Site Alpha Primary Lab") {
+      void setup() {
+        this.customZones.add("Crimbo21");
+
+        new Option(1, "Increase goo intensity", true);
+        new Option(2, "Decrease goo intensity", true);
+        new Option(3, "Trade grey goo ring for gooified matter", true)
+            .attachItem(ItemPool.GREY_GOO_RING, -1, MANUAL, new DisplayAll("goo ring", NEED, AT_LEAST, 1));
+        new Option(4, "Do nothing", true);
+        new Option(5, "Grab the cheer core. Just do it!", true);
+      }
+
+      @Override
+      String getDecision(String responseText, String decision, int stepCount) {
+        // If you can "Grab the Cheer Core!", do it.
+        if (responseText.contains("Grab the Cheer Core!")) {
+          return "5";
+        }
+        return decision;
+      }
+
+      @Override
+      void postChoice1(GenericRequest request, int decision) {
+        if (decision != 6) {
+          Preferences.increment("_coldMedicineConsults", 1, 5, false);
+          Preferences.setInteger("_nextColdMedicineConsult", KoLCharacter.getTurnsPlayed() + 20);
+        }
+      }
+
+      @Override
+      void postChoice2(GenericRequest request, int decision) {
+        if (decision == 1) {
+          Preferences.increment("primaryLabGooIntensity", 1);
+        } else if (decision == 2) {
+          Preferences.decrement("primaryLabGooIntensity", 1);
+        } else if (decision == 5) {
+          Preferences.setBoolean("primaryLabCheerCoreGrabbed", true);
+        }
+      }
+    };
   }
 
   static final void cartographyAdventureEncountered(KoLAdventure location) {
