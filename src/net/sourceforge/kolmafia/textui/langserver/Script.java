@@ -14,12 +14,25 @@ import net.sourceforge.kolmafia.textui.parsetree.Scope;
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.PublishDiagnosticsParams;
 
+/**
+ * A file that was recognized as a KoLmafia script in one of the directories under our authority.
+ * Takes care of recording unsaved changes made to it.
+ */
 public class Script {
   final AshLanguageServer parent;
   final File file;
 
+  /**
+   * The {@link Handler} in charge of this script. <i>Only</i> exists if this script is <b>not</b>
+   * imported by any other script.
+   *
+   * <p>When trying to find the handler(s) in charge of a given file, {@link
+   * FilesMonitor#findHandlers(File)} should be used.
+   */
   Handler handler;
+
   int version = -1;
+  /** The current content of the file. Is {@code null} if the file is currently closed */
   String text;
 
   Script(final AshLanguageServer parent, final File file) {
@@ -47,7 +60,8 @@ public class Script {
   }
 
   /**
-   * An object tasked with taking care of a Script.
+   * An object tasked with taking care of a {@link Script}, such as parsing it and sending the
+   * resulting diagnostics to the client once the parsing ends.
    *
    * <p>All files imported by this script should also be handled by this object
    */
@@ -61,8 +75,7 @@ public class Script {
     private final Object parserThreadWaitingLock = new Object();
 
     // Public class, private constructor
-    private Handler() {
-    }
+    private Handler() {}
 
     void refreshParsing() {
       this.parseFile(false);
@@ -71,6 +84,7 @@ public class Script {
     private void parseFile(final boolean initialParsing) {
       final String previousThreadName = Thread.currentThread().getName();
 
+      // If another thread was already parsing this script, kick them out; we're in charge now.
       synchronized (this.parserSwapLock) {
         if (this.parserThread != null) {
           this.parserThread.interrupt();
@@ -86,8 +100,10 @@ public class Script {
               Collections.synchronizedMap(new HashMap<>()));
 
       try {
+        // Parse the script
         this.scope = this.parser.parse();
 
+        // If we managed to parse it without interruption, send the diagnostics
         Script.this.parent.executor.execute(
             () -> {
               this.sendDiagnostics();
@@ -199,6 +215,7 @@ public class Script {
       }
     }
 
+    /** Blocks as long as we're still parsing the current script. */
     private void waitForParsing() {
       synchronized (this.parserThreadWaitingLock) {
         while (this.parserThread != null) {
@@ -216,6 +233,7 @@ public class Script {
       }
     }
 
+    /** Custom Parser that submits edited file contents, if we have them. */
     private class LSParser extends Parser {
       private LSParser(
           final File scriptFile, final InputStream stream, final Map<File, Parser> imports) {
