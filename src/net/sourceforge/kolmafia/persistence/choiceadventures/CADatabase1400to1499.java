@@ -625,7 +625,8 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
       @Override
       void postChoice2(GenericRequest request, int decision) {
         if (decision == 1) {
-          KoLCharacter.findFamiliar(FamiliarPool.MELODRAMEDARY).setExperience(0);
+          KoLCharacter.findFamiliar(FamiliarPool.MELODRAMEDARY).loseExperience();
+          Preferences.setBoolean("_entauntaunedToday", true);
         }
       }
     };
@@ -1517,7 +1518,7 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
       }
     };
 
-    new ChoiceAdventure(1461, null, "Site Alpha Primary Lab") {
+    new ChoiceAdventure(1461, "Hello Knob My Old Friend", "Site Alpha Primary Lab") {
       void setup() {
         this.customZones.add("Crimbo21");
 

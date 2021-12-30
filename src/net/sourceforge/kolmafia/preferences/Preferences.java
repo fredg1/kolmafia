@@ -212,6 +212,7 @@ public class Preferences {
         "encountersUntilNEPChoice",
         "ensorcelee",
         "ensorceleeLevel",
+        "entauntaunedColdRes",
         "envyfishMonster",
         "falloutShelterChronoUsed",
         "falloutShelterCoolingTankUsed",
