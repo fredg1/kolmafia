@@ -202,7 +202,7 @@ public abstract class KoLmafiaASH {
         while (it.hasNext() && !createInterpreter) {
           Entry<File, Parser> entry = it.next();
           File file = entry.getKey();
-          long timestamp = entry.getValue().getModificationDate();
+          long timestamp = entry.getValue().getModificationTimestamp();
           createInterpreter = timestamp != file.lastModified();
         }
       }

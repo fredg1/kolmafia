@@ -108,7 +108,7 @@ public class Parser {
   private final String fileName;
   private final String shortFileName;
   private final URI fileUri;
-  private final long modificationDate;
+  private final long modificationTimestamp;
   private String scriptName;
   private final InputStream istream;
 
@@ -141,16 +141,14 @@ public class Parser {
       this.fileName = scriptFile.getPath();
       this.shortFileName = this.fileName.substring(this.fileName.lastIndexOf(File.separator) + 1);
       this.fileUri = scriptFile.toURI();
-      this.modificationDate = scriptFile.lastModified();
+      this.modificationTimestamp = scriptFile.lastModified();
 
-      if (this.imports.isEmpty()) {
-        this.imports.put(scriptFile, this);
-      }
+      this.imports.put(scriptFile, this);
     } else {
       this.fileName = null;
       this.shortFileName = null;
       this.fileUri = null;
-      this.modificationDate = 0L;
+      this.modificationTimestamp = 0L;
     }
 
     if (this.istream == null) {
@@ -231,8 +229,8 @@ public class Parser {
     return this.diagnostics;
   }
 
-  public long getModificationDate() {
-    return this.modificationDate;
+  public long getModificationTimestamp() {
+    return this.modificationTimestamp;
   }
 
   public Function getMainMethod() {
@@ -380,9 +378,6 @@ public class Parser {
     }
 
     Parser parser = this.getParser(scriptFile);
-
-    this.imports.put(scriptFile, parser);
-
     Scope result = parser.parseFile(scope);
 
     for (AshDiagnostic diagnostic : parser.diagnostics) {
