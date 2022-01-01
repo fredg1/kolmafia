@@ -1540,14 +1540,6 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
       }
 
       @Override
-      void postChoice1(GenericRequest request, int decision) {
-        if (decision != 6) {
-          Preferences.increment("_coldMedicineConsults", 1, 5, false);
-          Preferences.setInteger("_nextColdMedicineConsult", KoLCharacter.getTurnsPlayed() + 20);
-        }
-      }
-
-      @Override
       void postChoice2(GenericRequest request, int decision) {
         if (decision == 1) {
           Preferences.increment("primaryLabGooIntensity", 1);
