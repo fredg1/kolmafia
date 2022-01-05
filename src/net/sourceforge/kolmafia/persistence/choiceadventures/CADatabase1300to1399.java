@@ -39,7 +39,6 @@ import net.sourceforge.kolmafia.session.EquipmentManager;
 import net.sourceforge.kolmafia.session.InventoryManager;
 import net.sourceforge.kolmafia.session.ResponseTextParser;
 import net.sourceforge.kolmafia.session.ResultProcessor;
-import net.sourceforge.kolmafia.session.TurnCounter;
 import net.sourceforge.kolmafia.utilities.StringUtilities;
 
 class CADatabase1300to1399 extends ChoiceAdventureDatabase {
@@ -2881,11 +2880,7 @@ class CADatabase1300to1399 extends ChoiceAdventureDatabase {
           }
         }
         if (decision == 7) {
-          TurnCounter.stopCounting("Fortune Cookie");
-          TurnCounter.stopCounting("Semirare window begin");
-          TurnCounter.stopCounting("Semirare window end");
-          TurnCounter.startCounting(0, "Fortune Cookie", "fortune.gif");
-          Preferences.setString("semirareLocation", "");
+          // *** No longer forces a semirare
         }
       }
     };

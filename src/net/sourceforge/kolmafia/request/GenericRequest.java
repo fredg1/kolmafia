@@ -898,12 +898,7 @@ public class GenericRequest implements Runnable {
         if (also.getTurnsRemaining() < 0) {
           continue;
         }
-        if (also.getLabel().equals("Fortune Cookie")) {
-          KoLmafia.updateDisplay("(" + expired.getLabel() + " counter discarded due to conflict)");
-          expired = also;
-        } else {
-          KoLmafia.updateDisplay("(" + also.getLabel() + " counter discarded due to conflict)");
-        }
+        KoLmafia.updateDisplay("(" + also.getLabel() + " counter discarded due to conflict)");
       }
 
       if (this.invokeCounterScript(expired)) {
@@ -926,9 +921,7 @@ public class GenericRequest implements Runnable {
                 + (remain == 1 ? "." : "s.");
       }
 
-      if (expired.getLabel().equals("Fortune Cookie")) {
-        message += " " + EatItemRequest.lastSemirareMessage();
-      } else if (expired.getLabel().equals("Spookyraven Lights Out")) {
+      if (expired.getLabel().equals("Spookyraven Lights Out")) {
         message += " " + LightsOutManager.message();
       }
 
@@ -2241,12 +2234,6 @@ public class GenericRequest implements Runnable {
       ChoiceManager.postChoice2(urlString, this);
     }
 
-    // Let clover protection kick in if needed
-
-    if (ResultProcessor.shouldDisassembleClovers(urlString)) {
-      KoLmafia.protectClovers();
-    }
-
     // Perhaps check for random donations in Fistcore
     if (!ResultProcessor.onlyAutosellDonationsCount && KoLCharacter.inFistcore()) {
       ResultProcessor.handleDonations(urlString, this.responseText);
@@ -2408,32 +2395,6 @@ public class GenericRequest implements Runnable {
       // item drop, but have a user supplied message.
       DisplayCaseRequest.parseDisplayCase(urlString, this.responseText);
       return;
-    }
-
-    // If this is a lucky adventure, then remove a clover
-    // from the player's inventory,
-    //
-    // Most places, this is signaled by the message "Your (or your)
-    // ten-leaf clover disappears in a puff of smoke."
-    //
-    // Some places, it "vanishes in a puff of smoke."
-    //
-    // The Hippy Camp (In Disguise)'s A Case of the Baskets, the message is
-    // "Like the smoke your ten-leaf clover disappears in a puff of"
-    //
-    // In the Spooky Forest's Lucky, Lucky! encounter, the message is
-    // "Your ten-leaf clover disappears into the leprechaun's pocket"
-    //
-    // The Orcish Frat House:
-    // Pretty good timing, it seems. Your ten-leaf clover
-    // disappears in a cloud of smoke and alcohol fumes.
-
-    if (this.responseText.contains("clover")
-        && (this.responseText.contains("disappears in a puff of")
-            || this.responseText.contains("vanishes in a puff of smoke")
-            || this.responseText.contains("into the leprechaun's pocket")
-            || this.responseText.contains("cloud of smoke and alcohol fumes"))) {
-      ResultProcessor.processItem(ItemPool.TEN_LEAF_CLOVER, -1);
     }
 
     if (this.responseText.contains("You break the bottle on the ground")) {

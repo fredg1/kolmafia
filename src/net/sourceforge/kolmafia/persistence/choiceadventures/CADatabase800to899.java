@@ -1159,19 +1159,6 @@ class CADatabase800to899 extends ChoiceAdventureDatabase {
         new CustomOption(2, "Bench Warrant");
         new CustomOption(3, "Fire Up Above");
       }
-
-      @Override
-      void visitChoice(GenericRequest request) {
-        // If you have a clover, this is a clover adventure.
-        // Otherwise it is a semirare
-        if (InventoryManager.getCount(ItemPool.TEN_LEAF_CLOVER) > 0) {
-          for (Option option : this.options.values()) {
-            option.attachItem(ItemPool.TEN_LEAF_CLOVER, -1, MANUAL, new NoDisplay());
-          }
-        } else {
-          KoLCharacter.registerSemirare();
-        }
-      }
     };
 
     new ChoiceAdventure(867, "Sneaky Peterskills", null) {

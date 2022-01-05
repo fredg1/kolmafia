@@ -948,12 +948,12 @@ public abstract class ChoiceManager {
     ChoiceAdventureDatabase.postChoice2(ChoiceManager.lastChoice, request);
     // Addition to the queue was done in ChoiceAdventureDatabase
 
+    SpadingManager.processChoice(urlString, text);
+
     if (ChoiceManager.handlingChoice) {
       ChoiceManager.visitChoice(request);
       return;
     }
-
-    SpadingManager.processChoice(urlString, text);
 
     if (text.contains("charpane.php")) {
       // Since a charpane refresh was requested, a turn might have been spent
