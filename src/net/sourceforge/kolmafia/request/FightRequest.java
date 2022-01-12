@@ -64,7 +64,9 @@ import net.sourceforge.kolmafia.session.BatManager;
 import net.sourceforge.kolmafia.session.BugbearManager;
 import net.sourceforge.kolmafia.session.ClanManager;
 import net.sourceforge.kolmafia.session.CrystalBallManager;
+import net.sourceforge.kolmafia.session.CursedMagnifyingGlassManager;
 import net.sourceforge.kolmafia.session.DadManager;
+import net.sourceforge.kolmafia.session.DaylightShavingsHelmetManager;
 import net.sourceforge.kolmafia.session.DreadScrollManager;
 import net.sourceforge.kolmafia.session.EncounterManager;
 import net.sourceforge.kolmafia.session.EquipmentManager;
@@ -2652,6 +2654,11 @@ public class FightRequest extends GenericRequest {
             } else {
               Preferences.setInteger("_voidFreeFights", 5);
             }
+            if (!EncounterManager.ignoreSpecialMonsters
+                && Preferences.getInteger("cursedMagnifyingGlassCount") == 13
+                && KoLCharacter.hasEquipped(ItemPool.CURSED_MAGNIFYING_GLASS)) {
+              Preferences.setInteger("cursedMagnifyingGlassCount", 0);
+            }
             break;
 
           case WOL:
@@ -2901,6 +2908,13 @@ public class FightRequest extends GenericRequest {
     else if (responseText.contains("Your crimbo tree is now 100% naked")) {
       Preferences.setInteger("garbageTreeCharge", 0);
       EquipmentManager.breakEquipment(ItemPool.DECEASED_TREE, "You toss your crimbo tree away.");
+    }
+
+    // Check for magnifying glass messages
+    CursedMagnifyingGlassManager.updatePreference(responseText);
+
+    if (KoLCharacter.hasEquipped(ItemPool.DAYLIGHT_SHAVINGS_HELMET, EquipmentManager.HAT)) {
+      DaylightShavingsHelmetManager.updatePreference(responseText);
     }
 
     // "The Slime draws back and shudders, as if it's about to sneeze.

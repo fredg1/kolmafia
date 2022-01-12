@@ -477,7 +477,8 @@ user	currentMood	default
 user	currentNunneryMeat	0
 user	currentPVPSeason	none
 user	currentPvpVictories
-user	currentSpecialBountyItem	
+user	currentSpecialBountyItem
+user	cursedMagnifyingGlassCount	0
 user	customCombatScript	default
 user	cyrptAlcoveEvilness	0
 user	cyrptCrannyEvilness	0
@@ -584,6 +585,7 @@ user	falloutShelterChronoUsed	false
 user	falloutShelterCoolingTankUsed	false
 user	falloutShelterLevel	0
 user	familiarScript
+user	lastBeardBuff	0
 user	lastCopyableMonster
 user	fingernailsClipped	0
 user	fireExtinguisherBatHoleUsed	false
