@@ -2,20 +2,16 @@ package net.sourceforge.kolmafia.textui.langserver.textdocumentservice;
 
 import java.io.File;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import net.sourceforge.kolmafia.textui.langserver.AshLanguageServer;
 import net.sourceforge.kolmafia.textui.langserver.Script.Handler;
 import net.sourceforge.kolmafia.textui.parsetree.BasicScope;
 import net.sourceforge.kolmafia.textui.parsetree.Function;
-import net.sourceforge.kolmafia.textui.parsetree.FunctionList;
 import net.sourceforge.kolmafia.textui.parsetree.Symbol;
 import net.sourceforge.kolmafia.textui.parsetree.SymbolList;
 import net.sourceforge.kolmafia.textui.parsetree.Type;
-import net.sourceforge.kolmafia.textui.parsetree.TypeList;
 import net.sourceforge.kolmafia.textui.parsetree.Variable;
-import net.sourceforge.kolmafia.textui.parsetree.VariableList;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
@@ -167,16 +163,10 @@ class SymbolManager {
               continue;
             }
 
-            for (final Location referenceLocation :
-                // symbols.getReferences( symbol )
-                // Stupid capture groups that don't work right...
-                symbols instanceof TypeList
-                    ? ((TypeList) symbols).getReferences((Type) symbol)
-                    : symbols instanceof VariableList
-                        ? ((VariableList) symbols).getReferences((Variable) symbol)
-                        : symbols instanceof FunctionList
-                            ? ((FunctionList) symbols).getReferences((Function) symbol)
-                            : Collections.<Location>emptyList()) {
+            // The compiler complains if we leave it as a capture group, for some reason
+            @SuppressWarnings("unchecked")
+            final List<Location> references = ((SymbolList<Symbol>) symbols).getReferences(symbol);
+            for (final Location referenceLocation : references) {
               if (isInTarget(referenceLocation) && isBetterThanCurrentBest(referenceLocation)) {
                 this.currentBest = symbol;
                 this.currentBestRange = referenceLocation.getRange();
