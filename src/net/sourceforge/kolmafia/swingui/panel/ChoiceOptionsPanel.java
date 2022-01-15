@@ -508,12 +508,14 @@ public class ChoiceOptionsPanel extends JTabbedPane implements Listener {
       this.dest = dest;
     }
 
+    @Override
     public void run() {
       this.dest.saveSettings();
     }
   }
 
   private class UpdateChoicesListener implements ListSelectionListener {
+    @Override
     public void valueChanged(final ListSelectionEvent e) {
       JList<KoLAdventure> source = (JList<KoLAdventure>) e.getSource();
       KoLAdventure location = source.getSelectedValue();
@@ -536,6 +538,7 @@ public class ChoiceOptionsPanel extends JTabbedPane implements Listener {
 
   private boolean isAdjusting = false;
 
+  @Override
   public synchronized void update() {
     if (!this.isAdjusting) {
       this.loadSettings();
@@ -686,6 +689,7 @@ public class ChoiceOptionsPanel extends JTabbedPane implements Listener {
       this.addActionListener(this);
     }
 
+    @Override
     public void actionPerformed(ActionEvent e) {
       CommandDisplayFrame.executeCommand(e.getActionCommand());
     }
