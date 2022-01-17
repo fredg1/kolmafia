@@ -298,7 +298,18 @@ class CADatabase1300to1399 extends ChoiceAdventureDatabase {
       }
     };
 
-    new UnknownChoiceAdventure(1309);
+    new ChoiceAdventure(1309, "Lyle, LyleCo CEO", null) {
+      // (choice adventure number not *quite* proven...)
+      void setup() {
+        // Nothing
+      }
+
+      @Override
+      void visitChoice(GenericRequest request) {
+        // We will either now, or in the past, have had Favored By Lyle
+        Preferences.setBoolean("_lyleFavored", true);
+      }
+    };
 
     new ChoiceAdventure(1310, "Granted a Boon", "Item-Driven") {
       void setup() {

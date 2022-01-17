@@ -163,15 +163,7 @@ public abstract class ChoiceManager {
   }
 
   public static int extractChoice(final String responseText) {
-    int choice = ChoiceUtilities.extractChoice(responseText);
-
-    if (choice == 0 && responseText.contains("<b>Lyle, LyleCo CEO</b>")) {
-      // We still don't know the choice number, so take action here instead
-      // We will either now, or in the past, have had Favored By Lyle
-      Preferences.setBoolean("_lyleFavored", true);
-    }
-
-    return choice;
+    return ChoiceUtilities.extractChoice(responseText);
   }
 
   public static final Pattern URL_CHOICE_PATTERN = Pattern.compile("whichchoice=(\\d+)");

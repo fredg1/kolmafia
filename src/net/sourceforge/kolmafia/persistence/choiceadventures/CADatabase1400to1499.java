@@ -31,6 +31,7 @@ import net.sourceforge.kolmafia.request.ScrapheapRequest;
 import net.sourceforge.kolmafia.request.WildfireCampRequest;
 import net.sourceforge.kolmafia.session.AvatarManager;
 import net.sourceforge.kolmafia.session.ChoiceManager;
+import net.sourceforge.kolmafia.session.CrystalBallManager;
 import net.sourceforge.kolmafia.session.EquipmentManager;
 import net.sourceforge.kolmafia.session.InventoryManager;
 import net.sourceforge.kolmafia.utilities.StringUtilities;
@@ -1548,6 +1549,18 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
         } else if (decision == 5) {
           Preferences.setBoolean("primaryLabCheerCoreGrabbed", true);
         }
+      }
+    };
+
+    new ChoiceAdventure(1462, "What the Future Holds", "Item-Driven") {
+      // (choice adventure number not *quite* proven...)
+      void setup() {
+        // Nothing
+      }
+
+      @Override
+      void visitChoice(GenericRequest request) {
+        CrystalBallManager.parsePonder(request.responseText);
       }
     };
   }
