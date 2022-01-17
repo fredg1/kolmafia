@@ -1405,14 +1405,14 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
       }
     };
 
-    new ChoiceAdventure(1456, "Experimental Sauna", null) {
+    new RetiredChoiceAdventure(1456, "Experimental Sauna", null) {
       void setup() {
         new Option(1, "50 advs of Sauna-Fresh").turnCost(1).attachEffect("Sauna-Fresh");
         new Option(2);
       }
     };
 
-    new ChoiceAdventure(1457, "Food Lab", null) {
+    new RetiredChoiceAdventure(1457, "Food Lab", null) {
       void setup() {
         new Option(1)
             .attachItem("[experimental crimbo food]", 1, AUTO)
@@ -1428,7 +1428,7 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
       }
     };
 
-    new ChoiceAdventure(1458, "Nog Lab", null) {
+    new RetiredChoiceAdventure(1458, "Nog Lab", null) {
       void setup() {
         new Option(1)
             .attachItem("[experimental crimbo booze]", 1, AUTO)
@@ -1444,7 +1444,7 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
       }
     };
 
-    new ChoiceAdventure(1459, "Chem Lab", null) {
+    new RetiredChoiceAdventure(1459, "Chem Lab", null) {
       void setup() {
         new Option(1)
             .attachItem("[experimental crimbo spleen]", 1, AUTO)
@@ -1460,7 +1460,7 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
       }
     };
 
-    new ChoiceAdventure(1460, "Gift Fabrication Lab", null) {
+    new RetiredChoiceAdventure(1460, "Gift Fabrication Lab", null) {
       void setup() {
         this.canWalkFromChoice = true;
 
@@ -1518,7 +1518,7 @@ class CADatabase1400to1499 extends ChoiceAdventureDatabase {
       }
     };
 
-    new ChoiceAdventure(1461, "Hello Knob My Old Friend", "Site Alpha Primary Lab") {
+    new RetiredChoiceAdventure(1461, "Hello Knob My Old Friend", "Site Alpha Primary Lab") {
       void setup() {
         this.customZones.add("Crimbo21");
 
