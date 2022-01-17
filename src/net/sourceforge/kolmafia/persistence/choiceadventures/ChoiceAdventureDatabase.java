@@ -38,7 +38,7 @@ public class ChoiceAdventureDatabase {
   private static final Map<Integer, ChoiceAdventure> database = new TreeMap<>();
   static final List<Integer> duplicates = new LinkedList<>();
 
-  public class ChoiceAdventure {
+  public abstract class ChoiceAdventure {
     /**
      * Indicates that none of the options from the Choice Adventure cause anything to be added to
      * the noncombat queue.<br>
@@ -127,7 +127,7 @@ public class ChoiceAdventureDatabase {
      * void decorateChoiceResponse(StringBuffer buffer, int option)
      * </pre>
      */
-    void setup() {}
+    abstract void setup();
 
     /**
      * Handling to be done before we register the request with RequestLogger.
@@ -1775,7 +1775,7 @@ public class ChoiceAdventureDatabase {
     }
   }
 
-  public class RetiredChoiceAdventure extends ChoiceAdventure {
+  public abstract class RetiredChoiceAdventure extends ChoiceAdventure {
     private boolean notifiedUser = false;
 
     RetiredChoiceAdventure(
@@ -1808,6 +1808,9 @@ public class ChoiceAdventureDatabase {
     UnknownChoiceAdventure(final int choiceAdventureNumber) {
       super(choiceAdventureNumber, null, "undefined");
     }
+
+    @Override
+    void setup() {}
 
     @Override
     protected void scanForUnknownInformation(final GenericRequest request) {
