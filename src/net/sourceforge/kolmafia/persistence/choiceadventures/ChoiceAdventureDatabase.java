@@ -593,11 +593,12 @@ public class ChoiceAdventureDatabase {
     final Option choiceFailed() {
       Option currentOption = getOption(this.lastDecision);
 
-      List<Option.Attachment> attachments = currentOption.attachments;
+      Iterator<Option.Attachment> attachments = currentOption.attachments.iterator();
 
-      for (Option.Attachment attachment : attachments) {
+      while (attachments.hasNext()) {
+        Option.Attachment attachment = attachments.next();
         if (attachment.processType == ProcessType.MANUAL) {
-          attachments.remove(attachment);
+          attachments.remove();
         }
       }
 
