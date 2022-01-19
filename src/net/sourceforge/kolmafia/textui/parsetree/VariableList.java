@@ -29,6 +29,7 @@ public class VariableList extends SymbolList<Variable> {
     return null;
   }
 
+  @Override
   public Iterator<Variable> iterator() {
     return list.keySet().iterator();
   }

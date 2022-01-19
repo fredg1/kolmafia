@@ -29,6 +29,7 @@ public class TypeList extends SymbolList<Type> {
     return null;
   }
 
+  @Override
   public Iterator<Type> iterator() {
     return list.keySet().iterator();
   }

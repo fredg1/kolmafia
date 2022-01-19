@@ -37,6 +37,7 @@ public class FunctionList extends SymbolList<Function> {
     return list.isEmpty();
   }
 
+  @Override
   public Iterator<Function> iterator() {
     return list.values().iterator();
   }
