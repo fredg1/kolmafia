@@ -70,30 +70,6 @@ public abstract class AshLanguageServer implements LanguageClientAware, Language
 
   /* The server */
 
-  private ServerState state = ServerState.STARTED;
-
-  enum ServerState {
-    STARTED,
-    INITIALIZED,
-    SHUTDOWN
-  }
-
-  public final ServerState getState() {
-    return this.state;
-  }
-
-  protected abstract boolean notInitialized();
-
-  protected abstract boolean wasShutdown();
-
-  protected abstract boolean isActive();
-
-  protected abstract void initializeCheck();
-
-  protected abstract void shutdownCheck();
-
-  protected abstract void stateCheck();
-
   public LanguageClient client;
   public ClientCapabilities clientCapabilities;
 
@@ -114,8 +90,6 @@ public abstract class AshLanguageServer implements LanguageClientAware, Language
 
   @Override
   public CompletableFuture<InitializeResult> initialize(InitializeParams params) {
-    this.state = ServerState.INITIALIZED;
-
     this.clientCapabilities = params.getCapabilities();
     // params.getTrace(); for when we implement trace
     // params.getClientInfo(); do we need/care about that?
@@ -142,8 +116,6 @@ public abstract class AshLanguageServer implements LanguageClientAware, Language
 
   @Override
   public CompletableFuture<Object> shutdown() {
-    this.state = ServerState.SHUTDOWN;
-
     return CompletableFuture.supplyAsync(
         () -> {
           this.close();
