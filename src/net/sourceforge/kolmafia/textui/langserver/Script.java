@@ -241,9 +241,7 @@ public class Script {
       }
 
       @Override
-      protected Parser getParser(final File scriptFile) {
-        InputStream stream = null;
-
+      protected InputStream getInputStream(final File scriptFile) {
         synchronized (Script.this.parent.scripts) {
           final Script script = Script.this.parent.scripts.get(scriptFile);
 
@@ -254,11 +252,11 @@ public class Script {
               script.handler.close();
             }
 
-            stream = script.getStream();
+            return script.getStream();
           }
-        }
 
-        return new LSParser(scriptFile, stream, this.getImports());
+          return null;
+        }
       }
     }
   }
