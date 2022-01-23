@@ -1876,7 +1876,9 @@ public class UseItemRequest extends GenericRequest {
         return;
 
       case KoLConstants.MESSAGE_DISPLAY:
-        UseItemRequest.showItemUsage(showHTML, responseText);
+        if (!Preferences.getBoolean("suppressNegativeStatusPopup")) {
+          UseItemRequest.showItemUsage(showHTML, responseText);
+        }
         return;
     }
 

@@ -443,6 +443,9 @@ class CADatabase500to599 extends ChoiceAdventureDatabase {
         new Option(3)
             .leadsTo(507, false, o -> o.index == 1)
             .attachItem(ItemPool.TREE_HOLED_COIN, new DisplayAll(NEED, AT_LEAST, 1));
+        new Option(4, "fake blood")
+            .turnCost(1)
+            .attachItem(ItemPool.FAKE_BLOOD, 1, AUTO);
       }
 
       @Override
