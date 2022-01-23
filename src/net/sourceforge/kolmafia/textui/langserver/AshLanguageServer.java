@@ -54,8 +54,12 @@ public abstract class AshLanguageServer implements LanguageClientAware, Language
   }
 
   public static AshLanguageServer launch(final InputStream in, final OutputStream out) {
-    final AshLanguageServer server = new StateCheckWrappers.AshLanguageServer();
+    return launch(in, out, new StateCheckWrappers.AshLanguageServer());
+  }
 
+  // Only exposed for tests
+  protected static AshLanguageServer launch(
+      final InputStream in, final OutputStream out, final AshLanguageServer server) {
     final Launcher<LanguageClient> launcher =
         LSPLauncher.createServerLauncher(server, in, out, server.executor, null);
     server.connect(launcher.getRemoteProxy());
@@ -81,6 +85,8 @@ public abstract class AshLanguageServer implements LanguageClientAware, Language
   public final ExecutorService executor = Executors.newCachedThreadPool();
   public final FilesMonitor monitor = new FilesMonitor(this);
 
+  // We use Hashtable to prevent null values. Otherwise a HashMap would have sufficed, since we do
+  // the synchronization ourselves.
   public final Map<File, Script> scripts = Collections.synchronizedMap(new Hashtable<>(20));
 
   @Override
@@ -180,5 +186,9 @@ public abstract class AshLanguageServer implements LanguageClientAware, Language
   @Override
   public WorkspaceService getWorkspaceService() {
     return this.workspaceService;
+  }
+
+  protected boolean canParse(final File file) {
+    return file.getName().endsWith(".ash");
   }
 }

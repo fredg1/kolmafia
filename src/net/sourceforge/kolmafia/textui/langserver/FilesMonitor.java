@@ -16,7 +16,7 @@ import net.sourceforge.kolmafia.KoLConstants;
 public class FilesMonitor {
   final AshLanguageServer parent;
 
-  FilesMonitor(final AshLanguageServer parent) {
+  protected FilesMonitor(final AshLanguageServer parent) {
     this.parent = parent;
   }
 
@@ -72,7 +72,7 @@ public class FilesMonitor {
   }
 
   /** Returns the currently existing {@link Script.Handler handler(s)} for the given file. */
-  List<Script.Handler> findHandlers(final File file) {
+  protected List<Script.Handler> findHandlers(final File file) {
     final List<Script.Handler> handlers = new LinkedList<>();
 
     synchronized (this.parent.scripts) {
@@ -113,7 +113,7 @@ public class FilesMonitor {
    * Checks every sub-directory under our authority as a KoLmafia root folder, and ensures that
    * every {@code .ash} file in them has a {@link Script.Handler handler}.
    */
-  void scan() {
+  protected void scan() {
     for (final File directory :
         Arrays.asList(
             KoLConstants.SCRIPT_LOCATION,
@@ -135,7 +135,7 @@ public class FilesMonitor {
 
       if (file.isDirectory()) {
         this.scan(file);
-      } else if (file.isFile() && file.getName().endsWith(".ash")) {
+      } else if (file.isFile() && this.parent.canParse(file)) {
         this.findOrMakeHandler(file);
       }
     }
