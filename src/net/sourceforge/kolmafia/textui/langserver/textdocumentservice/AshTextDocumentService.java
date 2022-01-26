@@ -159,7 +159,7 @@ public abstract class AshTextDocumentService implements TextDocumentService {
           TextDocumentIdentifier document = params.getTextDocument();
           Position position = params.getPosition();
 
-          File file = FilesMonitor.URIToFile(document.getUri());
+          File file = FilesMonitor.UriToFile(document.getUri());
 
           return Either.forLeft(this.symbolManager.getDefinition(file, position));
         },
@@ -174,7 +174,7 @@ public abstract class AshTextDocumentService implements TextDocumentService {
           TextDocumentIdentifier document = params.getTextDocument();
           Position position = params.getPosition();
 
-          File file = FilesMonitor.URIToFile(document.getUri());
+          File file = FilesMonitor.UriToFile(document.getUri());
 
           return Either.forLeft(this.symbolManager.getTypeDefinition(file, position));
         },
@@ -189,7 +189,7 @@ public abstract class AshTextDocumentService implements TextDocumentService {
           Position position = params.getPosition();
           // params.getContext().isIncludeDeclaration(); //for when we support declaration
 
-          File file = FilesMonitor.URIToFile(document.getUri());
+          File file = FilesMonitor.UriToFile(document.getUri());
 
           return this.symbolManager.getReferences(file, position);
         },
@@ -202,7 +202,7 @@ public abstract class AshTextDocumentService implements TextDocumentService {
         () -> {
           TextDocumentIdentifier document = params.getTextDocument();
 
-          File file = FilesMonitor.URIToFile(document.getUri());
+          File file = FilesMonitor.UriToFile(document.getUri());
 
           return this.semanticHandler.getSemanticTokens(file, null);
         },
@@ -216,7 +216,7 @@ public abstract class AshTextDocumentService implements TextDocumentService {
           TextDocumentIdentifier document = params.getTextDocument();
           Range range = params.getRange();
 
-          File file = FilesMonitor.URIToFile(document.getUri());
+          File file = FilesMonitor.UriToFile(document.getUri());
 
           return this.semanticHandler.getSemanticTokens(file, range);
         },
