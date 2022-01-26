@@ -29,17 +29,27 @@ public class FilesMonitor {
     synchronized (this.parent.scripts) {
       final Script script = this.getScript(file);
 
+      // Closing of non-existing files
+      if (!file.exists() && text == null) {
+        if (script.handler != null) {
+          script.handler.close();
+        }
+
+        this.parent.scripts.remove(file);
+        return;
+      }
+
       final List<Script.Handler> handlers = this.findHandlers(file);
 
       if (handlers.size() > 0
-          && ((script.text != null && script.version >= version)
+          && ((text != null && script.version >= version)
               || (script.text == null && text == null))) {
         // We already have a working handler using an
         // up-to-date version of that file.
         return;
       }
 
-      if (script.text == null || script.version < version || script.text != null && text == null) {
+      if (script.text == null || script.version < version || text == null) {
         script.text = text;
         script.version = version;
       }
@@ -142,7 +152,7 @@ public class FilesMonitor {
   }
 
   /** Converts an encoded string representation of an URI into a File. */
-  public static File URIToFile(String uri) {
+  public static File UriToFile(String uri) {
     if (uri == null) {
       return null;
     }
@@ -157,12 +167,7 @@ public class FilesMonitor {
       // Try feeding its path directly to File(String)
 
       // First, remove the scheme
-      String scheme = "";
-      if (uri.length() >= 5) {
-        scheme = uri.substring(0, 5);
-      }
-
-      if (scheme.equalsIgnoreCase("file:")) {
+      if (uri.length() >= 5 && uri.substring(0, 5).equalsIgnoreCase("file:")) {
         uri = uri.substring(5);
       } else {
         // That's not even a file.

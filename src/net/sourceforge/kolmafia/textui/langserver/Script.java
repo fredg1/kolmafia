@@ -31,9 +31,9 @@ public final class Script {
    */
   protected Handler handler;
 
-  int version = -1;
+  protected int version = -1;
   /** The current content of the file. Is {@code null} if the file is currently closed */
-  String text;
+  protected String text;
 
   protected Script(final AshLanguageServer parent, final File file) {
     this.parent = parent;
@@ -45,13 +45,16 @@ public final class Script {
 
     this.parent.executor.execute(
         () -> {
-          this.handler.parseFile(true);
+          // Check in case the handler is closed before we're ran
+          if (this.handler != null) {
+            this.handler.parseFile(true);
+          }
         });
 
     return this.handler;
   }
 
-  InputStream getStream() {
+  private InputStream getStream() {
     if (this.text == null) {
       return null;
     }
@@ -77,7 +80,7 @@ public final class Script {
     // Public class, private constructor
     private Handler() {}
 
-    void refreshParsing() {
+    protected void refreshParsing() {
       this.parseFile(false);
     }
 
@@ -87,6 +90,12 @@ public final class Script {
       // If another thread was already parsing this script, kick them out; we're in charge now.
       synchronized (this.parserSwapLock) {
         if (this.parserThread != null) {
+          // (...but first, quickly make sure it's not due to congestion)
+          if (Script.this.handler != this) {
+            // (oh... never mind, then...)
+            return;
+          }
+
           this.parserThread.interrupt();
         }
         this.parserThread = Thread.currentThread();
@@ -104,10 +113,7 @@ public final class Script {
         this.scope = this.parser.parse();
 
         // If we managed to parse it without interruption, send the diagnostics
-        Script.this.parent.executor.execute(
-            () -> {
-              this.sendDiagnostics();
-            });
+        Script.this.parent.executor.execute(this::sendDiagnostics);
       } catch (InterruptedException e) {
       } finally {
         synchronized (this.parserSwapLock) {
@@ -119,7 +125,8 @@ public final class Script {
             }
 
             if (!initialParsing) {
-              // In case some imports were removed, these scripts are now standalone
+              // In case some imports were removed, these scripts are now without a Handler
+              // Trigger a scan to find them and give them one
               Script.this.parent.monitor.scan();
             }
           }

@@ -110,7 +110,7 @@ public abstract class AshTextDocumentService implements TextDocumentService {
         () -> {
           TextDocumentItem document = params.getTextDocument();
 
-          File file = FilesMonitor.URIToFile(document.getUri());
+          File file = FilesMonitor.UriToFile(document.getUri());
 
           this.parent.monitor.updateFile(file, document.getText(), document.getVersion());
         });
@@ -128,7 +128,7 @@ public abstract class AshTextDocumentService implements TextDocumentService {
             return;
           }
 
-          File file = FilesMonitor.URIToFile(document.getUri());
+          File file = FilesMonitor.UriToFile(document.getUri());
 
           // We don't support incremental changes, so we expect the client
           // to put the whole file's content in a single TextDocumentContentChangeEvent
@@ -142,17 +142,14 @@ public abstract class AshTextDocumentService implements TextDocumentService {
         () -> {
           TextDocumentIdentifier document = params.getTextDocument();
 
-          File file = FilesMonitor.URIToFile(document.getUri());
+          File file = FilesMonitor.UriToFile(document.getUri());
 
           this.parent.monitor.updateFile(file, null, -1);
         });
   }
 
   @Override
-  public void didSave(DidSaveTextDocumentParams params) {
-    // TODO Auto-generated method stub
-
-  }
+  public void didSave(DidSaveTextDocumentParams params) {}
 
   @Override
   public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>>

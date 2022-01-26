@@ -101,10 +101,7 @@ public abstract class AshLanguageServer implements LanguageClientAware, Language
     // params.getClientInfo(); do we need/care about that?
     // params.getWorkspaceFolders(); look into this later
 
-    this.executor.execute(
-        () -> {
-          this.monitor.scan();
-        });
+    this.executor.execute(this.monitor::scan);
 
     return CompletableFuture.supplyAsync(
         () -> {
