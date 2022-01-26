@@ -44,6 +44,8 @@ public class HobopolisManager {
   private static LinkedList<AscensionClass> missingPerformers;
   private static int performerCount;
 
+  private HobopolisManager() {}
+
   public static final void checkHoboBoss(final int decision, final String bossName) {
     // Stop for Hobopolis bosses
     if (decision == 2 && KoLmafia.isAdventuring()) {

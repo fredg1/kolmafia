@@ -26,6 +26,8 @@ public class SeaMerkinOutpostManager {
     new Tent(313, MERKIN_BURGLAR), new Tent(314, MERKIN_RAIDER), new Tent(315, MERKIN_HEALER),
   };
 
+  private SeaMerkinOutpostManager() {}
+
   private static final class Tent {
     private final int choiceAdv;
     private final String ownerName;

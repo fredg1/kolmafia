@@ -59,6 +59,8 @@ public class LTAManager {
     new BondPerk("True Love, Honey Potts", "Honey")
   };
 
+  private LTAManager() {}
+
   public static final void parseLI11HQ(final GenericRequest request) {
     if (!request.responseText.contains("LI-11 HQ")) {
       return;

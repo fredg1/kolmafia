@@ -4,6 +4,8 @@ import net.sourceforge.kolmafia.KoLmafia;
 import net.sourceforge.kolmafia.RequestLogger;
 
 public class AvatarManager {
+  private AvatarManager() {}
+
   public static final void handleAfterAvatar(final int decision) {
     String newClass = "Unknown";
     switch (decision) {

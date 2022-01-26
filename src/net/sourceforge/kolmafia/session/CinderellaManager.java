@@ -12,6 +12,8 @@ public class CinderellaManager {
   private static final Pattern CINDERELLA_SCORE_PATTERN =
       Pattern.compile("score (?:is now|was) <b>(\\d+)</b>");
 
+  private CinderellaManager() {}
+
   public static final void postChoice2(final GenericRequest request) {
     // The Prince's Ball
     if (parseCinderellaTime() == false) {

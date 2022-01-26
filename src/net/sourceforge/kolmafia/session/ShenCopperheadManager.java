@@ -16,6 +16,8 @@ public class ShenCopperheadManager {
       Pattern.compile(
           "(?:Bring me|artifact known only as) <b>(.*?)</b>, hidden away for centuries");
 
+  private ShenCopperheadManager() {}
+
   public static final void parseInitialShen(final GenericRequest request) {
     Matcher matcher = SHEN_PATTERN.matcher(request.responseText);
     if (matcher.find()) {
